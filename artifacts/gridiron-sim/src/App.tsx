@@ -1,25 +1,10 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Activity, ArrowRight, Bookmark, ChevronDown, CircleHelp, Cloud, CloudRain, Crosshair, RotateCw, Shield, SlidersHorizontal, Trash2, Trophy, Wind } from 'lucide-react';
-import { simulateGame } from '@/lib/simulator';
+import { simulateGame, type WeatherSetup as Weather, type TeamSetup, type SimulationInput, type SimulationResult, type PlayerProjection as SimPlayer, type PlayerRecentStats, type DefenseRecentStats } from '@/lib/simulator';
 
-type Weather = { temperatureF: number; windMph: number; precipitation: 'none' | 'light' | 'moderate' | 'heavy' };
-type TeamSetup = {
-  name: string; qb: string; rb: string; wr1: string; wr2: string; te: string; kicker: string;
-  passRating: number; rushRating: number; defenseRating: number; context: string;
-};
-type SimulationInput = { away: TeamSetup; home: TeamSetup; weather: Weather; seed?: number };
-type SimPlayer = {
-  name: string; position: string; team: string; passYards: number; passTD: number; interceptions: number;
-  rushYards: number; rushTD: number; receptions: number; receivingYards: number; receivingTD: number;
-  fumblesLost: number; halfPpr: number;
-};
-type Drive = { id: number; quarter: number; team: string; result: string; summary: string; plays: string[] };
-type SimulationResult = {
-  seed: number; awayScore: number; homeScore: number; totalPlays: { away: number; home: number };
-  overview: string[]; drives: Drive[]; players: SimPlayer[];
-};
-type SavedSimulation = { id: string; savedAt: string; awayName: string; homeName: string; result: SimulationResult };
+type SavedSimulation = { id: string; savedAt: string; awayName: string; homeName: string; result: SimulationResult; setup?: StoredSetup };
 type StoredSetup = { away: TeamSetup; home: TeamSetup; weather: Weather };
+type PatchTeam = (side: 'away' | 'home', field: keyof TeamSetup, value: TeamSetup[keyof TeamSetup]) => void;
 
 const NFL_TEAMS = [
   'Arizona Cardinals','Atlanta Falcons','Baltimore Ravens','Buffalo Bills','Carolina Panthers','Chicago Bears','Cincinnati Bengals','Cleveland Browns',
@@ -29,11 +14,11 @@ const NFL_TEAMS = [
   'Tennessee Titans','Washington Commanders',
 ];
 const defaultAway: TeamSetup = {
-  name:'San Francisco 49ers', qb:'Brock Purdy', rb:'Christian McCaffrey', wr1:'Brandon Aiyuk', wr2:'Deebo Samuel', te:'George Kittle', kicker:'Jake Moody',
+  name:'San Francisco 49ers', qb:'Brock Purdy', rb:'Christian McCaffrey', wr1:'Brandon Aiyuk', wr2:'Deebo Samuel', wr3:'', te:'George Kittle', kicker:'Jake Moody',
   passRating:65, rushRating:67, defenseRating:62, context:'Strong play-action offense; keep an eye on red-zone usage.',
 };
 const defaultHome: TeamSetup = {
-  name:'Detroit Lions', qb:'Jared Goff', rb:'Jahmyr Gibbs', wr1:'Amon-Ra St. Brown', wr2:'Jameson Williams', te:'Sam LaPorta', kicker:'Jake Bates',
+  name:'Detroit Lions', qb:'Jared Goff', rb:'Jahmyr Gibbs', wr1:'Amon-Ra St. Brown', wr2:'Jameson Williams', wr3:'', te:'Sam LaPorta', kicker:'Jake Bates',
   passRating:64, rushRating:62, defenseRating:57, context:'High-volume passing environment with a balanced backfield.',
 };
 const DEFAULT_SETUP: StoredSetup = {
@@ -42,10 +27,18 @@ const DEFAULT_SETUP: StoredSetup = {
 const setupStorageKey = 'gridiron-sim-setup-v1';
 const resultsStorageKey = 'gridiron-sim-results-v1';
 
+function normalizeSetup(setup: StoredSetup): StoredSetup {
+  return {
+    ...setup,
+    away: { ...defaultAway, ...setup.away },
+    home: { ...defaultHome, ...setup.home },
+  };
+}
+
 function readSetup(): StoredSetup {
   try {
     const parsed = JSON.parse(localStorage.getItem(setupStorageKey) || 'null') as Partial<StoredSetup> | null;
-    return parsed?.away && parsed.home && parsed.weather ? { ...DEFAULT_SETUP, ...parsed } : DEFAULT_SETUP;
+    return parsed?.away && parsed.home && parsed.weather ? normalizeSetup({ ...DEFAULT_SETUP, ...parsed }) : DEFAULT_SETUP;
   } catch { return DEFAULT_SETUP; }
 }
 function readSaved(): SavedSimulation[] {
@@ -83,7 +76,7 @@ function App() {
     return () => window.clearTimeout(timer);
   }, [notice]);
 
-  const patchTeam = (side: 'away' | 'home', field: keyof TeamSetup, value: string | number) => {
+  const patchTeam: PatchTeam = (side, field, value) => {
     setSetup(current => ({ ...current, [side]: { ...current[side], [field]: value } }));
   };
   const runSimulation = () => {
@@ -104,6 +97,7 @@ function App() {
           awayName: setup.away.name,
           homeName: setup.home.name,
           result,
+          setup: structuredClone(setup),
         };
         setSaved(current => [entry, ...current.filter(item => item.id !== entry.id)].slice(0, 10));
         setNotice('Simulation complete. Result saved to this device.');
@@ -115,6 +109,7 @@ function App() {
   const openSaved = (item: SavedSimulation) => {
     setActive(item.result);
     setActiveNames({ away: item.awayName, home: item.homeName });
+    if (item.setup) setSetup(normalizeSetup(item.setup));
     setError('');
     setNotice('Saved result reopened.');
   };
@@ -124,7 +119,6 @@ function App() {
   };
   const currentAwayName = activeNames?.away || setup.away.name;
   const currentHomeName = activeNames?.home || setup.home.name;
-  const isTie = active && active.homeScore === active.awayScore;
 
   return (
     <div className="app-shell">
@@ -156,7 +150,7 @@ function App() {
             <div className="config-bottom">
               <h3 className="section-mini-title">GAME CONDITIONS</h3>
               <div className="weather-grid">
-                <Field label="Temperature" htmlFor="temperature"><input id="temperature" type="number" min="0" max="120" value={setup.weather.temperatureF} onChange={e => setSetup(s => ({ ...s, weather:{ ...s.weather, temperatureF:Number(e.target.value) } }))} data-testid="input-temperature" /></Field>
+                 <Field label="Temperature · °F" htmlFor="temperature"><input id="temperature" type="number" min="-30" max="120" value={setup.weather.temperatureF} onChange={e => setSetup(s => ({ ...s, weather:{ ...s.weather, temperatureF:Number(e.target.value) } }))} data-testid="input-temperature" /></Field>
                 <Field label="Wind · mph" htmlFor="wind"><input id="wind" type="number" min="0" max="80" value={setup.weather.windMph} onChange={e => setSetup(s => ({ ...s, weather:{ ...s.weather, windMph:Number(e.target.value) } }))} data-testid="input-wind" /></Field>
                 <Field label="Precipitation" htmlFor="precipitation">
                   <select id="precipitation" value={setup.weather.precipitation} onChange={e => setSetup(s => ({ ...s, weather:{ ...s.weather, precipitation:e.target.value as Weather['precipitation'] } }))} data-testid="select-precipitation">
@@ -200,7 +194,7 @@ function App() {
                   </div>
                 ))}</div>}
             </section>
-            <div className="footnote"><strong>Method note.</strong> Gridiron Sim is a stochastic estimate, not a prediction. It has no live roster, injury, weather, or statistics feed. Player labels and all team ratings are supplied by you; results are stored only in this browser.</div>
+             <div className="footnote"><strong>Method note.</strong> This is an experimental simulation, not a verified forecast. There is no live roster, injury, weather, or statistics feed. Replace the example player labels with current names. Optional recent stats shape workload and efficiency; context notes are displayed, not automatically analyzed. Results are stored only in this browser.</div>
           </div>
         </div>
       </main>
@@ -212,11 +206,12 @@ function App() {
 function Field({ label, htmlFor, children, full = false }: { label:string; htmlFor?:string; children:ReactNode; full?:boolean }) {
   return <div className={`field${full ? ' full' : ''}`}><label htmlFor={htmlFor}>{label}</label>{children}</div>;
 }
-function TeamEditor({ team, side, patchTeam }: { team:TeamSetup; side:'away'|'home'; patchTeam:(side:'away'|'home',field:keyof TeamSetup,value:string|number)=>void }) {
+function TeamEditor({ team, side, patchTeam }: { team:TeamSetup; side:'away'|'home'; patchTeam:PatchTeam }) {
   const label = side === 'away' ? 'AWAY TEAM' : 'HOME TEAM';
-  const fields: {key:'qb'|'rb'|'wr1'|'wr2'|'te'|'kicker'; label:string; placeholder:string}[] = [
+  const fields: {key:'qb'|'rb'|'wr1'|'wr2'|'wr3'|'te'|'kicker'; label:string; placeholder:string}[] = [
     {key:'qb',label:'Quarterback',placeholder:'QB name'}, {key:'rb',label:'Running back',placeholder:'RB name'},
     {key:'wr1',label:'Wide receiver 1',placeholder:'WR1 name'}, {key:'wr2',label:'Wide receiver 2',placeholder:'WR2 name'},
+    {key:'wr3',label:'Wide receiver 3',placeholder:'WR3 name'},
     {key:'te',label:'Tight end',placeholder:'TE name'}, {key:'kicker',label:'Kicker',placeholder:'K name'},
   ];
   const ratings: {key:'passRating'|'rushRating'|'defenseRating';label:string}[] = [
@@ -229,6 +224,7 @@ function TeamEditor({ team, side, patchTeam }: { team:TeamSetup; side:'away'|'ho
         <select id={`${side}-team`} value={team.name} onChange={e => patchTeam(side,'name',e.target.value)} data-testid={`select-${side}-team`}>
           {NFL_TEAMS.map(name => <option key={name} value={name}>{name}</option>)}
         </select>
+        <span className="input-help">Team selection does not load a roster. Update the example player names below.</span>
       </Field>
       {fields.map(field => <Field label={field.label} htmlFor={`${side}-${field.key}`} key={field.key}>
         <input id={`${side}-${field.key}`} value={team[field.key]} placeholder={field.placeholder} onChange={e => patchTeam(side,field.key,e.target.value)} data-testid={`input-${side}-${field.key}`} />
@@ -244,7 +240,79 @@ function TeamEditor({ team, side, patchTeam }: { team:TeamSetup; side:'away'|'ho
         <span className="rating-val">{team[rating.key]}</span>
       </div>)}
     </div>
+    <RecentStatsEditor team={team} side={side} patchTeam={patchTeam} />
   </div>;
+}
+
+type PlayerSlot = 'qb' | 'rb' | 'wr1' | 'wr2' | 'wr3' | 'te';
+const playerStatFields: Record<PlayerSlot, { key: keyof PlayerRecentStats; label: string }[]> = {
+  qb: [
+    { key: 'passAttempts', label: 'Pass attempts' }, { key: 'passCompletions', label: 'Completions' },
+    { key: 'passYards', label: 'Passing yards' }, { key: 'passTD', label: 'Passing TDs' },
+    { key: 'interceptions', label: 'INTs thrown' }, { key: 'rushAttempts', label: 'Carries' },
+    { key: 'rushYards', label: 'Rushing yards' }, { key: 'rushTD', label: 'Rushing TDs' },
+  ],
+  rb: [
+    { key: 'rushAttempts', label: 'Carries' }, { key: 'rushYards', label: 'Rushing yards' },
+    { key: 'rushTD', label: 'Rushing TDs' }, { key: 'targets', label: 'Targets' },
+    { key: 'receptions', label: 'Receptions' }, { key: 'receivingYards', label: 'Receiving yards' },
+    { key: 'receivingTD', label: 'Receiving TDs' },
+  ],
+  wr1: [], wr2: [], wr3: [], te: [],
+};
+const receivingFields: { key: keyof PlayerRecentStats; label: string }[] = [
+  { key: 'targets', label: 'Targets' }, { key: 'receptions', label: 'Receptions' },
+  { key: 'receivingYards', label: 'Receiving yards' }, { key: 'receivingTD', label: 'Receiving TDs' },
+];
+const defenseStatFields: { key: keyof DefenseRecentStats; label: string }[] = [
+  { key: 'passYardsAllowed', label: 'Pass yards allowed' },
+  { key: 'passTDAllowed', label: 'Pass TDs allowed' },
+  { key: 'rushYardsAllowed', label: 'Rush yards allowed' },
+  { key: 'rushTDAllowed', label: 'Rush TDs allowed' },
+  { key: 'interceptions', label: 'INTs made' },
+  { key: 'fumblesForced', label: 'Fumbles forced' },
+];
+
+function RecentStatsEditor({ team, side, patchTeam }: { team: TeamSetup; side: 'away' | 'home'; patchTeam: PatchTeam }) {
+  const slots: PlayerSlot[] = ['qb', 'rb', 'wr1', 'wr2', 'wr3', 'te'];
+  const count = Object.values(team.recentStats ?? {}).reduce((total, stats) => total + Object.values(stats).filter(value => value !== undefined).length, 0) +
+    Object.values(team.defenseRecent ?? {}).filter(value => value !== undefined).length;
+  const patchPlayer = (slot: PlayerSlot, field: keyof PlayerRecentStats, value: string) => {
+    patchTeam(side, 'recentStats', {
+      ...team.recentStats,
+      [slot]: { ...team.recentStats?.[slot], [field]: value === '' ? undefined : Number(value) },
+    });
+  };
+  return <details className="recent-stats">
+    <summary><SlidersHorizontal size={13} /> Recent stats <span>{count ? `${count} VALUES` : 'OPTIONAL'}</span><ChevronDown size={13} /></summary>
+    <p className="stats-help">Enter <strong>averages per game</strong>, preferably from the last 3–5 games. Add the game totals, divide by games played, and use decimals. Leave unknown values blank—not zero.</p>
+    {slots.map(slot => {
+      const fields = playerStatFields[slot].length ? playerStatFields[slot] : receivingFields;
+      return <details className="stat-player" key={slot}>
+        <summary>{slot.toUpperCase()} <strong>{team[slot] || 'Player'}</strong><ChevronDown size={12} /></summary>
+        <div className="stat-inputs">
+          {fields.map(field => <Field key={field.key} label={field.label} htmlFor={`${side}-${slot}-${field.key}`}>
+            <input id={`${side}-${slot}-${field.key}`} type="number" min="0" max="1000" step="0.1" placeholder="Avg / game"
+              value={team.recentStats?.[slot]?.[field.key] ?? ''}
+              onChange={event => patchPlayer(slot, field.key, event.target.value)}
+              data-testid={`stat-${side}-${slot}-${field.key}`} />
+          </Field>)}
+        </div>
+      </details>;
+    })}
+    <details className="stat-player">
+      <summary>DEF <strong>Team defense</strong><ChevronDown size={12} /></summary>
+      <p className="stats-help">Yards and TDs <strong>allowed to opponents</strong>; interceptions and fumbles <strong>created by this defense</strong>. All per game.</p>
+      <div className="stat-inputs">
+        {defenseStatFields.map(field => <Field key={field.key} label={field.label} htmlFor={`${side}-defense-${field.key}`}>
+          <input id={`${side}-defense-${field.key}`} type="number" min="0" max="1000" step="0.1" placeholder="Avg / game"
+            value={team.defenseRecent?.[field.key] ?? ''}
+            onChange={event => patchTeam(side, 'defenseRecent', { ...team.defenseRecent, [field.key]: event.target.value === '' ? undefined : Number(event.target.value) })}
+            data-testid={`stat-${side}-defense-${field.key}`} />
+        </Field>)}
+      </div>
+    </details>
+  </details>;
 }
 
 function SimulationResults({ result, awayName, homeName, onRun, busy }: { result:SimulationResult; awayName:string; homeName:string; onRun:()=>void; busy:boolean }) {
@@ -296,13 +364,13 @@ function SimulationResults({ result, awayName, homeName, onRun, busy }: { result
           <div className="content-heading" id="players-title"><Trophy size={15} className="heading-icon"/> HALF-PPR PROJECTIONS <span className="panel-index">{result.players.length} PLAYERS</span></div>
           <div className="player-table-wrap">
             <table className="player-table" data-testid="player-projections">
-              <thead><tr><th>Player</th><th>Pass<br/>Yds</th><th>Pass<br/>TD / INT</th><th>Rush<br/>Yds / TD</th><th>Rec<br/>REC / YDS / TD</th><th>FUM</th><th>½ PPR</th></tr></thead>
+               <thead><tr><th>Player</th><th>Pass<br/>Yds</th><th>Pass<br/>TD / INT</th><th>Rush<br/>Yds / TD</th><th>Rec<br/>REC / YDS / TD</th><th>FUM<br/>LOST</th><th>½ PPR</th></tr></thead>
               <tbody>{playersByTeam.map(([team,players]) => <FragmentGroup key={team} team={team} players={players}/>)}</tbody>
             </table>
           </div>
         </section>
       </div>
-      <div className="footnote"><strong>Reading the model.</strong> Half-PPR totals are stochastic estimates from this run’s seeded drive simulation. They are not sourced from live player or team data.</div>
+       <div className="footnote"><strong>Scoring.</strong> 0.5/catch, 1/10 rush or receiving yards, 1/25 passing yards, 4/passing TD, 6/rush or receiving TD. Turnovers are shown without point deductions, following your supplied rules. Kicking points are not included.</div>
     </div>
   </>;
 }

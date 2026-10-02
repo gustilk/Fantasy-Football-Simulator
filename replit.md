@@ -1,6 +1,6 @@
-# [Project name]
+# Gridiron Sim
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A repeatable NFL fantasy matchup lab with editable lineups, weather, recent offensive and defensive averages, drive logs, and Half-PPR outcomes.
 
 ## Run & Operate
 
@@ -9,7 +9,7 @@ _Replace the heading above with the project's name, and this line with one sente
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- The simulator runs in the browser and requires no external sports feed or user API keys.
 
 ## Stack
 
@@ -22,23 +22,32 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/gridiron-sim/src/App.tsx` — setup, recent-stat forms, results, and saved-run UI.
+- `artifacts/gridiron-sim/src/lib/simulator.ts` — seeded probability model and scoring rules.
+- `artifacts/gridiron-sim/src/index.css` — responsive visual styling.
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Recent statistics are entered as per-game averages, preferably over the last 3–5 games, and blended with baseline probabilities rather than treated as future box scores. **Why:** a small historical sample should inform the model without eliminating simulation variance.
+- Free-text injury/context notes are displayed but not automatically interpreted. **Why:** heuristic text parsing could silently misread availability; the user should adjust ratings explicitly.
+- No live NFL roster or injury feed is claimed. Example player labels must be updated by the user.
+- Half-PPR follows the user's exact supplied formula, which does not specify interception or fumble deductions. Kicking points are outside that formula.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- All 32 NFL team choices; editable QB, RB, WR1, WR2, WR3, TE, and kicker labels.
+- Optional recent offensive player averages and defensive averages allowed to opponents.
+- Fresh seeded runs, compact drive highlights, player stat/fantasy tables.
+- Settings and up to 10 runs persist in this browser; reopening a new saved run restores its input setup.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+The user wants a reusable simulator they can rerun at any time, with optional previous-game statistics informing fantasy-point estimates.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- This is an experimental scenario model, not a calibrated or backtested forecasting service.
+- Data is browser-local, not synchronized between devices. Clearing browser storage removes saved setups and runs.
 
 ## Pointers
 

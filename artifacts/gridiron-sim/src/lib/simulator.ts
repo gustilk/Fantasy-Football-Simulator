@@ -36,6 +36,7 @@ export interface TeamSetup {
   rb: string;
   wr1: string;
   wr2: string;
+  wr3: string;
   te: string;
   kicker: string;
   passRating: number;
@@ -47,6 +48,7 @@ export interface TeamSetup {
     rb?: PlayerRecentStats;
     wr1?: PlayerRecentStats;
     wr2?: PlayerRecentStats;
+    wr3?: PlayerRecentStats;
     te?: PlayerRecentStats;
   };
   defenseRecent?: DefenseRecentStats;
@@ -129,10 +131,6 @@ function makeRandom(seed: number): Random {
   };
 }
 
-function pick<T>(random: Random, values: readonly T[]): T {
-  return values[Math.floor(random() * values.length)]!;
-}
-
 function integerBetween(random: Random, min: number, max: number): number {
   return min + Math.floor(random() * (max - min + 1));
 }
@@ -183,6 +181,7 @@ function makeTeamSimulation(setup: TeamSetup): TeamSimulation {
       makePlayer(setup.rb, "RB", teamName),
       makePlayer(setup.wr1, "WR", teamName),
       makePlayer(setup.wr2, "WR", teamName),
+      makePlayer(setup.wr3?.trim() || "WR3", "WR", teamName),
       makePlayer(setup.te, "TE", teamName),
     ],
     drives: [],
@@ -194,33 +193,14 @@ function receiverFor(
   random: Random,
   redZone: boolean,
 ): PlayerAccumulator {
-  const slots = ["rb", "wr1", "wr2", "te"] as const;
-  const fallback = [0.22, 0.31, 0.26, 0.21];
+  const slots = ["rb", "wr1", "wr2", "wr3", "te"] as const;
+  const fallback = [4, 7, 5, 3, 4];
   const stats = team.setup.recentStats;
-  const knownTargets = slots
-    .map((slot) => stats?.[slot]?.targets)
-    .filter(supplied);
-  const fallbackKnownShare = slots.reduce(
-    (total, slot, index) =>
-      supplied(stats?.[slot]?.targets) ? total + fallback[index]! : total,
-    0,
-  );
-  const averageTargetRate =
-    knownTargets.length > 0
-      ? knownTargets.reduce((sum, target) => sum + target, 0) /
-        knownTargets.length
-      : 1;
-  const fallbackScale =
-    fallbackKnownShare > 0
-      ? knownTargets.reduce((sum, target) => sum + target, 0) /
-        fallbackKnownShare
-      : 1;
-
   const weighted = slots.map((slot, index) => {
     const playerStats = stats?.[slot];
     const recentTargetWeight = supplied(playerStats?.targets)
       ? playerStats.targets
-      : fallback[index]! * fallbackScale;
+      : fallback[index]!;
     const redZoneBoost =
       redZone && supplied(playerStats?.receivingTD)
         ? 1 + clamp(playerStats.receivingTD * 0.035, 0, 0.16)
@@ -228,16 +208,25 @@ function receiverFor(
     return recentTargetWeight * redZoneBoost;
   });
   const total = weighted.reduce((sum, value) => sum + value, 0);
-  const roll = random() * (total || 1);
+  const finalWeights = total > 0 ? weighted : fallback;
+  const roll = random() * finalWeights.reduce((sum, weight) => sum + weight, 0);
   let cumulative = 0;
   for (let index = 0; index < slots.length; index += 1) {
-    cumulative += weighted[index]!;
+    cumulative += finalWeights[index]!;
     if (roll < cumulative) {
       return team.players[index + 1]!;
     }
   }
-  void averageTargetRate;
-  return team.players[4]!;
+  return team.players[5]!;
+}
+
+function recentForPlayer(
+  team: TeamSimulation,
+  player: PlayerAccumulator,
+): PlayerRecentStats | undefined {
+  const slots = ["qb", "rb", "wr1", "wr2", "wr3", "te"] as const;
+  const slot = slots[team.players.indexOf(player)];
+  return slot ? team.setup.recentStats?.[slot] : undefined;
 }
 
 function runningBackFor(team: TeamSimulation, random: Random): PlayerAccumulator {
@@ -305,9 +294,12 @@ function simulateTeam(
   const coldPenalty = weather.temperatureF < 28 ? 0.025 : 0;
   const qbRecent = setup.recentStats?.qb;
   const defenseRecent = defense.defenseRecent;
+  const recentCarries = setup.recentStats?.rb?.rushAttempts;
   const recentPassingShare = supplied(qbRecent?.passAttempts)
     ? clamp(qbRecent.passAttempts / targetPlays, 0.4, 0.68)
-    : undefined;
+    : supplied(recentCarries)
+      ? clamp(1 - (recentCarries + (qbRecent?.rushAttempts ?? 3)) / targetPlays, 0.4, 0.68)
+      : undefined;
   const basePassShare = clamp(
     0.575 +
       (setup.passRating - setup.rushRating) * 0.0022 -
@@ -340,13 +332,16 @@ function simulateTeam(
   const rushDefenseFactor = supplied(defenseRecent?.rushYardsAllowed)
     ? clamp(blend(1, defenseRecent.rushYardsAllowed / 115, 0.36), 0.82, 1.2)
     : 1;
-  const passTouchdowns = [
-    qbRecent?.passTD,
+  const receiverTouchdowns = [
     setup.recentStats?.wr1?.receivingTD,
     setup.recentStats?.wr2?.receivingTD,
+    setup.recentStats?.wr3?.receivingTD,
     setup.recentStats?.te?.receivingTD,
     setup.recentStats?.rb?.receivingTD,
   ].filter(supplied).reduce((sum, value) => sum + value, 0);
+  const passTouchdowns = supplied(qbRecent?.passTD)
+    ? qbRecent.passTD
+    : receiverTouchdowns;
   const rushTouchdowns = [
     setup.recentStats?.qb?.rushTD,
     setup.recentStats?.rb?.rushTD,
@@ -378,7 +373,7 @@ function simulateTeam(
     for (let driveSnap = 0; driveSnap < maxSnaps; driveSnap += 1) {
       team.plays += 1;
       driveSnaps += 1;
-      const pass = random() < passShare;
+      const pass = random() < (yardsToGoal <= 15 ? redZonePassShare : passShare);
       let gain = 0;
       let turnover = false;
       let playText = "";
@@ -387,7 +382,23 @@ function simulateTeam(
 
       if (pass) {
         qb.attempts += 1;
-        const interceptionChance = clamp(0.022 - qbEdge * 0.00038, 0.009, 0.052);
+        const baselineInterceptionChance = 0.022 - qbEdge * 0.00038;
+        const recentInterceptionChance =
+          supplied(qbRecent?.interceptions) &&
+          supplied(qbRecent?.passAttempts) &&
+          qbRecent.passAttempts > 0
+            ? qbRecent.interceptions / qbRecent.passAttempts
+            : undefined;
+        const interceptionChance = clamp(
+          (recentInterceptionChance === undefined
+            ? baselineInterceptionChance
+            : blend(baselineInterceptionChance, recentInterceptionChance, 0.4)) +
+            (supplied(defenseRecent?.interceptions)
+              ? (defenseRecent.interceptions - 0.8) * 0.006
+              : 0),
+          0.006,
+          0.075,
+        );
         const sackChance = clamp(0.047 + (defense.defenseRating - setup.passRating) * 0.001, 0.025, 0.085);
 
         if (random() < interceptionChance) {
@@ -398,7 +409,9 @@ function simulateTeam(
           gain = -integerBetween(random, 3, 9);
           playText = `${qb.name} sacked for ${Math.abs(gain)} yards`;
         } else {
-          const completionChance = clamp(
+          const receiver = receiverFor(team, random, yardsToGoal <= 15);
+          const receiverRecent = recentForPlayer(team, receiver);
+          let completionChance = clamp(
             0.645 +
               qbEdge * 0.0024 +
               (isHome ? 0.012 : 0) -
@@ -408,21 +421,65 @@ function simulateTeam(
             0.39,
             0.76,
           );
+          if (
+            supplied(qbRecent?.passCompletions) &&
+            supplied(qbRecent?.passAttempts) &&
+            qbRecent.passAttempts > 0
+          ) {
+            completionChance = blend(
+              completionChance,
+              clamp(qbRecent.passCompletions / qbRecent.passAttempts, 0.3, 0.85),
+              0.32,
+            );
+          }
+          if (
+            supplied(receiverRecent?.receptions) &&
+            supplied(receiverRecent?.targets) &&
+            receiverRecent.targets > 0
+          ) {
+            completionChance = blend(
+              completionChance,
+              clamp(receiverRecent.receptions / receiverRecent.targets, 0.25, 0.9),
+              0.3,
+            );
+          }
+          if (yardsToGoal <= 15 && supplied(defenseRecent?.passTDAllowed)) {
+            completionChance += (defenseRecent.passTDAllowed - 1.4) * 0.025;
+          }
           if (random() >= completionChance) {
             playText = `${qb.name} pass incomplete`;
           } else {
-            const receiver = receiverFor(team, random);
-            gain = weightedPassYards(random);
-            const fumbled = random() < 0.009 + precipitation * 0.035;
+            const receiverEfficiency =
+              supplied(receiverRecent?.receivingYards) &&
+              supplied(receiverRecent?.receptions) &&
+              receiverRecent.receptions > 0
+                ? clamp(
+                    blend(1, receiverRecent.receivingYards / receiverRecent.receptions / 12, 0.4),
+                    0.65,
+                    1.4,
+                  )
+                : 1;
+            gain = Math.min(
+              yardsToGoal,
+              Math.max(1, Math.round(weightedPassYards(random) * passEfficiencyFactor * passDefenseFactor * receiverEfficiency)),
+            );
+            const fumbled = random() < clamp(
+              0.009 + precipitation * 0.035 +
+                (supplied(defenseRecent?.fumblesForced)
+                  ? (defenseRecent.fumblesForced - 0.7) * 0.004
+                  : 0),
+              0.002,
+              0.035,
+            );
+            qb.completions += 1;
+            qb.passYards += gain;
+            receiver.receptions += 1;
+            receiver.receivingYards += gain;
             if (fumbled) {
               receiver.fumblesLost += 1;
               turnover = true;
               playText = `${receiver.name} fumbles after a ${gain}-yard catch — recovered by the defense`;
             } else {
-              qb.completions += 1;
-              qb.passYards += gain;
-              receiver.receptions += 1;
-              receiver.receivingYards += gain;
               scorer = receiver;
               playText = `${qb.name} to ${receiver.name} for ${gain} yards`;
             }
@@ -430,14 +487,42 @@ function simulateTeam(
         }
       } else {
         const runner = runningBackFor(team, random);
-        gain = weightedRushYards(random, ratingEdge);
-        const fumbled = random() < 0.012 + precipitation * 0.045;
+        const runnerRecent = recentForPlayer(team, runner);
+        const runnerEfficiency =
+          supplied(runnerRecent?.rushYards) &&
+          supplied(runnerRecent?.rushAttempts) &&
+          runnerRecent.rushAttempts > 0
+            ? clamp(
+                blend(1, runnerRecent.rushYards / runnerRecent.rushAttempts / 4.5, 0.5),
+                0.65,
+                1.4,
+              )
+            : 1;
+        const goalLineDefense =
+          yardsToGoal <= 10 && supplied(defenseRecent?.rushTDAllowed)
+            ? clamp(1 + (defenseRecent.rushTDAllowed - 0.9) * 0.12, 0.8, 1.2)
+            : 1;
+        gain = Math.min(
+          yardsToGoal,
+          Math.round(
+            (weightedRushYards(random, ratingEdge) + ratingEdge * 0.035) *
+              runnerEfficiency * rushDefenseFactor * goalLineDefense,
+          ),
+        );
+        const fumbled = random() < clamp(
+          0.012 + precipitation * 0.045 +
+            (supplied(defenseRecent?.fumblesForced)
+              ? (defenseRecent.fumblesForced - 0.7) * 0.004
+              : 0),
+          0.003,
+          0.04,
+        );
+        runner.rushYards += gain;
         if (fumbled) {
           runner.fumblesLost += 1;
           turnover = true;
           playText = `${runner.name} fumbles after a ${Math.max(gain, 0)}-yard run — recovered by the defense`;
         } else {
-          runner.rushYards += gain;
           scorer = runner;
           playText = `${runner.name} runs for ${gain} yards`;
         }
@@ -561,11 +646,44 @@ function makeOverview(
     `Home field: ${home.setup.name} receives a small home-field edge in the model; ratings and weather have a larger effect.`,
     `${away.setup.name}: passing rating ${away.setup.passRating}, rushing rating ${away.setup.rushRating}, opposing-defense rating ${home.setup.defenseRating}. ${away.setup.context.trim() ? `Context supplied: ${away.setup.context.trim()}` : "No injury or trend notes supplied."}`,
     `${home.setup.name}: passing rating ${home.setup.passRating}, rushing rating ${home.setup.rushRating}, opposing-defense rating ${away.setup.defenseRating}. ${home.setup.context.trim() ? `Context supplied: ${home.setup.context.trim()}` : "No injury or trend notes supplied."}`,
+    `Recent stats: ${
+      [input.away, input.home].filter(team =>
+        Object.values(team.recentStats ?? {}).some(stats =>
+          Object.values(stats).some(supplied)) ||
+        Object.values(team.defenseRecent ?? {}).some(supplied),
+      ).map(team => team.name).join(" and ") || "none supplied"
+    }. Entered averages are blended with baseline rates, not treated as guaranteed outcomes. Context notes do not change probabilities; adjust ratings for injuries.`,
   ];
   return overview;
 }
 
 export function simulateGame(input: SimulationInput): SimulationResult {
+  if (input.away.name === input.home.name) {
+    throw new Error("Choose different teams for the away and home sides.");
+  }
+  if (
+    !Number.isFinite(input.weather.temperatureF) ||
+    input.weather.temperatureF < -30 || input.weather.temperatureF > 120 ||
+    !Number.isFinite(input.weather.windMph) ||
+    input.weather.windMph < 0 || input.weather.windMph > 80
+  ) {
+    throw new Error("Enter a temperature from -30 to 120°F and wind from 0 to 80 mph.");
+  }
+  for (const team of [input.away, input.home]) {
+    const stats = Object.values(team.recentStats ?? {});
+    const values = [...stats.flatMap(player => Object.values(player)), ...Object.values(team.defenseRecent ?? {})];
+    if (values.some(value => value !== undefined && (!Number.isFinite(value) || value < 0 || value > 1000))) {
+      throw new Error(`${team.name}: recent averages must be between 0 and 1,000.`);
+    }
+    for (const player of stats) {
+      if (supplied(player.passCompletions) && supplied(player.passAttempts) && player.passCompletions > player.passAttempts) {
+        throw new Error(`${team.name}: completions cannot exceed passing attempts.`);
+      }
+      if (supplied(player.receptions) && supplied(player.targets) && player.receptions > player.targets) {
+        throw new Error(`${team.name}: receptions cannot exceed targets.`);
+      }
+    }
+  }
   const seed =
     input.seed ??
     Math.floor(Math.random() * 0xffffffff) + 1;
