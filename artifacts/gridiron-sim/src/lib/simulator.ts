@@ -6,6 +6,30 @@ export interface WeatherSetup {
   precipitation: Precipitation;
 }
 
+export interface PlayerRecentStats {
+  passAttempts?: number;
+  passCompletions?: number;
+  passYards?: number;
+  passTD?: number;
+  interceptions?: number;
+  rushAttempts?: number;
+  rushYards?: number;
+  rushTD?: number;
+  targets?: number;
+  receptions?: number;
+  receivingYards?: number;
+  receivingTD?: number;
+}
+
+export interface DefenseRecentStats {
+  passYardsAllowed?: number;
+  passTDAllowed?: number;
+  rushYardsAllowed?: number;
+  rushTDAllowed?: number;
+  interceptions?: number;
+  fumblesForced?: number;
+}
+
 export interface TeamSetup {
   name: string;
   qb: string;
@@ -18,6 +42,14 @@ export interface TeamSetup {
   rushRating: number;
   defenseRating: number;
   context: string;
+  recentStats?: {
+    qb?: PlayerRecentStats;
+    rb?: PlayerRecentStats;
+    wr1?: PlayerRecentStats;
+    wr2?: PlayerRecentStats;
+    te?: PlayerRecentStats;
+  };
+  defenseRecent?: DefenseRecentStats;
 }
 
 export interface SimulationInput {
@@ -109,6 +141,14 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
+function supplied(value: number | undefined): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+function blend(baseline: number, recent: number, recentWeight = 0.4): number {
+  return baseline * (1 - recentWeight) + recent * recentWeight;
+}
+
 function makePlayer(
   name: string,
   position: string,
@@ -149,19 +189,71 @@ function makeTeamSimulation(setup: TeamSetup): TeamSimulation {
   };
 }
 
-function receiverFor(team: TeamSimulation, random: Random): PlayerAccumulator {
-  const [rb, wr1, wr2, te] = team.players.slice(1);
-  const roll = random();
-  if (roll < 0.22) return rb!;
-  if (roll < 0.53) return wr1!;
-  if (roll < 0.79) return wr2!;
-  return te!;
+function receiverFor(
+  team: TeamSimulation,
+  random: Random,
+  redZone: boolean,
+): PlayerAccumulator {
+  const slots = ["rb", "wr1", "wr2", "te"] as const;
+  const fallback = [0.22, 0.31, 0.26, 0.21];
+  const stats = team.setup.recentStats;
+  const knownTargets = slots
+    .map((slot) => stats?.[slot]?.targets)
+    .filter(supplied);
+  const fallbackKnownShare = slots.reduce(
+    (total, slot, index) =>
+      supplied(stats?.[slot]?.targets) ? total + fallback[index]! : total,
+    0,
+  );
+  const averageTargetRate =
+    knownTargets.length > 0
+      ? knownTargets.reduce((sum, target) => sum + target, 0) /
+        knownTargets.length
+      : 1;
+  const fallbackScale =
+    fallbackKnownShare > 0
+      ? knownTargets.reduce((sum, target) => sum + target, 0) /
+        fallbackKnownShare
+      : 1;
+
+  const weighted = slots.map((slot, index) => {
+    const playerStats = stats?.[slot];
+    const recentTargetWeight = supplied(playerStats?.targets)
+      ? playerStats.targets
+      : fallback[index]! * fallbackScale;
+    const redZoneBoost =
+      redZone && supplied(playerStats?.receivingTD)
+        ? 1 + clamp(playerStats.receivingTD * 0.035, 0, 0.16)
+        : 1;
+    return recentTargetWeight * redZoneBoost;
+  });
+  const total = weighted.reduce((sum, value) => sum + value, 0);
+  const roll = random() * (total || 1);
+  let cumulative = 0;
+  for (let index = 0; index < slots.length; index += 1) {
+    cumulative += weighted[index]!;
+    if (roll < cumulative) {
+      return team.players[index + 1]!;
+    }
+  }
+  void averageTargetRate;
+  return team.players[4]!;
 }
 
 function runningBackFor(team: TeamSimulation, random: Random): PlayerAccumulator {
   const qb = team.players[0]!;
   const rb = team.players[1]!;
-  return random() < 0.09 ? qb : rb;
+  const qbCarries = team.setup.recentStats?.qb?.rushAttempts;
+  const rbCarries = team.setup.recentStats?.rb?.rushAttempts;
+  let qbShare = 0.09;
+  if (supplied(qbCarries) && supplied(rbCarries) && qbCarries + rbCarries > 0) {
+    qbShare = qbCarries / (qbCarries + rbCarries);
+  } else if (supplied(qbCarries)) {
+    qbShare = qbCarries / (qbCarries + 20);
+  } else if (supplied(rbCarries) && rbCarries > 0) {
+    qbShare = 0.09 * (20 / rbCarries);
+  }
+  return random() < clamp(qbShare, 0.025, 0.4) ? qb : rb;
 }
 
 function weightedPassYards(random: Random): number {
@@ -211,7 +303,12 @@ function simulateTeam(
   const precipitation = precipImpact[weather.precipitation];
   const windPenalty = clamp(weather.windMph * 0.0018, 0, 0.19);
   const coldPenalty = weather.temperatureF < 28 ? 0.025 : 0;
-  const passShare = clamp(
+  const qbRecent = setup.recentStats?.qb;
+  const defenseRecent = defense.defenseRecent;
+  const recentPassingShare = supplied(qbRecent?.passAttempts)
+    ? clamp(qbRecent.passAttempts / targetPlays, 0.4, 0.68)
+    : undefined;
+  const basePassShare = clamp(
     0.575 +
       (setup.passRating - setup.rushRating) * 0.0022 -
       windPenalty * 0.6 -
@@ -220,7 +317,53 @@ function simulateTeam(
     0.4,
     0.68,
   );
+  const passShare = clamp(
+    recentPassingShare === undefined
+      ? basePassShare
+      : blend(basePassShare, recentPassingShare, 0.42),
+    0.4,
+    0.68,
+  );
   const ratingEdge = setup.rushRating - defense.defenseRating;
+  const passYardsPerAttempt =
+    supplied(qbRecent?.passYards) && supplied(qbRecent?.passAttempts) &&
+    qbRecent.passAttempts > 0
+      ? qbRecent.passYards / qbRecent.passAttempts
+      : undefined;
+  const passEfficiencyFactor =
+    passYardsPerAttempt === undefined
+      ? 1
+      : clamp(blend(1, passYardsPerAttempt / 7, 0.42), 0.8, 1.22);
+  const passDefenseFactor = supplied(defenseRecent?.passYardsAllowed)
+    ? clamp(blend(1, defenseRecent.passYardsAllowed / 225, 0.36), 0.82, 1.2)
+    : 1;
+  const rushDefenseFactor = supplied(defenseRecent?.rushYardsAllowed)
+    ? clamp(blend(1, defenseRecent.rushYardsAllowed / 115, 0.36), 0.82, 1.2)
+    : 1;
+  const passTouchdowns = [
+    qbRecent?.passTD,
+    setup.recentStats?.wr1?.receivingTD,
+    setup.recentStats?.wr2?.receivingTD,
+    setup.recentStats?.te?.receivingTD,
+    setup.recentStats?.rb?.receivingTD,
+  ].filter(supplied).reduce((sum, value) => sum + value, 0);
+  const rushTouchdowns = [
+    setup.recentStats?.qb?.rushTD,
+    setup.recentStats?.rb?.rushTD,
+  ].filter(supplied).reduce((sum, value) => sum + value, 0);
+  const knownRecentTouchdowns = passTouchdowns + rushTouchdowns;
+  const redZonePassShare =
+    knownRecentTouchdowns > 0
+      ? clamp(
+          blend(
+            passShare,
+            passTouchdowns / knownRecentTouchdowns,
+            0.18,
+          ),
+          0.3,
+          0.76,
+        )
+      : passShare;
 
   while (team.plays < targetPlays) {
     let yardsToGoal = integerBetween(random, 66, 78);
