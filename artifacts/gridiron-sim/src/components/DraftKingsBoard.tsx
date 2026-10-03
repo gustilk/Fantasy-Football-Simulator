@@ -63,7 +63,7 @@ export default function DraftKingsBoard({ season }: { season: number }) {
   const hist = groupDKPlayers(c.actualHistory.filter(p => p.weeks.length > 0).sort((a, b) =>
     a.recordedTotal === null ? (b.recordedTotal === null ? a.name.localeCompare(b.name) : 1)
       : b.recordedTotal === null ? -1 : b.recordedTotal - a.recordedTotal || a.name.localeCompare(b.name)));
-  const LIMIT = 10;
+  const LIMIT = view === 'projected' ? 20 : 10;
   const projAll = grouped.find(g => g.position === pos)?.players ?? [];
   const histAll = hist.find(h => h.position === pos)?.players ?? [];
   const projList = all ? projAll : projAll.slice(0, LIMIT);
@@ -119,7 +119,7 @@ export default function DraftKingsBoard({ season }: { season: number }) {
               <td>{r.actual ? `${fmt(r.actual.points)}${r.actual.partial ? '*' : ''}` : 'not recorded'}</td>
               <td>{r.difference === null ? (r.actual?.partial ? 'partial' : '–') : `${r.difference > 0 ? '+' : ''}${r.difference.toFixed(2)}`}</td></>}</tr>)}
           {projAll.length === 0 && <tr><td colSpan={detail ? 5 : 2}>No players.</td></tr>}</tbody></table></div>
-        <p className="dk-muted">Highest mean first. Ranges and actual comparisons appear under Details above.</p>
+        <p className="dk-muted">Highest mean first; no minimum points. Ranges and actual comparisons appear under Details above.</p>
       </div>) :
       <div className="dk-list">
         <p className="dk-short" data-testid="dk-partial-note">* partial estimate: recorded games only, unknown games are not counted as zero.

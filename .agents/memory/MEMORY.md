@@ -3,3 +3,4 @@
 - [Personal-use scope](personal-use-scope.md) — personal-use app whose stated purpose is supporting DraftKings fantasy-point decisions.
 - [TypeScript tests](typescript-test-runtime.md) — prefer native Node TypeScript tests here; do not assume a tsx executable is available.
 - [Elite-tier intent](elite-player-intent.md) — 1x/2x/3x mean +20%/+40%/+60% opportunity priority, not point multipliers; include rushing quarterbacks.
+- [Projection display intent](projection-display-intent.md) — 20 refers to player count, not a 20-point eligibility threshold.

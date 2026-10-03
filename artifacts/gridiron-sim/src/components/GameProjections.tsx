@@ -27,13 +27,13 @@ export default function GameProjections({ result, awayName, homeName, onRun, bus
         </div>
         <div className="sim-list-heading"><span>Player</span><span>Projected DK</span></div>
         <ol className="sim-player-list" data-testid="player-projections">
-          {(expanded ? shown : shown.slice(0, 10)).map((player, index) => <li key={player.id} data-testid={`projection-${player.id}`}>
+          {(expanded ? shown : shown.slice(0, 20)).map((player, index) => <li key={player.id} data-testid={`projection-${player.id}`}>
             <span className="sim-player-rank">{index + 1}</span>
              <div><strong>{player.name}</strong><EliteBadge player={player} /><span>{player.team}</span></div>
             <strong className="sim-player-points">{player.mean.toFixed(2)}</strong>
           </li>)}
         </ol>
-        {shown.length > 10 && <button className="btn-secondary" onClick={() => setExpanded(value => !value)}>{expanded ? 'Show top 10' : `Show all ${shown.length} players`}</button>}
+        {shown.length > 20 && <button className="btn-secondary" onClick={() => setExpanded(value => !value)}>{expanded ? 'Show top 20' : `Show all ${shown.length} players`}</button>}
         {!shown.length && <p className="sim-caption">No {position} players were included in this run.</p>}
       </>}
     </div>
