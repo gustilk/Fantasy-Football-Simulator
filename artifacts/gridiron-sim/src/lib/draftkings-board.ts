@@ -19,6 +19,7 @@ export interface DKProjection {
   name: string;
   team: string;
   position: DKPosition;
+  elite1x?: boolean;
   mean: number;
   p10: number;
   p90: number;
@@ -141,6 +142,7 @@ export function gameForecast(game: NflScheduledGame, input: SimulationInput, res
     if (matches.length !== 1) throw new Error(`Cannot uniquely identify ${player.name} in the saved roster.`);
     return {
       playerId: matches[0]!.id, name: player.name, team: player.team, position: player.position as DKPosition,
+      elite1x: player.elite1x === true,
       mean: summary.mean, p10: summary.p10, p90: summary.p90,
     };
   });

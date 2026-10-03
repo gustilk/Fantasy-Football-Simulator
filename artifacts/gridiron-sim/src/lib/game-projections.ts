@@ -11,6 +11,7 @@ export function gameProjections(result: SimulationResult) {
     name: player.name,
     team: player.team,
     position: player.position,
+    elite1x: player.elite1x === true,
     mean: ensemble.fantasy[index].mean,
   })).filter(player => ['QB', 'RB', 'WR', 'TE'].includes(player.position))
     .sort((a, b) => b.mean - a.mean);

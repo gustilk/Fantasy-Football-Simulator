@@ -1,4 +1,7 @@
 .game-simulator { max-width:1120px; margin:0 auto; }
+.elite-1x-badge { display:inline-block; margin-left:6px; padding:2px 6px; border-radius:5px; background:var(--app-away); color:var(--app-card); font-size:11px; font-weight:700; vertical-align:middle; }
+.game-simulator .elite-1x-toggle { display:flex; align-items:center; gap:7px; font-size:12px; text-transform:none; letter-spacing:0; margin-top:6px; }
+.game-simulator .elite-1x-toggle input { width:18px; height:18px; min-height:18px; accent-color:var(--app-away); }
 .game-simulator .page-heading { margin-bottom:22px; }
 .game-simulator .page-heading h1 { font-size:32px; margin:0 0 8px; }
 .game-simulator .main-grid { grid-template-columns:minmax(0,360px) minmax(0,1fr); gap:22px; }

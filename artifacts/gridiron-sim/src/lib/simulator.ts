@@ -3,6 +3,7 @@ import { getDivision, isDivisionGame } from "./nfl-divisions";
 import type { AvailabilityCheck } from "./availability";
 import type { historyStrength, playerUsage } from "./history-signals";
 import type { MarketOdds, MarketEvidence } from "./market-odds";
+import { isElite1x, eliteOpportunityWeight } from "./elite-players";
 
 export type Precipitation = "none" | "light" | "moderate" | "heavy";
 
@@ -46,6 +47,7 @@ export interface SimulationRosterPlayer {
   depthRank?: number;
   depthRankBasis?: "ESPN" | "saved" | "usage";
   historyObservations?: number;
+  elite1x?: boolean;
   usage?: ReturnType<typeof playerUsage>;
 }
 
@@ -62,6 +64,7 @@ export interface TeamSetup {
   rushRating: number;
   defenseRating: number;
   context: string;
+  elite1x?: Partial<Record<"qb" | "rb" | "wr1" | "wr2" | "wr3" | "te", boolean>>;
   recentStats?: {
     qb?: PlayerRecentStats;
     rb?: PlayerRecentStats;
@@ -107,6 +110,7 @@ export interface PlayerProjection {
   position: string;
   team: string;
   depthRank?: number;
+  elite1x?: boolean;
   passYards: number;
   passTD: number;
   interceptions: number;
@@ -202,6 +206,7 @@ function makePlayer(
     position,
     team,
     depthRank,
+    elite1x: isElite1x({ name, position }),
     passYards: 0,
     passTD: 0,
     interceptions: 0,
@@ -229,6 +234,7 @@ function makeTeamSimulation(setup: TeamSetup): TeamSimulation {
       return {
         ...makePlayer(player.name, player.position, teamName, player.depthRank ?? ranks[player.position]),
         id: player.id,
+        elite1x: isElite1x(player),
         recentStats: player.recentStats, historyObservations: player.historyObservations, usage: player.usage,
       };
     }) : [
@@ -238,7 +244,10 @@ function makeTeamSimulation(setup: TeamSetup): TeamSimulation {
       makePlayer(setup.wr2, "WR", teamName, 2),
       makePlayer(setup.wr3?.trim() || "WR3", "WR", teamName, 3),
       makePlayer(setup.te, "TE", teamName),
-    ],
+    ].map((player, index) => {
+      const slot = (["qb", "rb", "wr1", "wr2", "wr3", "te"] as const)[index]!;
+      return { ...player, elite1x: isElite1x({ ...player, elite1x: setup.elite1x?.[slot] }) };
+    }),
     drives: [],
   };
 }
@@ -261,7 +270,7 @@ function receiverFor(
       redZone && supplied(playerStats?.receivingTD)
         ? 1 + clamp(playerStats.receivingTD * 0.035, 0, 0.16)
         : 1;
-    return recentTargetWeight * redZoneBoost;
+    return eliteOpportunityWeight(recentTargetWeight * redZoneBoost, !!player.elite1x);
   });
   const total = weighted.reduce((sum, value) => sum + value, 0);
   const finalWeights = total > 0 ? weighted : fallback;
@@ -321,6 +330,7 @@ function runningBackFor(team: TeamSimulation, random: Random): PlayerAccumulator
       return carries === undefined ? defaults[index]! : roleGuidedWeight(defaults[index]!, carries, reliability);
     });
     if (weights.every(weight => weight === 0)) weights = defaults;
+    weights = weights.map((weight, index) => eliteOpportunityWeight(weight, !!runners[index]!.elite1x));
     let roll = random() * weights.reduce((sum, weight) => sum + weight, 0);
     for (let i = 0; i < runners.length; i++) {
       roll -= weights[i]!;
@@ -340,7 +350,10 @@ function runningBackFor(team: TeamSimulation, random: Random): PlayerAccumulator
   } else if (supplied(rbCarries) && rbCarries > 0) {
     qbShare = 0.09 * (20 / rbCarries);
   }
-  return random() < clamp(qbShare, 0.025, 0.4) ? qb : rb;
+  const baseShare = clamp(qbShare, 0.025, 0.4);
+  const qbWeight = eliteOpportunityWeight(baseShare, !!qb.elite1x);
+  const rbWeight = eliteOpportunityWeight(1 - baseShare, !!rb.elite1x);
+  return random() < qbWeight / (qbWeight + rbWeight) ? qb : rb;
 }
 
 function weightedPassYards(random: Random): number {

@@ -25,6 +25,8 @@ export interface RosterPlayer {
   position: RosterPlayerPosition;
   side: RosterPlayerSide;
   active: boolean;
+  /** Optional manual 1x preference. True gives 20% higher target/carry selection weight; false disables the researched default. Omitted uses the approved name-and-position list. */
+  elite1x?: boolean;
   source?: NflDataSource;
   sourcePosition?: string;
   availability?: string;

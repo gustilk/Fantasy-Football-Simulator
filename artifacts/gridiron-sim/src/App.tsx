@@ -16,6 +16,7 @@ import { withDepthChart } from '@/lib/depth-chart';
 import DraftKingsBoard from '@/components/DraftKingsBoard';
 import './season.css';
 import './components/game-simulator.css';
+import { isElite1x } from '@/lib/elite-players';
 
 type SavedSimulation = { id: string; savedAt: string; awayName: string; homeName: string; result: SimulationResult; setup?: StoredSetup };
 type StoredSetup = { away: TeamSetup; home: TeamSetup; weather: Weather; importance?: SimulationInput['importance']; market?: SimulationInput['market'] };
@@ -368,6 +369,10 @@ function TeamEditor({ team, side, patchTeam }: { team:TeamSetup; side:'away'|'ho
       </Field>
       {fields.map(field => <Field label={field.label} htmlFor={`${side}-${field.key}`} key={field.key}>
         <input id={`${side}-${field.key}`} value={team[field.key]} placeholder={field.placeholder} onChange={e => patchTeam(side,field.key,e.target.value)} data-testid={`input-${side}-${field.key}`} />
+         {field.key !== 'kicker' && <label className="elite-1x-toggle">
+           <input type="checkbox" aria-label={`1x elite priority for ${side} ${field.label}`} checked={isElite1x({ name: team[field.key], position: field.key === 'qb' ? 'QB' : field.key === 'rb' ? 'RB' : field.key === 'te' ? 'TE' : 'WR', elite1x: team.elite1x?.[field.key] })}
+             onChange={e => patchTeam(side, 'elite1x', { ...team.elite1x, [field.key]: e.target.checked })} /> 1x elite · +20% priority
+         </label>}
       </Field>)}
       <Field label="Context / injuries" htmlFor={`${side}-context`} full>
         <textarea id={`${side}-context`} value={team.context} maxLength={220} placeholder="Add player availability, role notes, or matchup context…" onChange={e => patchTeam(side,'context',e.target.value)} data-testid={`input-${side}-context`} />

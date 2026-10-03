@@ -225,6 +225,9 @@ components:
         position: { type: string, enum: [QB, RB, WR, TE, K, OL, DL, EDGE, LB, CB, S, OTHER] }
         side: { type: string, enum: [offense, defense] }
         active: { type: boolean }
+        elite1x:
+          type: boolean
+          description: Optional manual 1x preference. True gives 20% higher target/carry selection weight; false disables the researched default. Omitted uses the approved name-and-position list.
         source: { $ref: "#/components/schemas/NflDataSource" }
         sourcePosition: { type: string }
         availability: { type: string }

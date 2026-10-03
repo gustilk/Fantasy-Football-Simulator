@@ -28,7 +28,7 @@ export default function GameProjections({ result, awayName, homeName, onRun, bus
         <ol className="sim-player-list" data-testid="player-projections">
           {(expanded ? shown : shown.slice(0, 10)).map((player, index) => <li key={player.id} data-testid={`projection-${player.id}`}>
             <span className="sim-player-rank">{index + 1}</span>
-            <div><strong>{player.name}</strong><span>{player.team}</span></div>
+             <div><strong>{player.name}</strong>{player.elite1x && <small className="elite-1x-badge" title="1x: 20% higher opportunity priority">1x</small>}<span>{player.team}</span></div>
             <strong className="sim-player-points">{player.mean.toFixed(2)}</strong>
           </li>)}
         </ol>

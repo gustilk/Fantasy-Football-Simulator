@@ -103,6 +103,7 @@ export const ListSeasonTeamsResponseItem = zod.object({
   "position": zod.enum(['QB', 'RB', 'WR', 'TE', 'K', 'OL', 'DL', 'EDGE', 'LB', 'CB', 'S', 'OTHER']),
   "side": zod.enum(['offense', 'defense']),
   "active": zod.boolean(),
+  "elite1x": zod.boolean().optional().describe('Optional manual 1x preference. True gives 20% higher target/carry selection weight; false disables the researched default. Omitted uses the approved name-and-position list.'),
   "source": zod.object({
   "provider": zod.enum(['ESPN']),
   "url": zod.string().url(),
@@ -214,6 +215,7 @@ export const SaveSeasonTeamBody = zod.object({
   "position": zod.enum(['QB', 'RB', 'WR', 'TE', 'K', 'OL', 'DL', 'EDGE', 'LB', 'CB', 'S', 'OTHER']),
   "side": zod.enum(['offense', 'defense']),
   "active": zod.boolean(),
+  "elite1x": zod.boolean().optional().describe('Optional manual 1x preference. True gives 20% higher target/carry selection weight; false disables the researched default. Omitted uses the approved name-and-position list.'),
   "source": zod.object({
   "provider": zod.enum(['ESPN']),
   "url": zod.string().url(),
@@ -304,6 +306,7 @@ export const SaveSeasonTeamResponse = zod.object({
   "position": zod.enum(['QB', 'RB', 'WR', 'TE', 'K', 'OL', 'DL', 'EDGE', 'LB', 'CB', 'S', 'OTHER']),
   "side": zod.enum(['offense', 'defense']),
   "active": zod.boolean(),
+  "elite1x": zod.boolean().optional().describe('Optional manual 1x preference. True gives 20% higher target/carry selection weight; false disables the researched default. Omitted uses the approved name-and-position list.'),
   "source": zod.object({
   "provider": zod.enum(['ESPN']),
   "url": zod.string().url(),
@@ -420,6 +423,7 @@ export const PreviewNflTeamResponse = zod.object({
   "position": zod.enum(['QB', 'RB', 'WR', 'TE', 'K', 'OL', 'DL', 'EDGE', 'LB', 'CB', 'S', 'OTHER']),
   "side": zod.enum(['offense', 'defense']),
   "active": zod.boolean(),
+  "elite1x": zod.boolean().optional().describe('Optional manual 1x preference. True gives 20% higher target/carry selection weight; false disables the researched default. Omitted uses the approved name-and-position list.'),
   "source": zod.object({
   "provider": zod.enum(['ESPN']),
   "url": zod.string().url(),
