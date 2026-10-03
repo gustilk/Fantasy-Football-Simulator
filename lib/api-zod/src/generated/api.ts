@@ -9,6 +9,39 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Upcoming announced NFL matchups for all teams in a season
+ */
+export const getNflSchedulePathSeasonMin = 2000;
+export const getNflSchedulePathSeasonMax = 2100;
+
+
+
+export const GetNflScheduleParams = zod.object({
+  "season": zod.coerce.number().int().min(getNflSchedulePathSeasonMin).max(getNflSchedulePathSeasonMax)
+})
+
+export const getNflScheduleResponseGamesItemWeekMax = 22;
+
+
+
+export const GetNflScheduleResponse = zod.object({
+  "season": zod.number().int(),
+  "fetchedAt": zod.string(),
+  "sourceUrl": zod.string(),
+  "unannouncedGames": zod.number().int(),
+  "games": zod.array(zod.object({
+  "id": zod.string(),
+  "awayTeam": zod.string(),
+  "homeTeam": zod.string(),
+  "date": zod.string(),
+  "timeConfirmed": zod.boolean(),
+  "week": zod.number().int().min(1).max(getNflScheduleResponseGamesItemWeekMax),
+  "seasonType": zod.enum(['regular', 'postseason'])
+}))
+})
+
+
+/**
  * Returns server health status
  * @summary Health check
  */

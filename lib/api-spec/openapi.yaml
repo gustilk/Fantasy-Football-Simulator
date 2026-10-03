@@ -11,6 +11,31 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /nfl-schedule/{season}:
+    get:
+      operationId: getNflSchedule
+      summary: Upcoming announced NFL matchups for all teams in a season
+      parameters:
+        - in: path
+          name: season
+          required: true
+          schema: { type: integer, minimum: 2000, maximum: 2100 }
+      responses:
+        "200":
+          description: Public schedule with confirmed home and away teams
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NflSchedule" }
+        "400":
+          description: Invalid season
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeasonError" }
+        "502":
+          description: Public source unavailable or incomplete
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeasonError" }
   /healthz:
     get:
       operationId: healthCheck
@@ -148,6 +173,28 @@ paths:
               schema: { $ref: "#/components/schemas/SeasonError" }
 components:
   schemas:
+    NflScheduledGame:
+      type: object
+      required: [id, awayTeam, homeTeam, date, timeConfirmed, week, seasonType]
+      properties:
+        id: { type: string }
+        awayTeam: { type: string }
+        homeTeam: { type: string }
+        date: { type: string }
+        timeConfirmed: { type: boolean }
+        week: { type: integer, minimum: 1, maximum: 22 }
+        seasonType: { type: string, enum: [regular, postseason] }
+    NflSchedule:
+      type: object
+      required: [season, fetchedAt, sourceUrl, games, unannouncedGames]
+      properties:
+        season: { type: integer }
+        fetchedAt: { type: string }
+        sourceUrl: { type: string }
+        unannouncedGames: { type: integer }
+        games:
+          type: array
+          items: { $ref: "#/components/schemas/NflScheduledGame" }
     HealthStatus:
       type: object
       properties:

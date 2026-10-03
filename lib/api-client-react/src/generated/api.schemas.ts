@@ -5,6 +5,36 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type NflScheduledGameSeasonType = typeof NflScheduledGameSeasonType[keyof typeof NflScheduledGameSeasonType];
+
+
+export const NflScheduledGameSeasonType = {
+  regular: 'regular',
+  postseason: 'postseason',
+} as const;
+
+export interface NflScheduledGame {
+  id: string;
+  awayTeam: string;
+  homeTeam: string;
+  date: string;
+  timeConfirmed: boolean;
+  /**
+     * @minimum 1
+     * @maximum 22
+     */
+  week: number;
+  seasonType: NflScheduledGameSeasonType;
+}
+
+export interface NflSchedule {
+  season: number;
+  fetchedAt: string;
+  sourceUrl: string;
+  unannouncedGames: number;
+  games: NflScheduledGame[];
+}
+
 export interface HealthStatus {
   status: string;
 }

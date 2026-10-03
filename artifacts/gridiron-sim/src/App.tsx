@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Activity, ArrowRight, Bookmark, ChevronDown, CircleHelp, Cloud, CloudRain, Crosshair, RotateCw, Shield, SlidersHorizontal, Trash2, Trophy, Wind } from 'lucide-react';
 import { type WeatherSetup as Weather, type TeamSetup, type SimulationInput, type SimulationResult, type PlayerProjection as SimPlayer, type PlayerRecentStats, type DefenseRecentStats } from '@/lib/simulator';
-import { useListSeasonTeams, useGetNflDepthChart, getGetNflDepthChartQueryKey, getListSeasonTeamsQueryKey, type TeamSeasonRecord } from '@workspace/api-client-react';
+import { useListSeasonTeams, useGetNflDepthChart, getGetNflDepthChartQueryKey, getListSeasonTeamsQueryKey, type TeamSeasonRecord, type NflScheduledGame } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import TeamLibrary from '@/components/TeamLibrary';
 import HistoryTeamPicker from '@/components/HistoryTeamPicker';
@@ -11,6 +11,7 @@ import { calculateDraftKings, DRAFTKINGS_RULES_URL } from '@/lib/draftkings';
 import { NFL_TEAM_NAMES } from '@/lib/nfl-divisions';
 import DivisionMatchup from '@/components/DivisionMatchup';
 import FantasyLeaders from '@/components/FantasyLeaders';
+import UpcomingGames from '@/components/UpcomingGames';
 import { withDepthChart } from '@/lib/depth-chart';
 import './season.css';
 
@@ -100,6 +101,18 @@ function App() {
 
   const patchTeam: PatchTeam = (side, field, value) => {
     setSetup(current => ({ ...current, [side]: { ...current[side], [field]: value } }));
+  };
+  const selectScheduledGame = (game: NflScheduledGame) => {
+    setSource('library');
+    setWeek(game.week);
+    setSetup(current => ({
+      ...current,
+      away: { ...current.away, name: game.awayTeam },
+      home: { ...current.home, name: game.homeTeam },
+      importance: game.seasonType === 'postseason' ? 'playoff' : 'regular',
+    }));
+    setError('');
+    setNotice(`${game.awayTeam} at ${game.homeTeam} selected. Saved roster and history will be used.`);
   };
   const runSimulation = () => {
     setBusy(true);
@@ -210,6 +223,7 @@ function App() {
               <div className="panel-title" id="setup-title">MATCHUP SETUP</div>
               <div className="panel-index">01 / CONFIGURE</div>
             </div>
+            <UpcomingGames season={season} enabled={tab === 'simulator'} busy={busy} teams={storedTeams.map(team => team.team)} selectedMatchup={source === 'library' ? { away: setup.away.name, home: setup.home.name, week } : null} onSelect={selectScheduledGame} />
             <div className="team-block">
               <Field label="Player data source" htmlFor="data-source"><select id="data-source" value={source} onChange={e => changeSource(e.target.value as typeof source)}>
                 <option value="library">Saved Team Library</option><option value="manual">Manual one-game setup</option>
@@ -221,7 +235,7 @@ function App() {
                 {(awayDepth.isError || homeDepth.isError) && <p className="history-warning" role="status">A live depth chart is unavailable. Saved depth roles can be used; assign missing ranks in Team Library.</p>}
                 <p className="stats-help">Season {season}. <button className="text-button" onClick={() => setTab('library')}>Change season in Team Library</button>. Only games before the selected week are used.</p>
                 <Field label="Matchup week" htmlFor="matchup-week"><select id="matchup-week" value={week} onChange={e => setWeek(Number(e.target.value))}>
-                  {Array.from({length:18}, (_, i) => <option key={i} value={i+1}>Week {i+1}</option>)}
+                  {Array.from({length:22}, (_, i) => <option key={i} value={i+1}>{i < 18 ? `Week ${i+1}` : ['Wild Card', 'Divisional', 'Conference Championships', 'Super Bowl'][i-18]}</option>)}
                 </select></Field>
               </>}
               {source === 'snapshot' && <p className="stats-help">Uses the original saved inputs, not newer weekly entries. Choose Saved Team Library to use updated history.</p>}

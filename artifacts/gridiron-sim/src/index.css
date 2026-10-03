@@ -197,6 +197,17 @@ input::placeholder, textarea::placeholder { color: var(--app-muted); opacity: .8
 .result-sections { display:grid; grid-template-columns:minmax(0, 1.05fr) minmax(0, .95fr); gap:19px; }
 .subsection { min-width:0; }
 .fantasy-leaders { margin:20px 0; }
+.upcoming-games { padding:16px; border-bottom:1px solid var(--app-border); }
+.schedule-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.schedule-heading h3 { margin:0; }
+.schedule-heading button { display:flex; align-items:center; gap:5px; }
+.schedule-filter { display:grid; gap:6px; margin:12px 0; font-size:12px; }
+.schedule-filter select { width:100%; }
+.schedule-games { display:grid; gap:8px; max-height:310px; overflow-y:auto; }
+.scheduled-game { display:grid; gap:5px; width:100%; text-align:left; background:var(--app-bg); color:var(--app-text); border:1px solid var(--app-border); border-radius:8px; padding:12px; font-size:12px; }
+.scheduled-game:hover:not(:disabled), .scheduled-game:focus-visible, .scheduled-game.selected { border-color:var(--app-away); }
+.scheduled-game span, .scheduled-game small { color:var(--app-muted); font-size:11px; }
+.scheduled-game:disabled { opacity:.6; cursor:wait; }
 .fantasy-leaders-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
 .fantasy-leader-group { border:1px solid var(--app-border); border-radius:8px; background:var(--app-bg); overflow:hidden; }
 .fantasy-leader-group h3 { display:flex; justify-content:space-between; margin:0; padding:12px; font-size:13px; border-bottom:1px solid var(--app-border); }

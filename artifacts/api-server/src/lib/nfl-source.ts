@@ -1,5 +1,7 @@
 import type { NflDepthChart, NflImportPreview, NumericStats, RosterPlayer, TeamWeek } from "@workspace/api-zod";
 import { parseDepthChart, depthSource, type SourceDepthChart } from "./nfl-depth-chart";
+import { parseUpcomingSchedule, type ScheduleEvent } from "./nfl-schedule";
+import type { NflSchedule } from "@workspace/api-zod";
 
 // Public ESPN site data is not a contracted feed. Reject incomplete/wrong-season
 // responses instead of silently substituting an older season or invented zeros.
@@ -25,6 +27,36 @@ const API = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/";
 const sourceCache = new Map<string, { expires: number; value: Promise<unknown> }>();
 const previewCache = new Map<string, { expires: number; value: Promise<NflImportPreview> }>();
 const TTL = 5 * 60_000;
+const scheduleCache = new Map<number, { expires: number; value: Promise<NflSchedule> }>();
+
+export async function getNflSchedule(season: number): Promise<NflSchedule> {
+  const cached = scheduleCache.get(season);
+  if (cached && cached.expires > Date.now()) return cached.value;
+  const value = (async (): Promise<NflSchedule> => {
+    // Calendar-year requests avoid ESPN's unsupported long date ranges.
+    // Include the following January/February, then validate each event's season.
+    const [current, next, list] = await Promise.all([
+      json<{ events?: ScheduleEvent[] }>(`scoreboard?dates=${season}&limit=1000`),
+      json<{ events?: ScheduleEvent[] }>(`scoreboard?dates=${season + 1}&limit=1000`),
+      json<{ sports: { leagues: { teams: { team: { id: string; displayName: string } }[] }[] }[] }>("teams?limit=32"),
+    ]);
+    const teams = list.sports?.[0]?.leagues?.[0]?.teams;
+    if (!Array.isArray(current.events) || !Array.isArray(next.events) || teams?.length !== 32) {
+      throw new NflSourceError("ESPN has not supplied a complete schedule. Try again shortly.");
+    }
+    const events = [...current.events, ...next.events];
+    if (!events.some(event => event.season?.year === season && [2, 3].includes(event.season.type))) {
+      throw new NflSourceError(`ESPN has not published a matching ${season} schedule. No other season was substituted.`);
+    }
+    return {
+      season, fetchedAt: new Date().toISOString(),
+      sourceUrl: "https://www.espn.com/nfl/schedule",
+      ...parseUpcomingSchedule(events, season, new Map(teams.map(({ team }) => [team.id, team.displayName]))),
+    };
+  })().catch(error => { scheduleCache.delete(season); throw error; });
+  scheduleCache.set(season, { expires: Date.now() + TTL, value });
+  return value;
+}
 let pendingPreviews = 0;
 export class NflSourceError extends Error {
   constructor(message: string, readonly status = 502) { super(message); }

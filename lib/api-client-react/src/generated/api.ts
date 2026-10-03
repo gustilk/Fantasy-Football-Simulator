@@ -24,6 +24,7 @@ import type {
   ListSeasonTeamsParams,
   NflDepthChart,
   NflImportPreview,
+  NflSchedule,
   PreviewNflTeamParams,
   SeasonError,
   TeamSeasonInput,
@@ -56,6 +57,83 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetNflScheduleUrl = (season: number,) => {
+
+
+
+
+  return `/api/nfl-schedule/${season}`
+}
+
+/**
+ * @summary Upcoming announced NFL matchups for all teams in a season
+ */
+export const getNflSchedule = async (season: number, options?: Parameters<typeof customFetch>[1]): Promise<NflSchedule> => {
+
+  return customFetch<NflSchedule>(getGetNflScheduleUrl(season),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetNflScheduleQueryKey = (season: number,) => {
+    return [
+    `/api/nfl-schedule/${season}`
+    ] as const;
+    }
+
+
+export const getGetNflScheduleQueryOptions = <TData = Awaited<ReturnType<typeof getNflSchedule>>, TError = ErrorType<SeasonError>>(season: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNflSchedule>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetNflScheduleQueryKey(season);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getNflSchedule>>> = ({ signal }) => getNflSchedule(season, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: season !== null && season !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getNflSchedule>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetNflScheduleQueryResult = NonNullable<Awaited<ReturnType<typeof getNflSchedule>>>
+export type GetNflScheduleQueryError = ErrorType<SeasonError>
+
+
+/**
+ * @summary Upcoming announced NFL matchups for all teams in a season
+ */
+
+export function useGetNflSchedule<TData = Awaited<ReturnType<typeof getNflSchedule>>, TError = ErrorType<SeasonError>>(
+ season: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNflSchedule>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetNflScheduleQueryOptions(season,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getHealthCheckUrl = () => {
 

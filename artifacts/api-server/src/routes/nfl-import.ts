@@ -1,8 +1,20 @@
 import { Router, type IRouter } from "express";
 import { GetNflDepthChartParams, GetNflDepthChartResponse, PreviewNflTeamParams, PreviewNflTeamQueryParams, PreviewNflTeamResponse } from "@workspace/api-zod";
-import { NflSourceError, previewNflTeam, getNflDepthChart } from "../lib/nfl-source";
+import { NflSourceError, previewNflTeam, getNflDepthChart, getNflSchedule } from "../lib/nfl-source";
+import { GetNflScheduleParams, GetNflScheduleResponse } from "@workspace/api-zod";
 
 const router: IRouter = Router();
+router.get("/nfl-schedule/:season", async (req, res): Promise<void> => {
+  const parsed = GetNflScheduleParams.safeParse(req.params);
+  if (!parsed.success) { res.status(400).json({ error: "Choose a season from 2000 to 2100." }); return; }
+  try {
+    res.json(GetNflScheduleResponse.parse(await getNflSchedule(parsed.data.season)));
+  } catch (error) {
+    res.status(error instanceof NflSourceError ? error.status : 502).json({
+      error: error instanceof NflSourceError ? error.message : "The schedule source returned an unexpected format. Try again later.",
+    });
+  }
+});
 router.get("/nfl-depth-chart/:season/:team", async (req, res): Promise<void> => {
   const parsed = GetNflDepthChartParams.safeParse(req.params);
   if (!parsed.success) { res.status(400).json({ error: "Choose a valid NFL team and season." }); return; }
