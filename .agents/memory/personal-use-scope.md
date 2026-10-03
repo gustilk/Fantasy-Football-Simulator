@@ -26,3 +26,9 @@ The user requested that the Library roster be grouped.
 **Why:** The user wants players easier to find in the Library.
 
 **How to apply:** Retain position-based roster groups instead of returning to a single mixed list.
+
+The user said: “Remove unnecessary info from game simulator and the example.”
+
+**Why:** The user finds the Game Simulator interface too dense and wants it modern and easy to use.
+
+**How to apply:** Keep Game Simulator focused on selecting a matchup and average DraftKings projections. Do not restore the single-game example output.

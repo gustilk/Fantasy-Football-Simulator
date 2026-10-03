@@ -10,45 +10,45 @@ export default function UpcomingGames({ season, enabled, busy, teams, selectedMa
   const schedule = useGetNflSchedule(season, {
     query: { queryKey: getGetNflScheduleQueryKey(season), enabled, staleTime: 60_000, refetchInterval: 300_000, retry: false },
   });
-  const [week, setWeek] = useState('all');
+  const [week, setWeek] = useState('');
   const games = schedule.data?.games ?? [];
   const weeks = [...new Set(games.map(game => game.week))].sort((a, b) => a - b);
-  const selectedWeek = week !== 'all' && weeks.includes(Number(week)) ? week : 'all';
-  const visible = games.filter(game => selectedWeek === 'all' || game.week === Number(selectedWeek));
+  const selectedWeek = weeks.includes(Number(week)) ? Number(week)
+    : selectedMatchup && weeks.includes(selectedMatchup.week) ? selectedMatchup.week : weeks[0];
+  const visible = games.filter(game => game.week === selectedWeek);
+  const selected = visible.find(game => selectedMatchup?.away === game.awayTeam &&
+    selectedMatchup?.home === game.homeTeam && selectedMatchup?.week === game.week);
+  const missing = selected ? [selected.awayTeam, selected.homeTeam].filter(team => !teams.includes(team)) : [];
   const weekLabel = (value: number) => value <= 18 ? `Week ${value}` : ['Wild Card', 'Divisional', 'Conference Championships', 'Super Bowl'][value - 19];
   return <section className="upcoming-games" aria-labelledby="upcoming-title" data-testid="upcoming-games">
     <div className="schedule-heading">
-      <h3 className="section-mini-title" id="upcoming-title">UPCOMING NFL GAMES · {season}</h3>
+      <h3 className="section-mini-title" id="upcoming-title">NFL schedule · {season}</h3>
       <button className="text-button" disabled={schedule.isFetching || busy} onClick={() => void schedule.refetch()} aria-label="Refresh upcoming schedule"><RotateCw size={13} /> Refresh</button>
     </div>
-    <p className="stats-help">Select a game to fill both teams and the week automatically, using Saved Team Library. All announced regular-season and playoff matchups are included. Kickoff times use your local time zone.</p>
     {schedule.isLoading && <p className="stats-help" role="status">Loading the NFL schedule…</p>}
     {schedule.isError && <p className="history-warning" role="alert">Could not load the schedule. {schedule.error.message} Use Refresh to retry, or choose teams manually below.</p>}
     {schedule.data && !schedule.isError && <>
-      <p className="stats-help">ESPN schedule checked {new Date(schedule.data.fetchedAt).toLocaleString()}. Public source updates are cached for up to 5 minutes. <a href={schedule.data.sourceUrl} target="_blank" rel="noreferrer">Source</a></p>
-      {schedule.data.unannouncedGames > 0 && <p className="stats-help">{schedule.data.unannouncedGames} future game(s) have undecided teams and will appear once the matchup is announced.</p>}
       {games.length ? <>
-        <label className="schedule-filter" htmlFor="schedule-week">Show games
-          <select id="schedule-week" value={selectedWeek} onChange={event => setWeek(event.target.value)}>
-            <option value="all">All upcoming weeks ({games.length} games)</option>
+        <label className="schedule-filter" htmlFor="schedule-week">Browse week
+          <select id="schedule-week" value={selectedWeek} disabled={busy} onChange={event => setWeek(event.target.value)}>
             {weeks.map(value => <option key={value} value={value}>{weekLabel(value)}</option>)}
           </select>
         </label>
-        <div className="schedule-games">
-          {visible.map(game => {
-            const missing = [game.awayTeam, game.homeTeam].filter(team => !teams.includes(team));
-            const selected = selectedMatchup?.away === game.awayTeam && selectedMatchup?.home === game.homeTeam && selectedMatchup?.week === game.week;
-            return <button className={`scheduled-game${selected ? ' selected' : ''}`} aria-pressed={selected} key={game.id} disabled={busy} onClick={() => onSelect(game, schedule.data!.fetchedAt)} data-testid={`schedule-game-${game.id}`}>
-              <strong>{game.awayTeam} <span>at</span> {game.homeTeam}</strong>
-              <span>{weekLabel(game.week)} · {game.timeConfirmed
-                ? new Date(game.date).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' })
-                : 'Date / kickoff TBD'}</span>
-              {missing.length > 0 && <small>Needs saved roster/history: {missing.join(', ')}</small>}
-              {game.odds && <small>Home spread {game.odds.homeSpread > 0 ? '+' : ''}{game.odds.homeSpread} · O/U {game.odds.total} · {game.odds.provider}</small>}
-              {selected && <small>Selected matchup</small>}
-            </button>;
-          })}
-        </div>
+        <label className="schedule-filter" htmlFor="schedule-matchup">Game
+          <select id="schedule-matchup" value={selected?.id ?? ''} disabled={busy} onChange={event => {
+            const game = visible.find(game => game.id === event.target.value);
+            if (game) onSelect(game, schedule.data!.fetchedAt);
+          }}>
+            <option value="">Choose a game</option>
+            {visible.map(game => <option key={game.id} value={game.id} data-testid={`schedule-game-${game.id}`}>
+              {game.awayTeam.split(' ').at(-1)} at {game.homeTeam.split(' ').at(-1)}
+            </option>)}
+          </select>
+        </label>
+        {selected && <p className="sim-caption">{selected.timeConfirmed
+          ? new Date(selected.date).toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit', timeZoneName:'short' })
+          : 'Kickoff time TBD'}</p>}
+        {missing.length > 0 && <p className="history-warning" role="status">Save roster and history in Team Library for: {missing.join(', ')}.</p>}
       </> : <p className="stats-help" role="status">No upcoming announced matchups are available for this season.</p>}
     </>}
   </section>;

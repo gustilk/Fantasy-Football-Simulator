@@ -1,32 +1,25 @@
-import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Activity, ArrowRight, Bookmark, ChevronDown, CircleHelp, Cloud, CloudRain, Crosshair, RotateCw, Shield, SlidersHorizontal, Trash2, Trophy, Wind } from 'lucide-react';
-import { type WeatherSetup as Weather, type TeamSetup, type SimulationInput, type SimulationResult, type PlayerProjection as SimPlayer, type PlayerRecentStats, type DefenseRecentStats } from '@/lib/simulator';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Activity, ArrowRight, ChevronDown, CloudRain, Crosshair, RotateCw, SlidersHorizontal, Trash2, Wind } from 'lucide-react';
+import { type WeatherSetup as Weather, type TeamSetup, type SimulationInput, type SimulationResult, type PlayerRecentStats, type DefenseRecentStats } from '@/lib/simulator';
 import { useListSeasonTeams, useGetNflDepthChart, getGetNflDepthChartQueryKey, getListSeasonTeamsQueryKey, type TeamSeasonRecord, type NflScheduledGame } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import TeamLibrary from '@/components/TeamLibrary';
 import HistoryTeamPicker from '@/components/HistoryTeamPicker';
 import { setupFromHistory } from '@/lib/season-model';
 import { simulateEnsemble } from '@/lib/ensemble';
-import { calculateDraftKings, DRAFTKINGS_RULES_URL } from '@/lib/draftkings';
 import { NFL_TEAM_NAMES } from '@/lib/nfl-divisions';
 import DivisionMatchup from '@/components/DivisionMatchup';
-import FantasyLeaders from '@/components/FantasyLeaders';
+import GameProjections from '@/components/GameProjections';
 import UpcomingGames from '@/components/UpcomingGames';
 import MarketOddsInputs from '@/components/MarketOddsInputs';
-import MarketOddsSummary from '@/components/MarketOddsSummary';
 import { withDepthChart } from '@/lib/depth-chart';
 import DraftKingsBoard from '@/components/DraftKingsBoard';
 import './season.css';
+import './components/game-simulator.css';
 
 type SavedSimulation = { id: string; savedAt: string; awayName: string; homeName: string; result: SimulationResult; setup?: StoredSetup };
 type StoredSetup = { away: TeamSetup; home: TeamSetup; weather: Weather; importance?: SimulationInput['importance']; market?: SimulationInput['market'] };
 type PatchTeam = (side: 'away' | 'home', field: keyof TeamSetup, value: TeamSetup[keyof TeamSetup]) => void;
-type ProjectedPlayer = SimPlayer & { estimate?: { mean: number; p10: number; p90: number } };
-const projectionStats = (p: SimPlayer) => ({
-  passYards: p.passYards, passTD: p.passTD, interceptions: p.interceptions,
-  rushYards: p.rushYards, rushTD: p.rushTD, receptions: p.receptions,
-  receivingYards: p.receivingYards, receivingTD: p.receivingTD, fumblesLost: p.fumblesLost,
-});
 
 const NFL_TEAMS = NFL_TEAM_NAMES;
 const defaultAway: TeamSetup = {
@@ -42,6 +35,7 @@ const DEFAULT_SETUP: StoredSetup = {
 };
 const setupStorageKey = 'gridiron-sim-setup-v1';
 const resultsStorageKey = 'gridiron-sim-results-v1';
+const matchupStorageKey = 'gridiron-sim-matchup-chosen-v1';
 
 function normalizeSetup(setup: StoredSetup): StoredSetup {
   return {
@@ -80,19 +74,30 @@ function App() {
   const history = useListSeasonTeams({ season });
   const storedTeams = history.data ?? [];
   const [setup, setSetup] = useState<StoredSetup>(readSetup);
+  const [matchupChosen, setMatchupChosen] = useState(() => {
+    try {
+      const stored = localStorage.getItem(matchupStorageKey);
+      if (stored !== null) return stored === 'true';
+    } catch { /* Selection remains available for this session. */ }
+    return !!setup.market?.gameId || !!setup.away.roster || !!setup.home.roster ||
+      setup.away.name !== defaultAway.name || setup.home.name !== defaultHome.name;
+  });
   const [saved, setSaved] = useState<SavedSimulation[]>(readSaved);
   const [active, setActive] = useState<SimulationResult | null>(null);
   const [activeNames, setActiveNames] = useState<{ away:string; home:string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
-  const awayDepth = useGetNflDepthChart(season, setup.away.name, { query: { queryKey: getGetNflDepthChartQueryKey(season, setup.away.name), enabled: source === 'library' && tab === 'simulator', staleTime: 300_000, retry: false } });
-  const homeDepth = useGetNflDepthChart(season, setup.home.name, { query: { queryKey: getGetNflDepthChartQueryKey(season, setup.home.name), enabled: source === 'library' && tab === 'simulator', staleTime: 300_000, retry: false } });
+  const awayDepth = useGetNflDepthChart(season, setup.away.name, { query: { queryKey: getGetNflDepthChartQueryKey(season, setup.away.name), enabled: matchupChosen && source === 'library' && tab === 'simulator', staleTime: 300_000, retry: false } });
+  const homeDepth = useGetNflDepthChart(season, setup.home.name, { query: { queryKey: getGetNflDepthChartQueryKey(season, setup.home.name), enabled: matchupChosen && source === 'library' && tab === 'simulator', staleTime: 300_000, retry: false } });
   const teams = storedTeams.map(team => withDepthChart(team, team.team === setup.away.name ? awayDepth.data : team.team === setup.home.name ? homeDepth.data : undefined));
 
   useEffect(() => {
     try { localStorage.setItem(setupStorageKey, JSON.stringify(setup)); } catch { setNotice('Browser storage is unavailable; this setup will not persist.'); }
   }, [setup]);
+  useEffect(() => {
+    try { localStorage.setItem(matchupStorageKey, String(matchupChosen)); } catch { setNotice('Browser storage is unavailable; matchup selection will not persist.'); }
+  }, [matchupChosen]);
   useEffect(() => {
     try { localStorage.setItem(resultsStorageKey, JSON.stringify(saved.slice(0, 10))); } catch { setNotice('Browser storage is unavailable; saved simulations may not persist.'); }
   }, [saved]);
@@ -103,6 +108,7 @@ function App() {
   }, [notice]);
 
   const patchTeam: PatchTeam = (side, field, value) => {
+    setMatchupChosen(true);
     setSetup(current => ({ ...current, [side]: { ...current[side], [field]: value }, market: field === 'name' && value !== current[side].name ? undefined : current.market }));
   };
   const changeSeason = (value: number) => {
@@ -110,10 +116,12 @@ function App() {
     if (value !== season) setSetup(current => ({ ...current, market: undefined }));
   };
   const changeWeek = (value: number) => {
+    setMatchupChosen(true);
     setWeek(value);
     if (value !== week) setSetup(current => ({ ...current, market: undefined }));
   };
   const selectScheduledGame = (game: NflScheduledGame, fetchedAt: string) => {
+    setMatchupChosen(true);
     setSource('library');
     setWeek(game.week);
     setSetup(current => ({
@@ -135,6 +143,7 @@ function App() {
     setNotice(`${game.awayTeam} at ${game.homeTeam} selected. Saved roster and history will be used.`);
   };
   const runSimulation = () => {
+    if (!matchupChosen) { setError('Choose a game first.'); return; }
     setBusy(true);
     setError('');
     window.setTimeout(() => {
@@ -177,13 +186,14 @@ function App() {
           setup: structuredClone({ ...setup, away, home }),
         };
         setSaved(current => [entry, ...current.filter(item => item.id !== entry.id)].slice(0, 10));
-        setNotice(`200 simulations complete. ${result.ensemble?.market ? 'Market-weighted' : 'Fantasy'} averages and example game saved to this device.`);
+        setNotice('DraftKings projections ready and saved on this device.');
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : 'The simulation could not be completed. Check your setup and try again.');
       } finally { setBusy(false); }
     }, 180);
   };
   const openSaved = (item: SavedSimulation) => {
+    setMatchupChosen(true);
     setActive(item.result);
     setActiveNames({ away: item.awayName, home: item.homeName });
     if (item.setup) {
@@ -207,6 +217,7 @@ function App() {
     void history.refetch();
   };
   const changeSource = (value: typeof source) => {
+    setMatchupChosen(true);
     setSource(value);
     if (value === 'manual') setSetup(current => {
       const clearHistory = (team: TeamSetup): TeamSetup => ({ ...team, roster: undefined, record: undefined, historyGames: undefined, headToHead: undefined, depthChartSource: undefined, availabilityChecks: undefined, modelEvidence: undefined });
@@ -233,33 +244,35 @@ function App() {
             error={history.isError ? 'Could not load saved team history. Please retry.' : ''} onReload={() => { void history.refetch(); }} onSaved={onTeamSaved} teamNames={NFL_TEAMS} />
         </div>
         <div style={{ display: tab === 'draftkings' ? undefined : 'none' }}><DraftKingsBoard season={season} /></div>
-        <div style={{ display: tab === 'simulator' ? undefined : 'none' }}>
+        <div className="game-simulator" style={{ display: tab === 'simulator' ? undefined : 'none' }}>
         <div className="page-heading">
           <div>
-            <div className="eyebrow">WEEKEND WORKBENCH / MATCHUP MODEL</div>
-            <h1>Run the matchup.</h1>
-            <p>Tune the inputs. See how the game could unfold.</p>
+            <h1>Game Simulator</h1>
+            <p>Choose a game. Compare projected fantasy points.</p>
           </div>
-          <div className="method-pill"><CircleHelp size={14} /><span>Stochastic estimate · not a prediction</span></div>
         </div>
 
         <div className="main-grid">
           <section className="panel setup-panel" aria-labelledby="setup-title">
             <div className="panel-top">
-              <div className="panel-title" id="setup-title">MATCHUP SETUP</div>
-              <div className="panel-index">01 / CONFIGURE</div>
+              <div className="panel-title" id="setup-title">Choose your matchup</div>
             </div>
-            <UpcomingGames season={season} enabled={tab === 'simulator'} busy={busy} teams={storedTeams.map(team => team.team)} selectedMatchup={source === 'library' ? { away: setup.away.name, home: setup.home.name, week } : null} onSelect={selectScheduledGame} />
+            <UpcomingGames season={season} enabled={tab === 'simulator'} busy={busy} teams={storedTeams.map(team => team.team)} selectedMatchup={matchupChosen && source === 'library' ? { away: setup.away.name, home: setup.home.name, week } : null} onSelect={selectScheduledGame} />
+            {matchupChosen && <div className="sim-matchup">
+              <strong>{setup.away.name} at {setup.home.name}</strong>
+              <span>{season} · Week {week} · {source === 'library' ? 'Saved Team Library' : source === 'snapshot' ? 'Saved input snapshot' : 'Manual inputs'}</span>
+              {source === 'library' && (awayDepth.isLoading || homeDepth.isLoading) && <span role="status">Loading depth charts…</span>}
+              {source === 'library' && (awayDepth.isError || homeDepth.isError) && <p className="history-warning" role="status">Depth chart unavailable. Check saved roles in Team Library.</p>}
+            </div>}
+            <details className="sim-disclosure">
+            <summary>Advanced settings</summary>
             <div className="team-block">
               <Field label="Player data source" htmlFor="data-source"><select id="data-source" value={source} onChange={e => changeSource(e.target.value as typeof source)}>
                 <option value="library">Saved Team Library</option><option value="manual">Manual one-game setup</option>
                 {source === 'snapshot' && <option value="snapshot">Reopened saved input snapshot</option>}
               </select></Field>
               {source === 'library' && <>
-                <p className="stats-help">Depth roles: current ESPN charts, with saved manual ranks taking priority. Roles guide workload; they do not guarantee fantasy points or describe past-week availability.</p>
-                {(awayDepth.isLoading || homeDepth.isLoading) && <p className="stats-help" role="status">Loading team depth charts…</p>}
-                {(awayDepth.isError || homeDepth.isError) && <p className="history-warning" role="status">A live depth chart is unavailable. Saved depth roles can be used; assign missing ranks in Team Library.</p>}
-                <p className="stats-help">Season {season}. <button className="text-button" onClick={() => setTab('library')}>Change season in Team Library</button>. Only games before the selected week are used.</p>
+                <p className="stats-help"><button className="text-button" onClick={() => setTab('library')}>Change season or roster in Team Library</button>. Uses history before the matchup week.</p>
                 <Field label="Matchup week" htmlFor="matchup-week"><select id="matchup-week" value={week} onChange={e => changeWeek(Number(e.target.value))}>
                   {Array.from({length:22}, (_, i) => <option key={i} value={i+1}>{i < 18 ? `Week ${i+1}` : ['Wild Card', 'Divisional', 'Conference Championships', 'Super Bowl'][i-18]}</option>)}
                 </select></Field>
@@ -289,8 +302,11 @@ function App() {
               </div>
               <MarketOddsInputs market={setup.market} away={setup.away.name} home={setup.home.name} season={season} week={week} busy={busy}
                 onChange={market => setSetup(current => ({ ...current, market }))} />
+            </div>
+            </details>
+            <div className="config-bottom">
               <div className="setup-actions">
-                <button className="btn-primary" onClick={runSimulation} disabled={busy} data-testid="button-run-simulation">
+                <button className="btn-primary" onClick={runSimulation} disabled={busy || !matchupChosen} data-testid="button-run-simulation">
                   {busy ? <><RotateCw size={15} className="spin-icon" /> Running model…</> : <><Crosshair size={16} /> Run simulation <ArrowRight size={15} /></>}
                 </button>
               </div>
@@ -302,29 +318,22 @@ function App() {
             <section className="panel result-panel" aria-labelledby="results-title">
               {!active ? <div className="empty-result">
                 <div className="empty-orbit"><SlidersHorizontal size={30} strokeWidth={1.5}/></div>
-                <div className="eyebrow">YOUR LAB IS READY</div>
-                <h3>Build a game scenario</h3>
-                <p>Set each side’s roster, team ratings, and conditions. Your first run will create a drive-by-drive game and DraftKings NFL Classic projections.</p>
-              </div> : <SimulationResults result={active} awayName={currentAwayName} homeName={currentHomeName} onRun={runSimulation} busy={busy}/>}
+                <h3 id="results-title">Your projections appear here</h3>
+                <p>Choose a matchup and run it to see average DraftKings points for both teams.</p>
+              </div> : <GameProjections result={active} awayName={currentAwayName} homeName={currentHomeName} onRun={runSimulation} busy={busy}/>}
             </section>
-            <section className="panel saved-panel" aria-labelledby="saved-heading">
-              <div className="saved-header">
-                <div className="saved-title" id="saved-heading"><Bookmark size={15}/> SAVED RUNS</div>
-                <div className="saved-count">{saved.length} / 10</div>
-              </div>
+            <details className="panel saved-panel sim-disclosure">
+              <summary>Saved projections ({saved.length})</summary>
               {saved.length === 0 ? <div className="saved-empty">Your saved simulations will collect here on this device.</div> :
                 <div className="saved-list">{saved.map(item => (
                   <div className="saved-item" key={item.id} data-testid={`saved-run-${item.id}`}>
                     <button className="saved-open" onClick={() => openSaved(item)} data-testid={`button-open-saved-${item.id}`}>
-                      <span aria-hidden="true" style={{font: '10px var(--app-font-mono)',color:'var(--app-muted)'}}>↳</span>
-                      <span style={{minWidth:0,display:'flex',flexDirection:'column',gap:2}}><strong>{item.awayName} at {item.homeName}</strong><span>{formatSavedDate(item.savedAt)} · seed {item.result.seed}</span></span>
+                      <span style={{minWidth:0,display:'flex',flexDirection:'column',gap:2}}><strong>{item.awayName} at {item.homeName}</strong><span>{formatSavedDate(item.savedAt)}</span></span>
                     </button>
-                    <span className="saved-score">{item.result.awayScore} — {item.result.homeScore}</span>
                     <button className="saved-remove" aria-label={`Delete saved result ${item.awayName} at ${item.homeName}`} title="Delete saved result" onClick={() => removeSaved(item.id)} data-testid={`button-delete-saved-${item.id}`}><Trash2 size={14}/></button>
                   </div>
                 ))}</div>}
-            </section>
-             <div className="footnote"><strong>Method note.</strong> The Team Library is saved in the project database and shared by this app’s users; it is not a private signed-in account. Simulation settings and saved runs remain browser-local. History mode blends season and recent-five averages, with home/away splits when available. Home field, recorded W–L–T, opposing defense, weather, and game importance make bounded adjustments. Each run averages 200 simulated games; its score and drive log show one example. This is experimental and not backtested. Missing simulation inputs use baseline assumptions. Fantasy points use DraftKings NFL Classic offense scoring for QB/RB/WR/TE, not IDP or kicker scoring. Return TDs, two-point conversions and offensive fumble recovery TDs count in recorded game stats when reported, but are not modeled in simulations.</div>
+            </details>
           </div>
         </div>
         </div>
@@ -355,7 +364,7 @@ function TeamEditor({ team, side, patchTeam }: { team:TeamSetup; side:'away'|'ho
         <select id={`${side}-team`} value={team.name} onChange={e => patchTeam(side,'name',e.target.value)} data-testid={`select-${side}-team`}>
           {NFL_TEAMS.map(name => <option key={name} value={name}>{name}</option>)}
         </select>
-        <span className="input-help">Team selection does not load a roster. Update the example player names below.</span>
+        <span className="input-help">Enter player names below. Manual inputs do not load saved rosters.</span>
       </Field>
       {fields.map(field => <Field label={field.label} htmlFor={`${side}-${field.key}`} key={field.key}>
         <input id={`${side}-${field.key}`} value={team[field.key]} placeholder={field.placeholder} onChange={e => patchTeam(side,field.key,e.target.value)} data-testid={`input-${side}-${field.key}`} />
@@ -444,94 +453,6 @@ function RecentStatsEditor({ team, side, patchTeam }: { team: TeamSetup; side: '
       </div>
     </details>
   </details>;
-}
-
-function SimulationResults({ result, awayName, homeName, onRun, busy }: { result:SimulationResult; awayName:string; homeName:string; onRun:()=>void; busy:boolean }) {
-  const drives = useMemo(() => [...result.drives].sort((a, b) => a.id - b.id), [result.drives]);
-  const dkEnsemble = !!result.ensemble && result.players.every(p => typeof p.draftKings === 'number');
-  const playersByTeam = useMemo(() => {
-    const groups = new Map<string, ProjectedPlayer[]>();
-    result.players.forEach((player, index) => {
-      const played = player.played ?? Object.values(projectionStats(player)).some(n => n !== 0);
-      if (!played) return;
-      groups.set(player.team, [...(groups.get(player.team) || []), {
-        ...player, draftKings: calculateDraftKings(projectionStats(player)),
-        estimate: dkEnsemble ? result.ensemble?.fantasy[index] : undefined,
-      }]);
-    });
-    return [...groups.entries()].map(([name, players]) => [name, players.sort((a, b) => b.draftKings - a.draftKings)] as const);
-  }, [result.players, result.ensemble, dkEnsemble]);
-  const winner = result.awayScore === result.homeScore ? 'Even on the board' : result.awayScore > result.homeScore ? awayName : homeName;
-  return <>
-    <div className="result-topline">
-      <div><div className="result-label"><Trophy size={13}/> MODEL OUTPUT <span>·</span> SEED {result.seed}</div><h2 id="results-title">{result.ensemble ? 'One example game' : 'Final simulation'}</h2></div>
-      <div className="result-actions"><button className="icon-button" aria-label="Run a new simulation" title="Run a new simulation" onClick={onRun} disabled={busy} data-testid="button-rerun"><RotateCw size={15}/></button></div>
-    </div>
-    <div className="scoreboard" data-testid="simulation-score">
-      <div className="score-side">
-        <div className="team-crest">{initials(awayName)}</div><div><div className="score-name">{awayName}</div><div className="score-meta">AWAY · {result.totalPlays.away} PLAYS</div></div>
-        <div className="score-num">{result.awayScore}</div>
-      </div>
-      <div className="score-divider">FINAL</div>
-      <div className="score-side home">
-        <div className="score-num score-home-num">{result.homeScore}</div><div><div className="score-name">{homeName}</div><div className="score-meta">HOME · {result.totalPlays.home} PLAYS</div></div><div className="team-crest orange">{initials(homeName)}</div>
-      </div>
-    </div>
-    <div className="game-stats">
-      <div className="game-stat"><Activity size={13}/> TOTAL <strong>{result.totalPlays.away + result.totalPlays.home}</strong> PLAYS</div>
-      <div className="game-stat"><Shield size={13}/> OUTCOME <strong>{winner}</strong></div>
-      <div className="game-stat"><Cloud size={13}/> QUARTERS <strong>4</strong></div>
-    </div>
-    <div className="result-content">
-      <section aria-labelledby="overview-title">
-        {result.ensemble && <p className="ensemble-note"><strong>{result.ensemble.runs} simulated games.</strong> {result.ensemble.market ? 'Market-weighted outcomes' : 'Model outcomes'}: {awayName} wins {result.ensemble.awayWinPct}%, {homeName} wins {result.ensemble.homeWinPct}%, ties {result.ensemble.tiePct}%. Fantasy means and ranges below use all runs{result.ensemble.market ? ' with market weighting' : ''}; this score and drive log show just one {result.ensemble.market ? 'unweighted ' : ''}example.</p>}
-        <div className="content-heading" id="overview-title"><Crosshair size={15} className="heading-icon"/> MATCHUP READ &amp; X-FACTORS</div>
-        {result.overview.length ? <ul className="overview-list" data-testid="simulation-overview">{result.overview.map((line,index) => <li key={`${index}-${line}`}>{line}</li>)}</ul> : <p style={{fontSize:12,color:'var(--app-muted)'}}>No overview notes were returned for this run.</p>}
-      </section>
-      {result.ensemble?.market && <MarketOddsSummary market={result.ensemble.market} away={awayName} home={homeName} />}
-      <FantasyLeaders players={playersByTeam.flatMap(([, players]) => players)} />
-      <div className="result-sections">
-        <section className="subsection" aria-labelledby="drives-title">
-          <div className="content-heading" id="drives-title"><Activity size={15} className="heading-icon"/> DRIVE TRACKER <span className="panel-index">{result.drives.length} SERIES</span></div>
-          <div className="drive-scroll" data-testid="drive-log">
-            {drives.length === 0 ? <div className="saved-empty" style={{padding:14}}>No drive log was returned.</div> : drives.map((drive,index) =>
-              <Fragment key={`${drive.id}-${index}`}>
-              {index > 0 && drive.quarter >= 3 && drives[index - 1].quarter <= 2 && <div className="halftime-marker" data-testid="halftime-marker">HALFTIME</div>}
-              <details className={`drive team-${drive.team === awayName ? 'away' : 'home'}`}>
-                <summary><span className="quarter-badge">Q{drive.quarter}</span><span>{drive.team}</span><span className="drive-result">{drive.result}</span><ChevronDown size={13}/></summary>
-                <div className="drive-summary">{drive.summary}</div>
-                {drive.plays.length > 0 && <div className="play-list">{drive.plays.map((play,playIndex)=><span key={`${drive.id}-play-${playIndex}`}>{String(playIndex+1).padStart(2,'0')} &nbsp;{play}</span>)}</div>}
-              </details>
-              </Fragment>
-            )}
-          </div>
-        </section>
-        <section className="subsection" aria-labelledby="players-title">
-          <div className="content-heading" id="players-title"><Trophy size={15} className="heading-icon"/> DRAFTKINGS PLAYER STATS <span className="panel-index">{playersByTeam.reduce((sum, [, players]) => sum + players.length, 0)} PARTICIPANTS</span></div>
-          <div className="player-table-wrap">
-            <table className="player-table" data-testid="player-projections">
-               <thead><tr><th>Player</th><th>PASS<br/>YDS</th><th>PASS<br/>TD</th><th>INT</th><th>RUSH<br/>YDS</th><th>RUSH<br/>TD</th><th>REC</th><th>REC<br/>YDS</th><th>REC<br/>TD</th><th>FUM<br/>LOST</th><th>DK<br/>PTS</th><th>AVG DK<br/>PROJ.</th></tr></thead>
-              <tbody>{playersByTeam.map(([team,players]) => <FragmentGroup key={team} team={team} players={players} side={team === awayName ? 'away' : 'home'}/>)}</tbody>
-            </table>
-          </div>
-           <p className="ensemble-note">DK PTS matches the example game's displayed stats, including yardage bonuses and turnover deductions. Only modeled participants are shown; a player who participated can still score zero or negative points. {dkEnsemble ? <>AVG DK PROJ. is the {result.ensemble?.market ? 'market-weighted ' : ''}mean across {result.ensemble!.runs} runs; the range is the {result.ensemble?.market ? 'weighted ' : ''}10th–90th percentile of simulated outcomes, not a calibrated forecast interval.</> : result.ensemble ? 'This older saved run used a different scoring system. Run again for DraftKings averages and ranges.' : ''}</p>
-        </section>
-      </div>
-       <div className="footnote"><strong>DraftKings NFL Classic.</strong> 1/catch, 0.1/rush or receiving yard, 0.04/passing yard, 4/passing TD, 6/rush or receiving TD, −1/interception or lost fumble. +3 each for 300+ passing, 100+ rushing and 100+ receiving yards, scored per game. <a href={DRAFTKINGS_RULES_URL} target="_blank" rel="noopener noreferrer">Official scoring rules</a>. No individual defender or kicker scoring.</div>
-    </div>
-  </>;
-}
-function FragmentGroup({ team, players, side }: { team:string; players:ProjectedPlayer[]; side:'away'|'home' }) {
-  return <>
-    <tr className={`team-group-row team-${side}`}><td colSpan={12}>{team}</td></tr>
-    {players.map((player,index)=><tr className={`team-${side}`} key={`${team}-${player.name}-${index}`} data-testid={`projection-${team}-${index}`}>
-      <td className="player-name">{player.name}<span className="player-pos">{player.position}{player.depthRank ?? ''}</span></td>
-      <td>{player.passYards}</td><td>{player.passTD}</td><td>{player.interceptions}</td><td>{player.rushYards}</td><td>{player.rushTD}</td>
-      <td>{player.receptions}</td><td>{player.receivingYards}</td><td>{player.receivingTD}</td><td>{player.fumblesLost}</td>
-      <td className="fantasy-points" title="DraftKings points from the displayed example-game stats">{player.draftKings.toFixed(2)}</td>
-      <td className="fantasy-points">{player.estimate ? <>{player.estimate.mean.toFixed(2)}<span className="fantasy-range">{player.estimate.p10.toFixed(2)}–{player.estimate.p90.toFixed(2)}</span></> : '—'}</td>
-    </tr>)}
-  </>;
 }
 
 export default App;

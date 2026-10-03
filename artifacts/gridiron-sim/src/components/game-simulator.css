@@ -1,0 +1,45 @@
+.game-simulator { max-width:1120px; margin:0 auto; }
+.game-simulator .page-heading { margin-bottom:22px; }
+.game-simulator .page-heading h1 { font-size:32px; margin:0 0 8px; }
+.game-simulator .main-grid { grid-template-columns:minmax(0,360px) minmax(0,1fr); gap:22px; }
+.game-simulator .panel-top { padding:20px; }
+.game-simulator .panel-title { font-size:18px; }
+.sim-caption { margin:8px 0 0; font-size:13px; line-height:1.5; color:var(--app-muted); overflow-wrap:anywhere; }
+.sim-matchup { padding:18px 20px; display:grid; gap:6px; border-bottom:1px solid var(--app-border); }
+.sim-matchup strong { font-size:15px; line-height:1.5; overflow-wrap:anywhere; }
+.sim-matchup span { font-size:12px; color:var(--app-muted); }
+.sim-disclosure > summary { padding:16px 20px; cursor:pointer; font-size:14px; font-weight:600; }
+.sim-disclosure .team-block { border-left:0; }
+.game-simulator .config-bottom { padding:0 20px 20px; }
+.game-simulator .setup-actions { margin-top:0; }
+.game-simulator .empty-result { min-height:220px; padding:28px; }
+.game-simulator .result-topline { padding:20px; }
+.game-simulator .result-topline h2 { margin:0; font-size:23px; letter-spacing:0; overflow-wrap:anywhere; }
+.game-simulator .result-topline > div { min-width:0; }
+.game-simulator .icon-button { flex-shrink:0; width:44px; height:44px; }
+.sim-projections { padding:0 20px 20px; }
+.sim-position-tabs { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; margin:18px 0; }
+.sim-position-tabs button { min-height:44px; border:1px solid var(--app-border); border-radius:8px; color:var(--app-muted); background:var(--app-bg); font-weight:600; }
+.sim-position-tabs button.on { background:var(--app-away); color:var(--app-card); border-color:var(--app-away); }
+.sim-list-heading { display:flex; justify-content:space-between; gap:10px; padding-bottom:10px; color:var(--app-muted); font-size:12px; }
+.sim-player-list { list-style:none; padding:0; margin:0; }
+.sim-player-list li { display:grid; grid-template-columns:20px minmax(0,1fr) auto; gap:10px; align-items:center; padding:14px 0; border-top:1px solid var(--app-border); }
+.sim-player-rank { font-size:12px; color:var(--app-muted); }
+.sim-player-list li > div { min-width:0; overflow-wrap:anywhere; }
+.sim-player-list li > div > strong { font-size:15px; }
+.sim-player-list li > div > span { display:block; font-size:12px; margin-top:4px; color:var(--app-muted); }
+.sim-player-points { color:var(--app-away); font-size:20px; font-variant-numeric:tabular-nums; }
+.game-simulator .saved-panel { padding:0; }
+.game-simulator .saved-list { padding:0 16px 16px; }
+.game-simulator .saved-item { grid-template-columns:minmax(0,1fr) auto; }
+.game-simulator .saved-empty { padding:0 20px 16px; }
+.game-simulator .upcoming-games { padding:20px; }
+.game-simulator .schedule-heading h3 { font-size:15px; }
+.game-simulator .schedule-filter { margin-bottom:0; }
+.game-simulator .schedule-filter select { min-width:0; border:1px solid var(--app-border); background:var(--app-bg); padding:10px; min-height:44px; border-radius:8px; color:var(--app-text); }
+@media (max-width:760px) {
+  .game-simulator .main-grid { grid-template-columns:minmax(0,1fr); gap:16px; }
+  .game-simulator .page-heading h1 { font-size:28px; }
+  .game-simulator select, .game-simulator input, .game-simulator textarea { font-size:16px; }
+  .game-simulator .field select, .game-simulator .field input { min-height:44px; }
+}

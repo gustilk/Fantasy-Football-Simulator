@@ -1,3 +1,4 @@
 - [ESPN season handling](espn-season-handling.md) — public schedule responses can ignore the requested year; validate roster and schedule seasons independently.
 - [Calibration evidence](calibration-evidence.md) — require pregame eligibility and observed scoring targets; untreated games cannot establish a head-to-head effect.
 - [Personal-use scope](personal-use-scope.md) — personal-use app whose stated purpose is supporting DraftKings fantasy-point decisions.
+- [TypeScript tests](typescript-test-runtime.md) — prefer native Node TypeScript tests here; do not assume a tsx executable is available.
