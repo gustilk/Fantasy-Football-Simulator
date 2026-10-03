@@ -20,3 +20,9 @@ Public odds retrieval times are not sportsbook publication times. Manual timesta
 **Why:** ESPN supplies useful spread/total quotes but the inspected schedule feed does not establish when the sportsbook published each line. Recording when the app fetched it must not be presented as a verified closing line.
 
 **How to apply:** Use retrieval timestamps for freshness warnings and reject known post-kickoff observations. For accuracy evaluation, require an archived pregame quote and independently captured eligibility; do not treat a current quote as historical evidence.
+
+nflverse's historical spread sign is the opposite of the app's home-spread input convention.
+
+**Why:** The inspected nflreadr schedule dictionary defines a positive spread as home favored; the app uses a negative home spread for home favored. Copying the raw value would reverse the implied favorite.
+
+**How to apply:** In a future nflverse adapter or evaluation join, normalize with `homeSpread = -spread_line`, verify home/away orientation, and test both favorite directions before comparing predictions.

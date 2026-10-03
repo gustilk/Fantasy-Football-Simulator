@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Gridiron Sim — Market odds evidence audit</title>
+  <style>
+    :root{color-scheme:light;--ink:#162b20;--muted:#52645a;--line:#d9e3dc;--green:#216644;--bg:#f5f8f5}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 system-ui,-apple-system,sans-serif}
+    main{max-width:1000px;margin:auto;padding:48px 28px 64px}header{border-bottom:2px solid var(--green);padding-bottom:24px;margin-bottom:28px}
+    .eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);font-weight:700}h1{font-size:clamp(28px,5vw,42px);line-height:1.15;margin:12px 0 18px}h2{font-size:24px;margin:36px 0 12px}h3{font-size:18px;margin:24px 0 8px}p{margin:10px 0}a{color:var(--green)}.muted{color:var(--muted);font-size:14px}
+    .verdict{background:#fff5de;border-left:4px solid #a06b12;padding:18px 22px;margin:22px 0}.verdict strong{display:block;font-size:19px}
+    .table-wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;background:white;font-size:14px;margin:14px 0}th,td{padding:11px 14px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{background:#eaf1eb}td:nth-child(2){font-variant-numeric:tabular-nums;white-space:nowrap}
+    li{margin:9px 0}code{font:13px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;background:#e9efea;padding:2px 5px;border-radius:3px}pre{background:#e9efea;padding:16px;overflow-x:auto;font-size:12px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}.note{padding:14px 18px;background:#e9f2eb;border-left:3px solid var(--green)}footer{margin-top:40px;padding-top:20px;border-top:1px solid var(--line)}
+    @media(max-width:600px){main{padding:28px 16px}th,td{padding:9px}h2{font-size:21px}}
+    @media print{body{background:white}main{max-width:none;padding:0}h2,h3{break-after:avoid}table,.verdict,.note{break-inside:avoid}a{color:inherit}}
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">Gridiron Sim · Evaluation evidence</div>
+    <h1>Does adding market odds improve predictions?</h1>
+    <p><strong>We cannot establish an improvement from the available evidence.</strong> The feature changes model averages as designed, but that is not an accuracy result.</p>
+    <p class="muted">Audit date: October 3, 2026. Season inspected: 2026. Read-only Team Library inspection, live schedule inspection, and public-source research. No saved teams, market weights, or simulation behavior were changed.</p>
+  </header>
+
+  <div class="verdict">
+    <strong>Verdict: insufficient point-in-time evidence</strong>
+    <p>49 completed games have matching historical spread/total values in a public dataset. Those rows lack quote observation/publication timestamps. The app also lacks independently archived pregame eligibility and frozen historical prediction inputs. Consequently, <strong>zero games qualify for a defensible operational accuracy comparison</strong>. No score-error, win-calibration, or DraftKings-improvement metric is reported.</p>
+  </div>
+
+  <h2>What the current data supports</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Evidence inspected</th><th>Count</th><th>What it means</th></tr></thead>
+      <tbody>
+        <tr><td>Saved teams / completed team-game rows</td><td>32 / 96</td><td>Two team rows can describe the same game; 96 is not the independent-game sample size.</td></tr>
+        <tr><td>Distinct saved games / source event IDs</td><td>49 / 49</td><td>Completed games represented in the library.</td></tr>
+        <tr><td>Consistent reciprocal game pairs</td><td>47</td><td>Both teams have matching event, venue, and score records. Two games lack their counterpart.</td></tr>
+        <tr><td>Scored pairs with earlier history for both teams</td><td>31</td><td>Potential history-cutoff candidates, not eligible accuracy cases.</td></tr>
+        <tr><td>Pairs with at least three earlier games per team</td><td>0</td><td>The saved history is sparse. This is a limitation, not a reason to invent earlier games.</td></tr>
+        <tr><td>Previously seen, observed player-target rows</td><td>603</td><td>Descriptive rows from the 31 candidate games; participation is not used to choose forecasting inputs.</td></tr>
+        <tr><td>Player rows with every required DraftKings scoring component observed</td><td>0</td><td>Partial stat subtotals cannot establish full NFL Classic scoring targets. Missing fields are not zeros.</td></tr>
+        <tr><td>Current availability reports / manual overrides saved</td><td>0 / 0</td><td>Even if present, current flags alone would not prove historical pregame eligibility.</td></tr>
+        <tr><td>Current upcoming matchups / usable public odds</td><td>223 / 28</td><td>195 lack a usable public quote. Future quotes are useful for prospective capture, not retrospective accuracy evidence.</td></tr>
+        <tr><td>Historical accuracy comparisons meeting all gates</td><td>0</td><td>All accuracy metrics remain unavailable; they are not reported as zero error.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="muted">The live schedule snapshot was retrieved at 2026-10-03 18:48:36.950 UTC. Counts are a dated snapshot, not a live feed. The player-field audit conservatively requires all potentially relevant scoring components to be explicit; an independently verified complete official DK total could also provide a valid target.</p>
+
+  <h2>What the alternative public sources establish</h2>
+  <p>The inspected nflverse schedule file contains <strong>272 season-2026 games</strong>, including <strong>49 completed games with both spread and total values</strong>. All 49 saved completed ESPN event identifiers match those completed rows.</p>
+  <p>That makes a retrospective join possible, but not a leakage-free prediction reconstruction. The inspected file has no quote-recorded, observed, fetched, or published timestamp field, and no per-quote sportsbook identity field. Fetching the file today does not establish that its historical values were available at a particular pregame cutoff. It also contains postgame information, such as final scores and actual starting quarterbacks, that must never be used as forecasting inputs.</p>
+  <p>nflverse documents timestamped, appended depth-chart snapshots from 2025 onward. Those are a promising source for historical roles, but a depth chart is not an independently confirmed game-day eligible-player list. Injury and roster evidence would still require event-specific coverage and provenance checks. The research here inspected documentation and the current schedule dataset; it did not verify a complete historical injury/depth/eligibility archive.</p>
+  <div class="note">
+    <strong>Spread direction must be normalized.</strong> nflverse <code>spread_line</code> is positive when home is favored. The app’s <code>homeSpread</code> is negative when home is favored. Any future adapter must use <code>homeSpread = -spread_line</code>, not copy it directly. A total of 48 and home spread −6 imply home 27 / away 21.
+  </div>
+  <p>Public archived repository snapshots or another independently timestamped historical feed might fill some gaps. This audit does not claim that no such dataset exists; it finds that the data inspected and stored here does not satisfy the necessary gates.</p>
+
+  <h2>Why no historical accuracy claim is made</h2>
+  <ol>
+    <li><strong>No verified historical pregame quote snapshot.</strong> Current ESPN retrieval times are not sportsbook publication times or verified historical closing lines. Manually entered timestamps are declarations, not independently archived evidence.</li>
+    <li><strong>No historical eligible-player snapshot.</strong> Today’s active flags, current depth ranks, and held-out participation cannot establish who was eligible at a historical prediction cutoff.</li>
+    <li><strong>No frozen point-in-time input bundle.</strong> Filtering games by earlier week is necessary but does not prove when their imported statistics, later corrections, weather assumptions, roster information, or manual settings became available.</li>
+    <li><strong>Incomplete player scoring targets.</strong> Return TDs, two-point conversions, lost fumbles, and other scoring components cannot be silently inferred to be zero. An absent box-score row is not automatically a zero-point performance.</li>
+    <li><strong>Small, sparse candidate cohort.</strong> Even after fixing provenance, 31 sparse-history pairs would require cautious uncertainty reporting. An earlier head-to-head meeting is not a requirement for the market comparison; the earlier opponent-blend audit’s rematch requirement does not apply to this question.</li>
+  </ol>
+
+  <h2>Prospective collection and evaluation design</h2>
+  <p>The following is a design, not a running background collector. It adds no paid service and does not alter the Team Library.</p>
+  <h3>1. Freeze one pregame prediction per matchup</h3>
+  <p>Use a fixed cutoff, for example <strong>60 minutes before confirmed kickoff</strong>, consistently for both conditions. Do not guess a cutoff for a TBD kickoff. Capture the raw quote response, sportsbook/source label, home/away identifiers, normalized spread and total, and trustworthy archive capture time. Record a provider publication time only when actually supplied.</p>
+  <p>Capture independent official roster/inactive or game-day eligibility evidence, its raw response, source URL, capture time, and eligible QB/RB/WR/TE identifiers. Archive a depth-role snapshot separately. An omitted injury row must not imply “available.” Capture forecast weather and other inputs available at the same cutoff, not postgame weather.</p>
+  <p>Store records in a dedicated, immutable evaluation archive keyed by season and event ID. Preserve original raw responses and checksums; append corrections as new versions. An evaluation snapshot must never overwrite the user’s saved team documents or silently replace a previously frozen prediction.</p>
+  <h3>2. Generate paired predictions</h3>
+  <ul>
+    <li>Freeze the exact simulation input bundle, all pregame source provenance, model/source version or source-code hash, seed, and run count.</li>
+    <li>Generate 200 outcomes for the original model and the same seeded outcomes for the current fixed <strong>35% market-weighted / 65% original</strong> model.</li>
+    <li>Only toggle the optional market weighting. Keep history, roster, depth roles, availability, home/away, weather, importance, and all other inputs identical.</li>
+    <li>Archive both predictions before the outcome is known. Later reconstruction is permitted only from the frozen inputs and exact model version.</li>
+    <li>Record original and weighted mean scores, three-outcome win/tie probabilities, per-player mean DK projections and percentile ranges, quote age, and effective sample size. The market result already exposes paired original and weighted scoring averages.</li>
+    <li>Keep the 35% blend fixed on the evaluation set. Any tuning must use a separate development sample and a subsequent untouched holdout.</li>
+  </ul>
+  <h3>3. Attach observed outcomes after the game</h3>
+  <p>Join finalized scores using exact event identifiers and normalized home/away orientation. Require reciprocal consistency when using team-library outcome rows. Preserve the frozen predictions when results or statistics are corrected.</p>
+  <p>Evaluate player DK points only for the predeclared, pregame eligible cohort with independently observed complete scoring targets. Record excluded or missing targets explicitly. Do not select players based on who eventually played or fill an absent row with zero. Explicitly documented, complete zero-point outcomes can be scored as zero.</p>
+  <h3>4. Report paired metrics and uncertainty</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Question</th><th>Measure</th><th>Comparison unit</th></tr></thead>
+    <tbody>
+      <tr><td>Are team scores more accurate?</td><td>Home/away mean absolute error and RMSE; game-total error; home-minus-away margin error.</td><td>One real game, with baseline and market predictions paired.</td></tr>
+      <tr><td>Are win probabilities better?</td><td>Three-outcome Brier score for home win / away win / tie; calibration bins with counts; log loss with a declared clipping convention if used.</td><td>One observed game outcome. Do not report “win probability improved” just because favored teams receive higher weights.</td></tr>
+      <tr><td>Are fantasy projections more accurate?</td><td>Per-position DK MAE/RMSE, bias, and 10th–90th interval coverage on complete observed targets.</td><td>Pregame eligible player rows, with uncertainty clustered by game.</td></tr>
+      <tr><td>Is improvement robust?</td><td>Paired change = market error − original error; game/week-clustered confidence intervals and disclosed sample sizes.</td><td>Independent observed games, not the 200 synthetic outcomes treated as 200 observations.</td></tr>
+      <tr><td>Does weighting concentrate too strongly?</td><td>Effective sample size, quote-age bands, out-of-range implied scores, and warning frequency.</td><td>One prediction snapshot per game.</td></tr>
+    </tbody>
+  </table></div>
+  <p>Pre-register the evaluation window and decision rule before outcomes. As an initial descriptive checkpoint, target at least 100 eligible games or report at season end that this target was not reached. This is not a guarantee of statistical power: calculate the needed sample from a separate pilot and report inconclusive results when intervals are wide. Break out sparse-history games and QB/RB/WR/TE cohorts without selecting favorable subsets after seeing results.</p>
+  <p>Maintain an exclusion ledger for missing quotes, unknown kickoff, late capture, wrong season/event, unverified eligibility, incomplete pregame inputs, conflicting scores, missing player targets, and unusual game formats. Games lacking quotes may receive original-model predictions, but cannot be included as paired market-treatment cases.</p>
+
+  <h2>Reproducibility and safeguards</h2>
+  <p>A new read-only audit script records source-event counts, paired-history candidates, missing evidence, target completeness, and live-quote coverage. Its tests reject season mixing, preserve unknown-vs-zero distinctions, keep future quotes out of historical accuracy evidence, and check that source documents are not mutated.</p>
+  <pre>pnpm --filter @workspace/scripts exec tsx src/market-history-audit.ts \
+  &lt;read-only-team-library.json&gt; 2026 &lt;read-only-schedule.json&gt;
+
+pnpm --filter @workspace/scripts exec tsx src/market-history-audit.test.ts
+pnpm --filter @workspace/scripts exec tsx market-odds-test.ts</pre>
+  <p class="muted">Companion machine-readable audit: <code>reports/market-odds-feasibility.json</code>. Public-source metadata: <code>reports/market-odds-source-audit.json</code>. No experiment or market-weight tuning was performed. Synthetic functional tests are not held-out forecast-accuracy results.</p>
+  <p class="muted">Team Library snapshot SHA-256:<br><code>1b3d67ab7f16e5d922ac3e26412fcb15adf75b54f43f0782239ef7b929b6c4e2</code></p>
+
+  <h2>Sources inspected</h2>
+  <ol>
+    <li><a href="https://www.espn.com/nfl/schedule">ESPN public NFL schedule</a> and the app’s read-only season-2026 schedule response. Odds capture time is retrieval time, not a verified sportsbook publication time.</li>
+    <li><a href="https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv">nflverse current games.csv</a> — season filtering, observed scores, historical spread/total coverage, event-ID matches, and absence of per-quote timestamp fields inspected directly.</li>
+    <li><a href="https://raw.githubusercontent.com/nflverse/nflreadr/main/data-raw/dictionary_schedules.csv">nflreadr schedule dictionary</a> — spread sign and Eastern-time kickoff convention inspected directly.</li>
+    <li><a href="https://nflreadr.nflverse.com/articles/dictionary_depth_charts.html">nflreadr depth-chart dictionary</a> — post-2024 source change and ISO8601 load timestamp.</li>
+    <li><a href="https://nflreadr.nflverse.com/articles/nflverse_data_schedule.html">nflverse data update and availability schedule</a> — append-by-timestamp depth-chart updates; injury/roster update descriptions; participation data timing.</li>
+  </ol>
+  <footer><strong>Recommendation:</strong> Keep market odds optional and the blend unchanged. A working feature is established; an accuracy improvement is not. Implement prospective evidence capture before making prediction-quality claims.</footer>
+</main>
+</body>
+</html>

@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "9WAppHOGTMevjpeYjNiKd"
+uri = "file://reports/market-odds-validation.html"
+type = "html"
+title = "Market Odds: Evidence Audit and Test Plan"
+description = "Read-only audit of 49 completed games, public historical odds coverage, evidence gaps, and a prospective paired-model evaluation plan. No accuracy improvement is claimed."
+logical_id = "522dfbe7-b7f3-4345-8ee0-711174524c73"
+content_hash = "sha256:1f0860e5af293093794bd352dac9f9a770f6d4937abf5883fc0c746c68a7bd2e"
+size = 16769
+mtime_ms = 1791053535142
+storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:1c3bd1a2-d51c-497b-9eb1-bd30c388c597/522dfbe7-b7f3-4345-8ee0-711174524c73/737aa3de-75b4-4dd0-8465-c692e867dd82"
+storage_version_token = "1791053623948679"
+content_type = "text/html"

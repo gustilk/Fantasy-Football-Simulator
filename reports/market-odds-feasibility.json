@@ -1,0 +1,44 @@
+{
+  "auditedAt": "2026-10-03T18:50:41.180Z",
+  "librarySnapshotSha256": "1b3d67ab7f16e5d922ac3e26412fcb15adf75b54f43f0782239ef7b929b6c4e2",
+  "kind": "evidence-feasibility-audit",
+  "season": 2026,
+  "saved": {
+    "teams": 32,
+    "teamGameRows": 96,
+    "uniqueGames": 49,
+    "uniqueSourceEventIds": 49,
+    "missingCounterpartGames": 2,
+    "conflictingCounterpartGames": 0,
+    "pairedGames": 47,
+    "scoredGamesWithPriorHistoryBothTeams": 31,
+    "gamesWithThreePriorGamesBothTeams": 0,
+    "priorSeenObservedPlayerRows": 603,
+    "completeDraftKingsTargetRows": 0,
+    "currentAvailabilityReportRows": 0,
+    "currentAvailabilityOverrideRows": 0
+  },
+  "upcoming": {
+    "games": 223,
+    "usablePublicQuotes": 28,
+    "missingPublicQuotes": 195,
+    "sourceFetchedAt": "2026-10-03T18:48:36.950Z",
+    "historicalAccuracyEvidence": false
+  },
+  "archivedEvidence": {
+    "historicalPregameOddsSnapshots": "not stored in Team Library",
+    "independentlyArchivedPregameEligibility": "not stored in Team Library",
+    "immutablePregameInputSnapshots": "not stored in Team Library",
+    "sportsbookPublicationTimes": "not supplied by current public schedule quotes"
+  },
+  "eligibleAccuracyComparisons": 0,
+  "metrics": null,
+  "exclusions": [
+    "Current/future odds cannot stand in for independently archived pregame odds.",
+    "Current active flags, depth ranks, availability reports and retrospective overrides cannot establish historical pregame eligibility.",
+    "Prior-week history cutoffs do not prove that imported statistics or inputs were available at the prediction time.",
+    "Missing DraftKings scoring components and absent player rows remain unknown, not zero.",
+    "No baseline/market accuracy metrics can be computed from this evidence contract."
+  ],
+  "conclusion": "Insufficient point-in-time evidence. Keep the experimental market weight unchanged; collect immutable pregame quotes, eligibility and input snapshots before measuring accuracy."
+}
