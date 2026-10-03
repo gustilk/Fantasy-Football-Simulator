@@ -40,7 +40,8 @@ export default function TeamLibrary({ season, onSeasonChange, teams, loading, er
   const [ctx, setCtx] = useState<{ season: number; team: string } | null>(null);
   const [draft, setDraft] = useState<Draft>({ players: [], weeks: normalize(undefined).weeks });
   const [base, setBase] = useState<{ version: number; snap: string }>({ version: 0, snap: snap(normalize(undefined)) });
-  const [view, setView] = useState<'roster' | 'weeks'>('weeks');
+  const [view, setView] = useState<'roster' | 'weeks'>(() =>
+    new URLSearchParams(window.location.search).get('section') === 'roster' ? 'roster' : 'weeks');
   const [weekNo, setWeekNo] = useState(1);
   const [status, setStatus] = useState<{ kind: 'ok' | 'err' | 'conflict'; text: string } | null>(null);
   const [pendingAdopt, setPendingAdopt] = useState(false);
