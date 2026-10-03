@@ -1,6 +1,7 @@
 import type { NflScheduledGame, TeamSeasonRecord } from '@workspace/api-client-react';
 import type { SimulationInput, SimulationResult } from './simulator';
 import { getDraftKingsDetails } from './draftkings';
+import { savedEliteTier, type EliteTier } from './elite-players';
 
 export const DK_POSITIONS = ['QB', 'RB', 'WR', 'TE'] as const;
 export type DKPosition = typeof DK_POSITIONS[number];
@@ -20,6 +21,7 @@ export interface DKProjection {
   team: string;
   position: DKPosition;
   elite1x?: boolean;
+  eliteTier?: EliteTier;
   mean: number;
   p10: number;
   p90: number;
@@ -145,6 +147,7 @@ export function gameForecast(game: NflScheduledGame, input: SimulationInput, res
     return {
       playerId: matches[0]!.id, name: player.name, team: player.team, position: player.position as DKPosition,
       elite1x: player.elite1x === true,
+      eliteTier: savedEliteTier(player),
       mean: summary.mean, p10: summary.p10, p90: summary.p90,
     };
   });

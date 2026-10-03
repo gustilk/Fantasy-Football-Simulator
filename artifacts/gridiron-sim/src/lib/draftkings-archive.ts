@@ -14,6 +14,7 @@ const forecastSchema = z.object({
   players: z.array(z.object({
     playerId: z.string(), name: z.string(), team: z.string(), position: z.enum(['QB', 'RB', 'WR', 'TE']),
     mean: z.number(), p10: z.number(), p90: z.number(), elite1x: z.boolean().optional(),
+    eliteTier: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]).optional(),
   })),
   warnings: z.array(z.string()),
 }).passthrough();

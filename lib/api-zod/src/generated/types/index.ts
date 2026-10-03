@@ -25,6 +25,7 @@ export * from './playerAvailabilityReport';
 export * from './playerAvailabilityReportStatus';
 export * from './previewNflTeamParams';
 export * from './rosterPlayer';
+export * from './rosterPlayerEliteTier';
 export * from './rosterPlayerPosition';
 export * from './rosterPlayerSide';
 export * from './seasonError';

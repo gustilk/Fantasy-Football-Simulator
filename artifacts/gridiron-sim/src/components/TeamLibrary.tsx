@@ -6,7 +6,7 @@ import NflImportPanel from './NflImportPanel';
 import DivisionMatchup from './DivisionMatchup';
 import { getDivision } from '@/lib/nfl-divisions';
 import { rolesForRoster } from '@/lib/depth-chart';
-import { isElite1x } from '@/lib/elite-players';
+import { getEliteTier, ELITE_TIER_OPTIONS, type EliteTier } from '@/lib/elite-players';
 import PlayerStatsTable, { type StatRow } from './PlayerStatsTable';
 import PlayerAvailabilityEditor from './PlayerAvailabilityEditor';
 import './team-library.css';
@@ -261,7 +261,7 @@ function Roster({ players, patch, setDraft, depth, nextWeek }: { players: Player
         </select>
       </label>
       <p className="tl-hint">QB/RB/WR/TE overrides apply only to the selected week and take precedence over the saved Active flag. Out/Doubtful excludes; Questionable/Limited includes without modeling missed-game probability or a workload reduction. One weekly override per player is retained. Save team to persist it. Roster reports are not confirmed game-day participation.</p>
-      <p className="tl-hint"><strong>1x elite:</strong> 20% higher target/carry priority; QB rushing only. The 20 approved names start enabled. Save team after changes, then rerun projections to apply.</p>
+      <p className="tl-hint"><strong>Elite priority:</strong> 1x +20%, 2x +40%, 3x +60% target/carry priority; QB rushing only. Your assigned players start at their chosen tiers. None disables the boost. Save team after changes, then rerun projections to apply.</p>
       {players.length === 0 ? (
         <div className="tl-empty"><Database size={26} /><strong>No roster saved for this team and season</strong><span>Refresh recent NFL data above, add players, or paste a list. Nothing is stored until you save.</span></div>
       ) : (
@@ -275,16 +275,15 @@ function Roster({ players, patch, setDraft, depth, nextWeek }: { players: Player
             return (
             <div className={`tl-tr${p.active ? '' : ' off'}`} role="row" key={p.id} data-testid={`row-player-${p.id}`}>
               <input aria-label="Name" value={p.name} title={p.source ? `ESPN: ${p.sourcePosition || p.position} · ${p.availability || 'availability unknown'}` : undefined} onChange={e => upd(p.id, { name: e.target.value })} />
-               <div className="tl-role-cell"><select aria-label="Position" value={p.position} onChange={e => upd(p.id, { position: e.target.value as Position, depthRank: undefined, depthSource: undefined, elite1x: ['QB', 'RB', 'WR', 'TE'].includes(e.target.value) ? p.elite1x : false })}>{positions.map(x => <option key={x}>{x}</option>)}</select>
+               <div className="tl-role-cell"><select aria-label="Position" value={p.position} onChange={e => upd(p.id, { position: e.target.value as Position, depthRank: undefined, depthSource: undefined, elite1x: ['QB', 'RB', 'WR', 'TE'].includes(e.target.value) ? p.elite1x : false, eliteTier: ['QB', 'RB', 'WR', 'TE'].includes(e.target.value) ? p.eliteTier : 0 })}>{positions.map(x => <option key={x}>{x}</option>)}</select>
                  {p.side === 'offense' && ['QB', 'RB', 'WR', 'TE'].includes(p.position) && <select aria-label={`Depth role for ${p.name}`} data-testid={`depth-role-${p.id}`} value={p.depthSource ? '' : p.depthRank ?? ''} onChange={e => upd(p.id, { depthRank: e.target.value ? Number(e.target.value) : undefined, depthSource: undefined })}>
                    <option value="">Auto{automatic ? ` · ${p.position}${automatic}` : ' · unranked'}</option>
                    {Array.from({ length: 50 }, (_, i) => <option key={i + 1} value={i + 1}>{p.position}{i + 1}</option>)}
                  </select>}
-                 {p.side === 'offense' && ['QB', 'RB', 'WR', 'TE'].includes(p.position) && <label className="tl-check" title="20% higher target/carry priority. QB: rushing only. Does not override availability. Save team to keep changes.">
-                   <input type="checkbox" aria-label={`1x elite priority for ${p.name}`} data-testid={`elite-1x-${p.id}`} checked={isElite1x(p)} onChange={e => upd(p.id, { elite1x: e.target.checked })} /> 1x elite
-                 </label>}
+                 {p.side === 'offense' && ['QB', 'RB', 'WR', 'TE'].includes(p.position) && <select aria-label={`Elite priority for ${p.name}`} data-testid={`elite-tier-${p.id}`} title="Target/carry priority only. QB: rushing only. Does not override availability. Save team to keep changes."
+                   value={getEliteTier(p)} onChange={e => upd(p.id, { eliteTier: Number(e.target.value) as EliteTier, elite1x: Number(e.target.value) > 0 })}>{ELITE_TIER_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select>}
                </div>
-               <select aria-label="Side" value={p.side} onChange={e => upd(p.id, { side: e.target.value as Side, depthRank: undefined, depthSource: undefined, elite1x: e.target.value === 'offense' ? p.elite1x : false })}><option value="offense">Offense</option><option value="defense">Defense</option></select>
+               <select aria-label="Side" value={p.side} onChange={e => upd(p.id, { side: e.target.value as Side, depthRank: undefined, depthSource: undefined, elite1x: e.target.value === 'offense' ? p.elite1x : false, eliteTier: e.target.value === 'offense' ? p.eliteTier : 0 })}><option value="offense">Offense</option><option value="defense">Defense</option></select>
               <div className="tl-availability-cell"><label className="tl-check"><input type="checkbox" checked={p.active} onChange={e => upd(p.id, { active: e.target.checked })} /> {p.active ? 'Active' : 'Inactive'}</label>
                 {p.side === 'offense' && ['QB', 'RB', 'WR', 'TE'].includes(p.position) && <PlayerAvailabilityEditor player={p} week={availabilityWeek} onChange={ch => upd(p.id, ch)} />}
               </div>

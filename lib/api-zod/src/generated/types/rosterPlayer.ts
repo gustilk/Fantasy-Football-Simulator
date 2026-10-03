@@ -8,6 +8,7 @@
 import type { NflDataSource } from './nflDataSource';
 import type { PlayerAvailabilityOverride } from './playerAvailabilityOverride';
 import type { PlayerAvailabilityReport } from './playerAvailabilityReport';
+import type { RosterPlayerEliteTier } from './rosterPlayerEliteTier';
 import type { RosterPlayerPosition } from './rosterPlayerPosition';
 import type { RosterPlayerSide } from './rosterPlayerSide';
 
@@ -25,8 +26,10 @@ export interface RosterPlayer {
   position: RosterPlayerPosition;
   side: RosterPlayerSide;
   active: boolean;
-  /** Optional manual 1x preference. True gives 20% higher target/carry selection weight; false disables the researched default. Omitted uses the approved name-and-position list. */
+  /** Legacy elite preference. Used only when eliteTier is omitted; false disables defaults and true enables the approved default tier or 1x. */
   elite1x?: boolean;
+  /** Optional manual opportunity tier. 0 disables, 1 gives 20%, 2 gives 40%, and 3 gives 60% higher target/carry priority. QB rushing only. Omitted uses legacy preferences or approved name-and-position defaults. */
+  eliteTier?: RosterPlayerEliteTier;
   source?: NflDataSource;
   sourcePosition?: string;
   availability?: string;

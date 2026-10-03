@@ -3,7 +3,7 @@ import { getDivision, isDivisionGame } from "./nfl-divisions";
 import type { AvailabilityCheck } from "./availability";
 import type { historyStrength, playerUsage } from "./history-signals";
 import type { MarketOdds, MarketEvidence } from "./market-odds";
-import { isElite1x, eliteOpportunityWeight } from "./elite-players";
+import { getEliteTier, eliteOpportunityWeight, type EliteTier } from "./elite-players";
 
 export type Precipitation = "none" | "light" | "moderate" | "heavy";
 
@@ -48,6 +48,7 @@ export interface SimulationRosterPlayer {
   depthRankBasis?: "ESPN" | "saved" | "usage";
   historyObservations?: number;
   elite1x?: boolean;
+  eliteTier?: EliteTier;
   usage?: ReturnType<typeof playerUsage>;
 }
 
@@ -65,6 +66,7 @@ export interface TeamSetup {
   defenseRating: number;
   context: string;
   elite1x?: Partial<Record<"qb" | "rb" | "wr1" | "wr2" | "wr3" | "te", boolean>>;
+  eliteTiers?: Partial<Record<"qb" | "rb" | "wr1" | "wr2" | "wr3" | "te", EliteTier>>;
   recentStats?: {
     qb?: PlayerRecentStats;
     rb?: PlayerRecentStats;
@@ -111,6 +113,7 @@ export interface PlayerProjection {
   team: string;
   depthRank?: number;
   elite1x?: boolean;
+  eliteTier?: EliteTier;
   passYards: number;
   passTD: number;
   interceptions: number;
@@ -206,7 +209,8 @@ function makePlayer(
     position,
     team,
     depthRank,
-    elite1x: isElite1x({ name, position }),
+    elite1x: getEliteTier({ name, position }) > 0,
+    eliteTier: getEliteTier({ name, position }),
     passYards: 0,
     passTD: 0,
     interceptions: 0,
@@ -234,7 +238,8 @@ function makeTeamSimulation(setup: TeamSetup): TeamSimulation {
       return {
         ...makePlayer(player.name, player.position, teamName, player.depthRank ?? ranks[player.position]),
         id: player.id,
-        elite1x: isElite1x(player),
+        elite1x: getEliteTier(player) > 0,
+        eliteTier: getEliteTier(player),
         recentStats: player.recentStats, historyObservations: player.historyObservations, usage: player.usage,
       };
     }) : [
@@ -246,7 +251,8 @@ function makeTeamSimulation(setup: TeamSetup): TeamSimulation {
       makePlayer(setup.te, "TE", teamName),
     ].map((player, index) => {
       const slot = (["qb", "rb", "wr1", "wr2", "wr3", "te"] as const)[index]!;
-      return { ...player, elite1x: isElite1x({ ...player, elite1x: setup.elite1x?.[slot] }) };
+      const eliteTier = getEliteTier({ ...player, eliteTier: setup.eliteTiers?.[slot], elite1x: setup.elite1x?.[slot] });
+      return { ...player, eliteTier, elite1x: eliteTier > 0 };
     }),
     drives: [],
   };
@@ -270,7 +276,7 @@ function receiverFor(
       redZone && supplied(playerStats?.receivingTD)
         ? 1 + clamp(playerStats.receivingTD * 0.035, 0, 0.16)
         : 1;
-    return eliteOpportunityWeight(recentTargetWeight * redZoneBoost, !!player.elite1x);
+    return eliteOpportunityWeight(recentTargetWeight * redZoneBoost, player.eliteTier ?? 0);
   });
   const total = weighted.reduce((sum, value) => sum + value, 0);
   const finalWeights = total > 0 ? weighted : fallback;
@@ -330,7 +336,7 @@ function runningBackFor(team: TeamSimulation, random: Random): PlayerAccumulator
       return carries === undefined ? defaults[index]! : roleGuidedWeight(defaults[index]!, carries, reliability);
     });
     if (weights.every(weight => weight === 0)) weights = defaults;
-    weights = weights.map((weight, index) => eliteOpportunityWeight(weight, !!runners[index]!.elite1x));
+    weights = weights.map((weight, index) => eliteOpportunityWeight(weight, runners[index]!.eliteTier ?? 0));
     let roll = random() * weights.reduce((sum, weight) => sum + weight, 0);
     for (let i = 0; i < runners.length; i++) {
       roll -= weights[i]!;
@@ -351,8 +357,8 @@ function runningBackFor(team: TeamSimulation, random: Random): PlayerAccumulator
     qbShare = 0.09 * (20 / rbCarries);
   }
   const baseShare = clamp(qbShare, 0.025, 0.4);
-  const qbWeight = eliteOpportunityWeight(baseShare, !!qb.elite1x);
-  const rbWeight = eliteOpportunityWeight(1 - baseShare, !!rb.elite1x);
+  const qbWeight = eliteOpportunityWeight(baseShare, qb.eliteTier ?? 0);
+  const rbWeight = eliteOpportunityWeight(1 - baseShare, rb.eliteTier ?? 0);
   return random() < qbWeight / (qbWeight + rbWeight) ? qb : rb;
 }
 

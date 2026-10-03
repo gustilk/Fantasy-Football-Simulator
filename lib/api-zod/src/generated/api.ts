@@ -103,7 +103,8 @@ export const ListSeasonTeamsResponseItem = zod.object({
   "position": zod.enum(['QB', 'RB', 'WR', 'TE', 'K', 'OL', 'DL', 'EDGE', 'LB', 'CB', 'S', 'OTHER']),
   "side": zod.enum(['offense', 'defense']),
   "active": zod.boolean(),
-  "elite1x": zod.boolean().optional().describe('Optional manual 1x preference. True gives 20% higher target/carry selection weight; false disables the researched default. Omitted uses the approved name-and-position list.'),
+  "elite1x": zod.boolean().optional().describe('Legacy elite preference. Used only when eliteTier is omitted; false disables defaults and true enables the approved default tier or 1x.'),
+  "eliteTier": zod.union([zod.literal(0),zod.literal(1),zod.literal(2),zod.literal(3)]).optional().describe('Optional manual opportunity tier. 0 disables, 1 gives 20%, 2 gives 40%, and 3 gives 60% higher target/carry priority. QB rushing only. Omitted uses legacy preferences or approved name-and-position defaults.'),
   "source": zod.object({
   "provider": zod.enum(['ESPN']),
   "url": zod.string().url(),
@@ -215,7 +216,8 @@ export const SaveSeasonTeamBody = zod.object({
   "position": zod.enum(['QB', 'RB', 'WR', 'TE', 'K', 'OL', 'DL', 'EDGE', 'LB', 'CB', 'S', 'OTHER']),
   "side": zod.enum(['offense', 'defense']),
   "active": zod.boolean(),
-  "elite1x": zod.boolean().optional().describe('Optional manual 1x preference. True gives 20% higher target/carry selection weight; false disables the researched default. Omitted uses the approved name-and-position list.'),
+  "elite1x": zod.boolean().optional().describe('Legacy elite preference. Used only when eliteTier is omitted; false disables defaults and true enables the approved default tier or 1x.'),
+  "eliteTier": zod.union([zod.literal(0),zod.literal(1),zod.literal(2),zod.literal(3)]).optional().describe('Optional manual opportunity tier. 0 disables, 1 gives 20%, 2 gives 40%, and 3 gives 60% higher target/carry priority. QB rushing only. Omitted uses legacy preferences or approved name-and-position defaults.'),
   "source": zod.object({
   "provider": zod.enum(['ESPN']),
   "url": zod.string().url(),
@@ -306,7 +308,8 @@ export const SaveSeasonTeamResponse = zod.object({
   "position": zod.enum(['QB', 'RB', 'WR', 'TE', 'K', 'OL', 'DL', 'EDGE', 'LB', 'CB', 'S', 'OTHER']),
   "side": zod.enum(['offense', 'defense']),
   "active": zod.boolean(),
-  "elite1x": zod.boolean().optional().describe('Optional manual 1x preference. True gives 20% higher target/carry selection weight; false disables the researched default. Omitted uses the approved name-and-position list.'),
+  "elite1x": zod.boolean().optional().describe('Legacy elite preference. Used only when eliteTier is omitted; false disables defaults and true enables the approved default tier or 1x.'),
+  "eliteTier": zod.union([zod.literal(0),zod.literal(1),zod.literal(2),zod.literal(3)]).optional().describe('Optional manual opportunity tier. 0 disables, 1 gives 20%, 2 gives 40%, and 3 gives 60% higher target/carry priority. QB rushing only. Omitted uses legacy preferences or approved name-and-position defaults.'),
   "source": zod.object({
   "provider": zod.enum(['ESPN']),
   "url": zod.string().url(),
@@ -423,7 +426,8 @@ export const PreviewNflTeamResponse = zod.object({
   "position": zod.enum(['QB', 'RB', 'WR', 'TE', 'K', 'OL', 'DL', 'EDGE', 'LB', 'CB', 'S', 'OTHER']),
   "side": zod.enum(['offense', 'defense']),
   "active": zod.boolean(),
-  "elite1x": zod.boolean().optional().describe('Optional manual 1x preference. True gives 20% higher target/carry selection weight; false disables the researched default. Omitted uses the approved name-and-position list.'),
+  "elite1x": zod.boolean().optional().describe('Legacy elite preference. Used only when eliteTier is omitted; false disables defaults and true enables the approved default tier or 1x.'),
+  "eliteTier": zod.union([zod.literal(0),zod.literal(1),zod.literal(2),zod.literal(3)]).optional().describe('Optional manual opportunity tier. 0 disables, 1 gives 20%, 2 gives 40%, and 3 gives 60% higher target/carry priority. QB rushing only. Omitted uses legacy preferences or approved name-and-position defaults.'),
   "source": zod.object({
   "provider": zod.enum(['ESPN']),
   "url": zod.string().url(),

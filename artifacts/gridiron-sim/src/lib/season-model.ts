@@ -2,7 +2,7 @@ import type { NumericStats, TeamSeasonRecord, TeamWeek } from "@workspace/api-cl
 import type { PlayerRecentStats, SimulationRosterPlayer, TeamSetup } from "./simulator";
 import { availabilityForWeek, availabilityWarnings } from "./availability";
 import { historyStrength, historyWarnings, playerUsage } from "./history-signals";
-import { isElite1x } from "./elite-players";
+import { getEliteTier } from "./elite-players";
 
 const average = (rows: NumericStats[], key: string): number | undefined => {
   const values = rows.map(row => row[key]).filter((value): value is number => typeof value === "number" && Number.isFinite(value));
@@ -72,7 +72,8 @@ export function setupFromHistory(team: TeamSeasonRecord, week: number, venue: "h
     const rows = games.filter(game => game.playerStats[player.id] !== undefined).map(game => ({ stats: game.playerStats[player.id]!, venue: game.venue, opponent: game.opponent }));
     return {
       id: player.id, name: player.name, position: player.position as SimulationRosterPlayer["position"],
-      elite1x: isElite1x(player),
+      elite1x: getEliteTier(player) > 0,
+      eliteTier: getEliteTier(player),
       depthRank: player.depthRank, depthRankBasis: player.depthRank === undefined ? "usage" as const : player.depthSource ? "ESPN" as const : "saved" as const,
       historyObservations: rows.filter(row => ["passAttempts", "rushAttempts", "targets", "receptions", "receivingYards"].some(key => Number.isFinite(row.stats[key]))).length,
       recentStats: blendedStats(rows, venue, matchupOpponent) as PlayerRecentStats,

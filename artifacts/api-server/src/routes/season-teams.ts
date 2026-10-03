@@ -26,8 +26,8 @@ router.put("/season-teams/:season/:team", async (req, res): Promise<void> => {
   if (ids.size !== players.length) { fail("Each roster player must have a unique ID."); return; }
   const roles = new Set<string>();
   for (const player of players) {
-    if (player.elite1x === true && (player.side !== "offense" || !["QB", "RB", "WR", "TE"].includes(player.position))) {
-      fail("1x applies to offensive QB/RB/WR/TE players only."); return;
+    if ((player.elite1x === true || (player.eliteTier ?? 0) > 0) && (player.side !== "offense" || !["QB", "RB", "WR", "TE"].includes(player.position))) {
+      fail("Elite tiers apply to offensive QB/RB/WR/TE players only."); return;
     }
     if (player.depthRank === undefined) continue;
     if (player.side !== "offense" || !["QB", "RB", "WR", "TE"].includes(player.position)) { fail("Depth roles apply to offensive QB/RB/WR/TE players only."); return; }

@@ -5,6 +5,7 @@ import { useDraftKingsBoard, type DraftKingsBoardController } from '@/hooks/use-
 import { DK_POSITIONS, groupDKPlayers, type DKHistoryPlayer, type DKPosition } from '@/lib/draftkings-board';
 import './draftkings.css';
 import DraftKingsAccuracy from './DraftKingsAccuracy';
+import EliteBadge from './EliteBadge';
 
 const fmt = (n: number | null | undefined) => n === null || n === undefined ? 'unknown' : n.toFixed(2);
 const when = (iso: string) => new Date(iso).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'America/Chicago', timeZoneName: 'short' });
@@ -112,7 +113,7 @@ export default function DraftKingsBoard({ season }: { season: number }) {
         <p className="dk-muted">Saved Sunday {slate.sunday} · {slate.forecasts.length} games</p>
         <div className="player-table-wrap"><table className="player-table"><thead><tr><th>#  Player</th><th>DK points</th>{detail && <><th>10th–90th</th><th>Actual</th><th>Diff</th></>}</tr></thead><tbody>
           {projList.map((r, i) => <tr key={`${r.team}-${r.playerId}`} data-testid={`dk-proj-${r.playerId}`}>
-            <td><span className="dk-rank">{i + 1}</span><span className="player-name">{r.name}</span>{r.elite1x && <small className="elite-1x-badge" title="1x: 20% higher opportunity priority">1x</small>}<span className="player-pos">{r.team}</span></td>
+            <td><span className="dk-rank">{i + 1}</span><span className="player-name">{r.name}</span><EliteBadge player={r} /><span className="player-pos">{r.team}</span></td>
             <td className="dk-mean">{r.mean.toFixed(2)}</td>
             {detail && <><td>{r.p10.toFixed(2)}–{r.p90.toFixed(2)}</td>
               <td>{r.actual ? `${fmt(r.actual.points)}${r.actual.partial ? '*' : ''}` : 'not recorded'}</td>

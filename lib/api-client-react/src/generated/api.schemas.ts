@@ -74,6 +74,19 @@ export const RosterPlayerSide = {
   defense: 'defense',
 } as const;
 
+/**
+ * Optional manual opportunity tier. 0 disables, 1 gives 20%, 2 gives 40%, and 3 gives 60% higher target/carry priority. QB rushing only. Omitted uses legacy preferences or approved name-and-position defaults.
+ */
+export type RosterPlayerEliteTier = typeof RosterPlayerEliteTier[keyof typeof RosterPlayerEliteTier];
+
+
+export const RosterPlayerEliteTier = {
+  NUMBER_0: 0,
+  NUMBER_1: 1,
+  NUMBER_2: 2,
+  NUMBER_3: 3,
+} as const;
+
 export type NflDataSourceProvider = typeof NflDataSourceProvider[keyof typeof NflDataSourceProvider];
 
 
@@ -142,8 +155,10 @@ export interface RosterPlayer {
   position: RosterPlayerPosition;
   side: RosterPlayerSide;
   active: boolean;
-  /** Optional manual 1x preference. True gives 20% higher target/carry selection weight; false disables the researched default. Omitted uses the approved name-and-position list. */
+  /** Legacy elite preference. Used only when eliteTier is omitted; false disables defaults and true enables the approved default tier or 1x. */
   elite1x?: boolean;
+  /** Optional manual opportunity tier. 0 disables, 1 gives 20%, 2 gives 40%, and 3 gives 60% higher target/carry priority. QB rushing only. Omitted uses legacy preferences or approved name-and-position defaults. */
+  eliteTier?: RosterPlayerEliteTier;
   source?: NflDataSource;
   sourcePosition?: string;
   availability?: string;
