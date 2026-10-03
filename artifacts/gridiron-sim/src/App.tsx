@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Activity, ArrowRight, Bookmark, ChevronDown, CircleHelp, Cloud, CloudRain, Crosshair, RotateCw, Shield, SlidersHorizontal, Trash2, Trophy, Wind } from 'lucide-react';
 import { type WeatherSetup as Weather, type TeamSetup, type SimulationInput, type SimulationResult, type PlayerProjection as SimPlayer, type PlayerRecentStats, type DefenseRecentStats } from '@/lib/simulator';
 import { useListSeasonTeams, getListSeasonTeamsQueryKey, type TeamSeasonRecord } from '@workspace/api-client-react';
@@ -228,14 +228,14 @@ function App() {
                     <option value="none">None</option><option value="light">Light</option><option value="moderate">Moderate</option><option value="heavy">Heavy</option>
                   </select>
                 </Field>
-                <div className="field"><label>Conditions</label><div style={{height:37,display:'flex',alignItems:'center',gap:7,color:'#6d796e',fontSize:11}}>{setup.weather.precipitation === 'none' ? <Wind size={14}/> : <CloudRain size={14}/>} {setup.weather.windMph} mph · {setup.weather.temperatureF}°F</div></div>
+                <div className="field"><label>Conditions</label><div style={{height:37,display:'flex',alignItems:'center',gap:7,color:'var(--app-muted)',fontSize:11}}>{setup.weather.precipitation === 'none' ? <Wind size={14}/> : <CloudRain size={14}/>} {setup.weather.windMph} mph · {setup.weather.temperatureF}°F</div></div>
               </div>
               <div className="setup-actions">
                 <button className="btn-primary" onClick={runSimulation} disabled={busy} data-testid="button-run-simulation">
                   {busy ? <><RotateCw size={15} className="spin-icon" /> Running model…</> : <><Crosshair size={16} /> Run simulation <ArrowRight size={15} /></>}
                 </button>
               </div>
-              {error && <div role="alert" style={{marginTop:11,color:'#a34435',fontSize:12}}>{error} <button className="text-button" onClick={runSimulation}>Retry</button></div>}
+              {error && <div role="alert" style={{marginTop:11,color:'var(--app-danger)',fontSize:12}}>{error} <button className="text-button" onClick={runSimulation}>Retry</button></div>}
             </div>
           </section>
 
@@ -257,7 +257,7 @@ function App() {
                 <div className="saved-list">{saved.map(item => (
                   <div className="saved-item" key={item.id} data-testid={`saved-run-${item.id}`}>
                     <button className="saved-open" onClick={() => openSaved(item)} data-testid={`button-open-saved-${item.id}`}>
-                      <span aria-hidden="true" style={{font: '10px var(--app-font-mono)',color:'#8c927f'}}>↳</span>
+                      <span aria-hidden="true" style={{font: '10px var(--app-font-mono)',color:'var(--app-muted)'}}>↳</span>
                       <span style={{minWidth:0,display:'flex',flexDirection:'column',gap:2}}><strong>{item.awayName} at {item.homeName}</strong><span>{formatSavedDate(item.savedAt)} · seed {item.result.seed}</span></span>
                     </button>
                     <span className="saved-score">{item.result.awayScore} — {item.result.homeScore}</span>
@@ -289,7 +289,7 @@ function TeamEditor({ team, side, patchTeam }: { team:TeamSetup; side:'away'|'ho
   const ratings: {key:'passRating'|'rushRating'|'defenseRating';label:string}[] = [
     {key:'passRating',label:'Pass offense'}, {key:'rushRating',label:'Rush offense'}, {key:'defenseRating',label:'Defense'},
   ];
-  return <div className="team-block">
+  return <div className={`team-block team-${side}`}>
     <div className="team-heading"><div className="team-label"><span className={`team-crest ${side === 'home' ? 'orange' : ''}`} style={{width:29,height:29,borderRadius:8,fontSize:11}}>{initials(team.name)}</span>{label}</div><span className="team-chip">{side === 'away' ? 'VISITOR' : 'AT HOME'}</span></div>
     <div className="form-grid">
       <Field label="NFL team" htmlFor={`${side}-team`} full>
@@ -388,6 +388,7 @@ function RecentStatsEditor({ team, side, patchTeam }: { team: TeamSetup; side: '
 }
 
 function SimulationResults({ result, awayName, homeName, onRun, busy }: { result:SimulationResult; awayName:string; homeName:string; onRun:()=>void; busy:boolean }) {
+  const drives = useMemo(() => [...result.drives].sort((a, b) => a.id - b.id), [result.drives]);
   const playersByTeam = useMemo(() => {
     const groups = new Map<string, ProjectedPlayer[]>();
     result.players.forEach((player, index) => groups.set(player.team, [...(groups.get(player.team) || []), { ...player, estimate: result.ensemble?.fantasy[index] }]));
@@ -418,18 +419,21 @@ function SimulationResults({ result, awayName, homeName, onRun, busy }: { result
       <section aria-labelledby="overview-title">
         {result.ensemble && <p className="ensemble-note"><strong>{result.ensemble.runs} simulated games.</strong> Model outcomes: {awayName} wins {result.ensemble.awayWinPct}%, {homeName} wins {result.ensemble.homeWinPct}%, ties {result.ensemble.tiePct}%. Fantasy means and ranges below use all runs; this score and drive log show just one example.</p>}
         <div className="content-heading" id="overview-title"><Crosshair size={15} className="heading-icon"/> MATCHUP READ &amp; X-FACTORS</div>
-        {result.overview.length ? <ul className="overview-list" data-testid="simulation-overview">{result.overview.map((line,index) => <li key={`${index}-${line}`}>{line}</li>)}</ul> : <p style={{fontSize:12,color:'#777'}}>No overview notes were returned for this run.</p>}
+        {result.overview.length ? <ul className="overview-list" data-testid="simulation-overview">{result.overview.map((line,index) => <li key={`${index}-${line}`}>{line}</li>)}</ul> : <p style={{fontSize:12,color:'var(--app-muted)'}}>No overview notes were returned for this run.</p>}
       </section>
       <div className="result-sections">
         <section className="subsection" aria-labelledby="drives-title">
           <div className="content-heading" id="drives-title"><Activity size={15} className="heading-icon"/> DRIVE TRACKER <span className="panel-index">{result.drives.length} SERIES</span></div>
           <div className="drive-scroll" data-testid="drive-log">
-            {result.drives.length === 0 ? <div className="saved-empty" style={{padding:14}}>No drive log was returned.</div> : [...result.drives].sort((a,b)=>a.id-b.id).map((drive,index) =>
-              <details className="drive" key={`${drive.id}-${index}`}>
+            {drives.length === 0 ? <div className="saved-empty" style={{padding:14}}>No drive log was returned.</div> : drives.map((drive,index) =>
+              <Fragment key={`${drive.id}-${index}`}>
+              {index > 0 && drive.quarter >= 3 && drives[index - 1].quarter <= 2 && <div className="halftime-marker" data-testid="halftime-marker">HALFTIME</div>}
+              <details className={`drive team-${drive.team === awayName ? 'away' : 'home'}`}>
                 <summary><span className="quarter-badge">Q{drive.quarter}</span><span>{drive.team}</span><span className="drive-result">{drive.result}</span><ChevronDown size={13}/></summary>
                 <div className="drive-summary">{drive.summary}</div>
                 {drive.plays.length > 0 && <div className="play-list">{drive.plays.map((play,playIndex)=><span key={`${drive.id}-play-${playIndex}`}>{String(playIndex+1).padStart(2,'0')} &nbsp;{play}</span>)}</div>}
               </details>
+              </Fragment>
             )}
           </div>
         </section>
@@ -438,7 +442,7 @@ function SimulationResults({ result, awayName, homeName, onRun, busy }: { result
           <div className="player-table-wrap">
             <table className="player-table" data-testid="player-projections">
                <thead><tr><th>Player</th><th>Pass<br/>Yds</th><th>Pass<br/>TD / INT</th><th>Rush<br/>Yds / TD</th><th>Rec<br/>REC / YDS / TD</th><th>FUM<br/>LOST</th><th>{result.ensemble ? 'Mean ½ PPR' : '½ PPR'}</th></tr></thead>
-              <tbody>{playersByTeam.map(([team,players]) => <FragmentGroup key={team} team={team} players={players}/>)}</tbody>
+              <tbody>{playersByTeam.map(([team,players]) => <FragmentGroup key={team} team={team} players={players} side={team === awayName ? 'away' : 'home'}/>)}</tbody>
             </table>
           </div>
            {result.ensemble && <p className="ensemble-note">Mean Half-PPR across {result.ensemble.runs} runs. The range is the 10th–90th percentile of simulated outcomes, not a calibrated forecast interval. Stat columns show the example game. Backups with no modeled playing time can have zero projections.</p>}
@@ -448,10 +452,10 @@ function SimulationResults({ result, awayName, homeName, onRun, busy }: { result
     </div>
   </>;
 }
-function FragmentGroup({ team, players }: { team:string; players:ProjectedPlayer[] }) {
+function FragmentGroup({ team, players, side }: { team:string; players:ProjectedPlayer[]; side:'away'|'home' }) {
   return <>
-    <tr className="team-group-row"><td colSpan={7}>{team}</td></tr>
-    {players.map((player,index)=><tr key={`${team}-${player.name}-${index}`} data-testid={`projection-${team}-${index}`}>
+    <tr className={`team-group-row team-${side}`}><td colSpan={7}>{team}</td></tr>
+    {players.map((player,index)=><tr className={`team-${side}`} key={`${team}-${player.name}-${index}`} data-testid={`projection-${team}-${index}`}>
       <td className="player-name">{player.name}<span className="player-pos">{player.position}</span></td>
       <td>{player.passYards}</td><td>{player.passTD} / {player.interceptions}</td><td>{player.rushYards} / {player.rushTD}</td>
       <td>{player.receptions} / {player.receivingYards} / {player.receivingTD}</td><td>{player.fumblesLost}</td><td className="fantasy-points">{Number(player.estimate?.mean ?? player.halfPpr).toFixed(1)}{player.estimate && <span className="fantasy-range">{player.estimate.p10.toFixed(1)}–{player.estimate.p90.toFixed(1)}</span>}</td>

@@ -8,7 +8,7 @@ export default function HistoryTeamPicker({ name, teams, week, venue, onChange, 
 }) {
   const team = teams.find(team => team.team === name);
   const setup = snapshot ?? (team ? setupFromHistory(team, week, venue) : undefined);
-  return <div className="team-block history-team">
+  return <div className={`team-block history-team team-${venue}`}>
     <h3 className="section-mini-title">{venue.toUpperCase()} TEAM</h3>
     <label htmlFor={`history-${venue}`} className="input-help">Saved team</label>
     <select id={`history-${venue}`} value={name} onChange={event => onChange(event.target.value)} disabled={!!snapshot} data-testid={`history-${venue}`}>

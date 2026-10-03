@@ -55,6 +55,8 @@ A saved NFL season library and fantasy matchup lab: full rosters, raw weekly pla
 
 The user wants two sections: enter and save all offensive and defensive players and their weekly stats for each team, then automatically reuse those stats when simulating matchups.
 
+The app's palette is background #0f1a13, cards #16251b, text #e9e8de, muted text #98a89c, borders #2c4234, away green #7fc08f, home amber #f0b429. Away team panels have green left edges; home panels have amber left edges. Halftime log markers and focus outlines use amber. **Why:** the user chose turf greens and chalk-white text, with green/amber separating the teams.
+
 ## Gotchas
 
 - This is an experimental scenario model, not a calibrated or backtested forecasting service.
