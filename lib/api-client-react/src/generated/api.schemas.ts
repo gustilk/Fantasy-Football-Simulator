@@ -13,6 +13,12 @@ export const NflScheduledGameSeasonType = {
   postseason: 'postseason',
 } as const;
 
+export interface NflMarketQuote {
+  homeSpread: number;
+  total: number;
+  provider: string;
+}
+
 export interface NflScheduledGame {
   id: string;
   awayTeam: string;
@@ -25,6 +31,7 @@ export interface NflScheduledGame {
      */
   week: number;
   seasonType: NflScheduledGameSeasonType;
+  odds?: NflMarketQuote;
 }
 
 export interface NflSchedule {

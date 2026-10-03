@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { NflMarketQuote } from './nflMarketQuote';
 import type { NflScheduledGameSeasonType } from './nflScheduledGameSeasonType';
 
 export interface NflScheduledGame {
@@ -19,4 +20,5 @@ export interface NflScheduledGame {
      */
   week: number;
   seasonType: NflScheduledGameSeasonType;
+  odds?: NflMarketQuote;
 }

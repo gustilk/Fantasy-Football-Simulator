@@ -5,7 +5,7 @@ import { RotateCw } from 'lucide-react';
 export default function UpcomingGames({ season, enabled, busy, teams, selectedMatchup, onSelect }: {
   season: number; enabled: boolean; busy: boolean; teams: string[];
   selectedMatchup: { away: string; home: string; week: number } | null;
-  onSelect: (game: NflScheduledGame) => void;
+  onSelect: (game: NflScheduledGame, fetchedAt: string) => void;
 }) {
   const schedule = useGetNflSchedule(season, {
     query: { queryKey: getGetNflScheduleQueryKey(season), enabled, staleTime: 60_000, refetchInterval: 300_000, retry: false },
@@ -38,12 +38,13 @@ export default function UpcomingGames({ season, enabled, busy, teams, selectedMa
           {visible.map(game => {
             const missing = [game.awayTeam, game.homeTeam].filter(team => !teams.includes(team));
             const selected = selectedMatchup?.away === game.awayTeam && selectedMatchup?.home === game.homeTeam && selectedMatchup?.week === game.week;
-            return <button className={`scheduled-game${selected ? ' selected' : ''}`} aria-pressed={selected} key={game.id} disabled={busy} onClick={() => onSelect(game)} data-testid={`schedule-game-${game.id}`}>
+            return <button className={`scheduled-game${selected ? ' selected' : ''}`} aria-pressed={selected} key={game.id} disabled={busy} onClick={() => onSelect(game, schedule.data!.fetchedAt)} data-testid={`schedule-game-${game.id}`}>
               <strong>{game.awayTeam} <span>at</span> {game.homeTeam}</strong>
               <span>{weekLabel(game.week)} · {game.timeConfirmed
                 ? new Date(game.date).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' })
                 : 'Date / kickoff TBD'}</span>
               {missing.length > 0 && <small>Needs saved roster/history: {missing.join(', ')}</small>}
+              {game.odds && <small>Home spread {game.odds.homeSpread > 0 ? '+' : ''}{game.odds.homeSpread} · O/U {game.odds.total} · {game.odds.provider}</small>}
               {selected && <small>Selected matchup</small>}
             </button>;
           })}

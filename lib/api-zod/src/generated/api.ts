@@ -36,7 +36,12 @@ export const GetNflScheduleResponse = zod.object({
   "date": zod.string(),
   "timeConfirmed": zod.boolean(),
   "week": zod.number().int().min(1).max(getNflScheduleResponseGamesItemWeekMax),
-  "seasonType": zod.enum(['regular', 'postseason'])
+  "seasonType": zod.enum(['regular', 'postseason']),
+  "odds": zod.object({
+  "homeSpread": zod.number(),
+  "total": zod.number(),
+  "provider": zod.string()
+}).optional()
 }))
 })
 

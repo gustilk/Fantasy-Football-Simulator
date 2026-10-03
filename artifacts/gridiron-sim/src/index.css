@@ -208,6 +208,14 @@ input::placeholder, textarea::placeholder { color: var(--app-muted); opacity: .8
 .scheduled-game:hover:not(:disabled), .scheduled-game:focus-visible, .scheduled-game.selected { border-color:var(--app-away); }
 .scheduled-game span, .scheduled-game small { color:var(--app-muted); font-size:11px; }
 .scheduled-game:disabled { opacity:.6; cursor:wait; }
+.market-inputs { margin:20px 0; padding-top:16px; border-top:1px solid var(--app-border); }
+.market-toggle { display:flex; align-items:center; gap:9px; font-size:12px; }
+.market-toggle input { width:16px; height:16px; accent-color:var(--app-away); flex-shrink:0; }
+.market-inputs .form-grid { margin-top:14px; }
+.market-summary { margin:20px 0; }
+.market-comparison { width:100%; min-width:480px; border-collapse:collapse; font-size:11px; }
+.market-comparison th, .market-comparison td { padding:10px; text-align:right; border-bottom:1px solid var(--app-border); }
+.market-comparison th:first-child { text-align:left; }
 .fantasy-leaders-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
 .fantasy-leader-group { border:1px solid var(--app-border); border-radius:8px; background:var(--app-bg); overflow:hidden; }
 .fantasy-leader-group h3 { display:flex; justify-content:space-between; margin:0; padding:12px; font-size:13px; border-bottom:1px solid var(--app-border); }

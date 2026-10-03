@@ -12,11 +12,13 @@ import { NFL_TEAM_NAMES } from '@/lib/nfl-divisions';
 import DivisionMatchup from '@/components/DivisionMatchup';
 import FantasyLeaders from '@/components/FantasyLeaders';
 import UpcomingGames from '@/components/UpcomingGames';
+import MarketOddsInputs from '@/components/MarketOddsInputs';
+import MarketOddsSummary from '@/components/MarketOddsSummary';
 import { withDepthChart } from '@/lib/depth-chart';
 import './season.css';
 
 type SavedSimulation = { id: string; savedAt: string; awayName: string; homeName: string; result: SimulationResult; setup?: StoredSetup };
-type StoredSetup = { away: TeamSetup; home: TeamSetup; weather: Weather; importance?: SimulationInput['importance'] };
+type StoredSetup = { away: TeamSetup; home: TeamSetup; weather: Weather; importance?: SimulationInput['importance']; market?: SimulationInput['market'] };
 type PatchTeam = (side: 'away' | 'home', field: keyof TeamSetup, value: TeamSetup[keyof TeamSetup]) => void;
 type ProjectedPlayer = SimPlayer & { estimate?: { mean: number; p10: number; p90: number } };
 const projectionStats = (p: SimPlayer) => ({
@@ -70,8 +72,8 @@ function formatSavedDate(value: string) {
 }
 function App() {
   const [tab, setTab] = useState<'library' | 'simulator'>('library');
-  const [season, setSeason] = useState(new Date().getFullYear());
-  const [week, setWeek] = useState(2);
+  const [season, setSeason] = useState(() => readSetup().market?.season ?? new Date().getFullYear());
+  const [week, setWeek] = useState(() => readSetup().market?.week ?? 2);
   const [source, setSource] = useState<'library' | 'manual' | 'snapshot'>('library');
   const queryClient = useQueryClient();
   const history = useListSeasonTeams({ season });
@@ -100,9 +102,17 @@ function App() {
   }, [notice]);
 
   const patchTeam: PatchTeam = (side, field, value) => {
-    setSetup(current => ({ ...current, [side]: { ...current[side], [field]: value } }));
+    setSetup(current => ({ ...current, [side]: { ...current[side], [field]: value }, market: field === 'name' && value !== current[side].name ? undefined : current.market }));
   };
-  const selectScheduledGame = (game: NflScheduledGame) => {
+  const changeSeason = (value: number) => {
+    setSeason(value);
+    if (value !== season) setSetup(current => ({ ...current, market: undefined }));
+  };
+  const changeWeek = (value: number) => {
+    setWeek(value);
+    if (value !== week) setSetup(current => ({ ...current, market: undefined }));
+  };
+  const selectScheduledGame = (game: NflScheduledGame, fetchedAt: string) => {
     setSource('library');
     setWeek(game.week);
     setSetup(current => ({
@@ -110,6 +120,15 @@ function App() {
       away: { ...current.away, name: game.awayTeam },
       home: { ...current.home, name: game.homeTeam },
       importance: game.seasonType === 'postseason' ? 'playoff' : 'regular',
+      market: current.market?.source === 'manual' && current.market.gameId === game.id &&
+        current.market.season === season && current.market.week === game.week &&
+        current.market.awayTeam === game.awayTeam && current.market.homeTeam === game.homeTeam &&
+        (current.market.homeSpread !== undefined || current.market.total !== undefined) ? current.market : {
+        enabled: false, source: game.odds ? 'ESPN' : 'manual',
+        awayTeam: game.awayTeam, homeTeam: game.homeTeam, season, week: game.week,
+        gameId: game.id, kickoff: game.timeConfirmed ? game.date : undefined,
+        ...game.odds, recordedAt: game.odds ? fetchedAt : undefined,
+      },
     }));
     setError('');
     setNotice(`${game.awayTeam} at ${game.homeTeam} selected. Saved roster and history will be used.`);
@@ -119,6 +138,9 @@ function App() {
     setError('');
     window.setTimeout(() => {
       try {
+        if (setup.market?.enabled && (setup.market.season !== season || setup.market.week !== week)) {
+          throw new Error('These odds belong to another season or week. Clear them and enter lines for this matchup.');
+        }
         let away = setup.away, home = setup.home;
         if (source === 'library') {
           if (history.isError || history.isLoading) throw new Error('Team history is not available yet. Retry loading the library.');
@@ -154,7 +176,7 @@ function App() {
           setup: structuredClone({ ...setup, away, home }),
         };
         setSaved(current => [entry, ...current.filter(item => item.id !== entry.id)].slice(0, 10));
-        setNotice('200 simulations complete. Fantasy averages and example game saved to this device.');
+        setNotice(`200 simulations complete. ${result.ensemble?.market ? 'Market-weighted' : 'Fantasy'} averages and example game saved to this device.`);
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : 'The simulation could not be completed. Check your setup and try again.');
       } finally { setBusy(false); }
@@ -165,6 +187,8 @@ function App() {
     setActiveNames({ away: item.awayName, home: item.homeName });
     if (item.setup) {
       setSetup(normalizeSetup(item.setup));
+      if (item.setup.market?.season !== undefined) setSeason(item.setup.market.season);
+      if (item.setup.market?.week !== undefined) setWeek(item.setup.market.week);
       setSource(item.setup.away.roster ? 'snapshot' : 'manual');
     }
     setError('');
@@ -204,7 +228,7 @@ function App() {
           <button className={tab === 'simulator' ? 'selected' : ''} onClick={() => setTab('simulator')} data-testid="tab-simulator">Game Simulator</button>
         </nav>
         <div style={{ display: tab === 'library' ? undefined : 'none' }}>
-          <TeamLibrary season={season} onSeasonChange={setSeason} teams={storedTeams} loading={history.isLoading}
+          <TeamLibrary season={season} onSeasonChange={changeSeason} teams={storedTeams} loading={history.isLoading}
             error={history.isError ? 'Could not load saved team history. Please retry.' : ''} onReload={() => { void history.refetch(); }} onSaved={onTeamSaved} teamNames={NFL_TEAMS} />
         </div>
         <div style={{ display: tab === 'simulator' ? undefined : 'none' }}>
@@ -234,7 +258,7 @@ function App() {
                 {(awayDepth.isLoading || homeDepth.isLoading) && <p className="stats-help" role="status">Loading team depth charts…</p>}
                 {(awayDepth.isError || homeDepth.isError) && <p className="history-warning" role="status">A live depth chart is unavailable. Saved depth roles can be used; assign missing ranks in Team Library.</p>}
                 <p className="stats-help">Season {season}. <button className="text-button" onClick={() => setTab('library')}>Change season in Team Library</button>. Only games before the selected week are used.</p>
-                <Field label="Matchup week" htmlFor="matchup-week"><select id="matchup-week" value={week} onChange={e => setWeek(Number(e.target.value))}>
+                <Field label="Matchup week" htmlFor="matchup-week"><select id="matchup-week" value={week} onChange={e => changeWeek(Number(e.target.value))}>
                   {Array.from({length:22}, (_, i) => <option key={i} value={i+1}>{i < 18 ? `Week ${i+1}` : ['Wild Card', 'Divisional', 'Conference Championships', 'Super Bowl'][i-18]}</option>)}
                 </select></Field>
               </>}
@@ -261,6 +285,8 @@ function App() {
                 </Field>
                 <div className="field"><label>Conditions</label><div style={{height:37,display:'flex',alignItems:'center',gap:7,color:'var(--app-muted)',fontSize:11}}>{setup.weather.precipitation === 'none' ? <Wind size={14}/> : <CloudRain size={14}/>} {setup.weather.windMph} mph · {setup.weather.temperatureF}°F</div></div>
               </div>
+              <MarketOddsInputs market={setup.market} away={setup.away.name} home={setup.home.name} season={season} week={week} busy={busy}
+                onChange={market => setSetup(current => ({ ...current, market }))} />
               <div className="setup-actions">
                 <button className="btn-primary" onClick={runSimulation} disabled={busy} data-testid="button-run-simulation">
                   {busy ? <><RotateCw size={15} className="spin-icon" /> Running model…</> : <><Crosshair size={16} /> Run simulation <ArrowRight size={15} /></>}
@@ -456,10 +482,11 @@ function SimulationResults({ result, awayName, homeName, onRun, busy }: { result
     </div>
     <div className="result-content">
       <section aria-labelledby="overview-title">
-        {result.ensemble && <p className="ensemble-note"><strong>{result.ensemble.runs} simulated games.</strong> Model outcomes: {awayName} wins {result.ensemble.awayWinPct}%, {homeName} wins {result.ensemble.homeWinPct}%, ties {result.ensemble.tiePct}%. Fantasy means and ranges below use all runs; this score and drive log show just one example.</p>}
+        {result.ensemble && <p className="ensemble-note"><strong>{result.ensemble.runs} simulated games.</strong> {result.ensemble.market ? 'Market-weighted outcomes' : 'Model outcomes'}: {awayName} wins {result.ensemble.awayWinPct}%, {homeName} wins {result.ensemble.homeWinPct}%, ties {result.ensemble.tiePct}%. Fantasy means and ranges below use all runs{result.ensemble.market ? ' with market weighting' : ''}; this score and drive log show just one {result.ensemble.market ? 'unweighted ' : ''}example.</p>}
         <div className="content-heading" id="overview-title"><Crosshair size={15} className="heading-icon"/> MATCHUP READ &amp; X-FACTORS</div>
         {result.overview.length ? <ul className="overview-list" data-testid="simulation-overview">{result.overview.map((line,index) => <li key={`${index}-${line}`}>{line}</li>)}</ul> : <p style={{fontSize:12,color:'var(--app-muted)'}}>No overview notes were returned for this run.</p>}
       </section>
+      {result.ensemble?.market && <MarketOddsSummary market={result.ensemble.market} away={awayName} home={homeName} />}
       <FantasyLeaders players={playersByTeam.flatMap(([, players]) => players)} />
       <div className="result-sections">
         <section className="subsection" aria-labelledby="drives-title">
@@ -485,7 +512,7 @@ function SimulationResults({ result, awayName, homeName, onRun, busy }: { result
               <tbody>{playersByTeam.map(([team,players]) => <FragmentGroup key={team} team={team} players={players} side={team === awayName ? 'away' : 'home'}/>)}</tbody>
             </table>
           </div>
-           <p className="ensemble-note">DK PTS matches the example game's displayed stats, including yardage bonuses and turnover deductions. Only modeled participants are shown; a player who participated can still score zero or negative points. {dkEnsemble ? <>AVG DK PROJ. is the mean across {result.ensemble!.runs} runs; the range is the 10th–90th percentile of simulated outcomes, not a calibrated forecast interval.</> : result.ensemble ? 'This older saved run used a different scoring system. Run again for DraftKings averages and ranges.' : ''}</p>
+           <p className="ensemble-note">DK PTS matches the example game's displayed stats, including yardage bonuses and turnover deductions. Only modeled participants are shown; a player who participated can still score zero or negative points. {dkEnsemble ? <>AVG DK PROJ. is the {result.ensemble?.market ? 'market-weighted ' : ''}mean across {result.ensemble!.runs} runs; the range is the {result.ensemble?.market ? 'weighted ' : ''}10th–90th percentile of simulated outcomes, not a calibrated forecast interval.</> : result.ensemble ? 'This older saved run used a different scoring system. Run again for DraftKings averages and ranges.' : ''}</p>
         </section>
       </div>
        <div className="footnote"><strong>DraftKings NFL Classic.</strong> 1/catch, 0.1/rush or receiving yard, 0.04/passing yard, 4/passing TD, 6/rush or receiving TD, −1/interception or lost fumble. +3 each for 300+ passing, 100+ rushing and 100+ receiving yards, scored per game. <a href={DRAFTKINGS_RULES_URL} target="_blank" rel="noopener noreferrer">Official scoring rules</a>. No individual defender or kicker scoring.</div>

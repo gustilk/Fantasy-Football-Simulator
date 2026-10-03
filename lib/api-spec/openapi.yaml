@@ -184,6 +184,14 @@ components:
         timeConfirmed: { type: boolean }
         week: { type: integer, minimum: 1, maximum: 22 }
         seasonType: { type: string, enum: [regular, postseason] }
+        odds: { $ref: "#/components/schemas/NflMarketQuote" }
+    NflMarketQuote:
+      type: object
+      required: [homeSpread, total, provider]
+      properties:
+        homeSpread: { type: number }
+        total: { type: number }
+        provider: { type: string }
     NflSchedule:
       type: object
       required: [season, fetchedAt, sourceUrl, games, unannouncedGames]

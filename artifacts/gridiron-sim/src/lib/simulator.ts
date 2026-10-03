@@ -2,6 +2,7 @@ import { calculateDraftKings } from "./draftkings";
 import { getDivision, isDivisionGame } from "./nfl-divisions";
 import type { AvailabilityCheck } from "./availability";
 import type { historyStrength, playerUsage } from "./history-signals";
+import type { MarketOdds, MarketEvidence } from "./market-odds";
 
 export type Precipitation = "none" | "light" | "moderate" | "heavy";
 
@@ -85,6 +86,8 @@ export interface SimulationInput {
   weather: WeatherSetup;
   seed?: number;
   importance?: "regular" | "must-win" | "playoff";
+  /** Optional market weighting is applied to ensemble summaries, not a single game's raw stats. */
+  market?: MarketOdds;
 }
 
 export interface SimulatedDrive {
@@ -129,6 +132,7 @@ export interface SimulationResult {
     homeWinPct: number;
     tiePct: number;
     fantasy: { mean: number; p10: number; p90: number }[];
+    market?: MarketEvidence;
   };
 }
 
