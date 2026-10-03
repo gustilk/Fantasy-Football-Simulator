@@ -105,6 +105,28 @@ export function availableSundays(games: NflScheduledGame[]) {
   return [...new Set(games.map(game => centralDay(game.date)).filter(isSunday))].sort();
 }
 
+/** Game numbers are source NFL weeks, not a team's count of games played. */
+export function availableSundayOptions(games: NflScheduledGame[]) {
+  const byDay = new Map<string, Map<string, { week: number; playoff: boolean }>>();
+  for (const game of games) {
+    const day = centralDay(game.date);
+    if (!isSunday(day)) continue;
+    const weeks = byDay.get(day) ?? new Map();
+    const playoff = game.seasonType === 'postseason';
+    weeks.set(`${playoff}:${game.week}`, { week: game.week, playoff });
+    byDay.set(day, weeks);
+  }
+  const dateFormat = new Intl.DateTimeFormat('en-US', {
+    month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC',
+  });
+  return [...byDay.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([value, weeks]) => ({
+    value,
+    label: `${dateFormat.format(new Date(`${value}T12:00:00Z`))} · ${[...weeks.values()]
+      .sort((a, b) => a.week - b.week)
+      .map(week => `${week.playoff ? 'Playoff game' : 'Game'} #${week.week}`).join(' / ')}`,
+  }));
+}
+
 export function gameForecast(game: NflScheduledGame, input: SimulationInput, result: SimulationResult): DKGameForecast {
   const ensemble = result.ensemble;
   if (!ensemble || ensemble.fantasy.length !== result.players.length) throw new Error('Complete ensemble projections are required.');

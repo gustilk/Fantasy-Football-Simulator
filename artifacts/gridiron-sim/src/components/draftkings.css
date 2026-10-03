@@ -55,6 +55,7 @@
 .dk-seg button{border:0;background:transparent;padding:8px 18px;border-radius:8px;font-weight:600;font-size:14px;color:var(--app-muted)}
 .dk-seg button.on{background:var(--app-card);color:var(--app-away);box-shadow:0 1px 2px rgb(60 50 30/.15)}
 .dk-more{justify-self:start}
+.dk-row .dk-date-field{width:285px;max-width:100%;min-width:0}
 .dk-archive{border-top:1px solid var(--app-border);padding-top:6px}
 .dk-grid>div{background:var(--app-card)}
 .dk-week{font-size:12px}

@@ -83,8 +83,8 @@ export default function DraftKingsBoard({ season }: { season: number }) {
     {!loading && !loadError && <div className="panel dk-panel">
       {c.sundays.length === 0 ? <p className="dk-muted">No upcoming Sundays in the {season} schedule.</p> : <>
         <div className="dk-row">
-          <div className="field"><label htmlFor="dk-sunday">Sunday (Central)</label>
-            <select id="dk-sunday" disabled={c.busy} value={c.sunday} onChange={e => c.setSunday(e.target.value)} data-testid="select-dk-sunday">{c.sundays.map(s => <option key={s}>{s}</option>)}</select></div>
+          <div className="field dk-date-field"><label htmlFor="dk-sunday">Sunday · NFL week (Central)</label>
+            <select id="dk-sunday" disabled={c.busy} value={c.sunday} onChange={e => c.setSunday(e.target.value)} data-testid="select-dk-sunday">{c.sundayOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>
           <button className="btn-primary" disabled={c.busy || !c.games.length} onClick={() => { void c.runSlate(); }} data-testid="button-dk-run">
             {c.busy ? <><RotateCw size={15} className="spin-icon" /> Simulating</> : <><Play size={15} /> Run and save {c.games.length} games</>}</button>
         </div>

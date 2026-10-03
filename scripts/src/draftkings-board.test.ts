@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import type { TeamSeasonRecord, NflScheduledGame } from '../../lib/api-client-react/src/generated/api.schemas';
 import {
-  availableSundays, centralDay, dkHistory, gameForecast, groupDKPlayers, slateBoard, sundayGames,
+  availableSundays, availableSundayOptions, centralDay, dkHistory, gameForecast, groupDKPlayers, slateBoard, sundayGames,
   validateOfficialScore, type DKOfficialScore, type DKSlate,
 } from '../../artifacts/gridiron-sim/src/lib/draftkings-board';
 import {
@@ -39,6 +39,16 @@ assert.equal(centralDay(games[2].date), '2026-10-04', 'Sunday evening must not b
 assert.deepEqual(sundayGames(games, '2026-10-04', now).map(game => game.id), ['morning', 'afternoon', 'sunday-night']);
 assert.equal(sundayGames(games, '2026-10-04', Date.parse('2026-10-04T18:00:00Z')).length, 1, 'Exclude kickoffs that have passed');
 assert.deepEqual(availableSundays(games), ['2026-10-04', '2026-10-11']);
+assert.deepEqual(availableSundayOptions(games), [
+  { value: '2026-10-04', label: 'October 4, 2026 · Game #4' },
+  { value: '2026-10-11', label: 'October 11, 2026 · Game #4' },
+], 'Use actual source weeks, not dropdown order; include Sunday night and deduplicate matchups');
+assert.deepEqual(availableSundayOptions([game('not-sunday', '2026-09-04T17:00:00Z')]), [],
+  'September 4, 2026 is Friday, not Sunday');
+assert.equal(availableSundayOptions([{ ...game('later-week', '2026-10-11T17:00:00Z'), week: 5 }])[0].label,
+  'October 11, 2026 · Game #5');
+assert.equal(availableSundayOptions([{ ...game('playoff', '2027-01-10T18:00:00Z'), week: 1, seasonType: 'postseason' }])[0].label,
+  'January 10, 2027 · Playoff game #1', 'NFL season can continue into the next calendar year');
 assert.throws(() => sundayGames(games, '2026-10-05', now), /Sunday/);
 const teams = [makeTeam('Detroit Lions'), makeTeam('San Francisco 49ers')];
 const before = JSON.stringify(teams);

@@ -4,7 +4,7 @@ import { withDepthChart } from '@/lib/depth-chart';
 import { setupFromHistory } from '@/lib/season-model';
 import { simulateEnsemble } from '@/lib/ensemble';
 import {
-  availableSundays, dkHistory, gameForecast, slateBoard, sundayGames, validateOfficialScore,
+  availableSundayOptions, dkHistory, gameForecast, slateBoard, sundayGames, validateOfficialScore,
   type DKMarketDraft, type DKOfficialScore, type DKSlate,
 } from '@/lib/draftkings-board';
 import {
@@ -30,7 +30,8 @@ export function useDraftKingsBoard(season: number) {
   const running = useRef(false);
   useEffect(() => { setSelectedSunday(''); setSelectedSlateId(''); }, [season]);
   const teams = historyQuery.data ?? [];
-  const sundays = useMemo(() => availableSundays(schedule.data?.games ?? []), [schedule.data]);
+  const sundayOptions = useMemo(() => availableSundayOptions(schedule.data?.games ?? []), [schedule.data]);
+  const sundays = useMemo(() => sundayOptions.map(option => option.value), [sundayOptions]);
   const sunday = selectedSunday || sundays[0] || '';
   const games = useMemo(() => sunday ? sundayGames(schedule.data?.games ?? [], sunday) : [], [schedule.data, sunday]);
   const slates = stored.archive.slates.filter(slate => slate.season === season);
@@ -169,7 +170,7 @@ export function useDraftKingsBoard(season: number) {
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
   return {
-    season, schedule, historyQuery, sundays, sunday, setSunday: setSelectedSunday, games, slates,
+    season, schedule, historyQuery, sundays, sundayOptions, sunday, setSunday: setSelectedSunday, games, slates,
     activeSlate, selectSlate: setSelectedSlateId, actualHistory, projections, busy, progress,
     error, notice, storageError: stored.storageError, runSlate, getMarket, updateMarket, usePublicMarket,
     saveOfficial, removeOfficial, deleteSlate, exportArchive, reloadArchive,
