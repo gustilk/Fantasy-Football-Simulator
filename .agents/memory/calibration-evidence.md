@@ -26,3 +26,9 @@ nflverse's historical spread sign is the opposite of the app's home-spread input
 **Why:** The inspected nflreadr schedule dictionary defines a positive spread as home favored; the app uses a negative home spread for home favored. Copying the raw value would reverse the implied favorite.
 
 **How to apply:** In a future nflverse adapter or evaluation join, normalize with `homeSpread = -spread_line`, verify home/away orientation, and test both favorite directions before comparing predictions.
+
+Local checksums and archive URLs establish consistency, not independent historical authenticity.
+
+**Why:** A perfectly hashed JSON file can still contain backdated declarations. Offline evaluation cannot verify when the original source actually became available.
+
+**How to apply:** Require source/receipt review before making accuracy claims. When independently frozen pregame inputs are unavailable, use prospective collection rather than backdating a retrospective reconstruction.
