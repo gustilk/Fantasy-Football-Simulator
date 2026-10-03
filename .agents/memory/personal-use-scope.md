@@ -20,3 +20,9 @@ The user said the theme was “too tedious” and there was “too much informat
 **Why:** The user requested a simpler interface for this app.
 
 **How to apply:** Keep the main fantasy-point rankings easy to scan. Make detailed odds, model explanations and history available on request instead of displaying everything at once.
+
+The user requested that the Library roster be grouped.
+
+**Why:** The user wants players easier to find in the Library.
+
+**How to apply:** Retain position-based roster groups instead of returning to a single mixed list.

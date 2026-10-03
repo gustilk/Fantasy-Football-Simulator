@@ -226,6 +226,12 @@ function Roster({ players, patch, setDraft, depth, nextWeek }: { players: Player
   const upd = (id: string, ch: Partial<Player>) => patch(ps => ps.map(p => (p.id === id ? { ...p, ...ch } : p)));
   const shown = players.filter(p => filter === 'all' || p.side === filter);
   const automaticPlayers = rolesForRoster(players, depth);
+  const ranks = new Map(automaticPlayers.map(player => [player.id, player.depthRank]));
+  const groups = positions.map(position => ({
+    position,
+    players: shown.filter(player => player.position === position).sort((a, b) =>
+      (ranks.get(a.id) ?? Infinity) - (ranks.get(b.id) ?? Infinity)),
+  })).filter(group => group.players.length > 0);
 
   return (
     <div className="tl-roster">
@@ -257,9 +263,12 @@ function Roster({ players, patch, setDraft, depth, nextWeek }: { players: Player
       {players.length === 0 ? (
         <div className="tl-empty"><Database size={26} /><strong>No roster saved for this team and season</strong><span>Refresh recent NFL data above, add players, or paste a list. Nothing is stored until you save.</span></div>
       ) : (
-        <div className="tl-table" role="table" aria-label="Roster">
+         <div className="tl-roster-groups">
+         {groups.map(group => <details className="tl-position-group" key={group.position} data-testid={`roster-group-${group.position}`}>
+           <summary><strong>{group.position}</strong><span>{group.players.length} {group.players.length === 1 ? 'player' : 'players'}</span></summary>
+         <div className="tl-table" role="table" aria-label={`${group.position} roster`}>
           <div className="tl-tr th" role="row"><span>Name</span><span>Position / role</span><span>Side</span><span>Active</span><span /></div>
-          {shown.map(p => {
+           {group.players.map(p => {
             const automatic = automaticPlayers.find(player => player.id === p.id)?.depthRank;
             return (
             <div className={`tl-tr${p.active ? '' : ' off'}`} role="row" key={p.id} data-testid={`row-player-${p.id}`}>
@@ -278,6 +287,9 @@ function Roster({ players, patch, setDraft, depth, nextWeek }: { players: Player
             </div>
           );})}
         </div>
+         </details>)}
+         {groups.length === 0 && <p className="tl-hint">No players match this filter.</p>}
+         </div>
       )}
       <p className="tl-hint">Excluded players keep their history and depth rank. A weekly override does not permanently demote or deactivate a returning starter.</p>
     </div>

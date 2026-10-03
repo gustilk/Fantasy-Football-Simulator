@@ -28,6 +28,12 @@
 .tl-row .btn-secondary { min-height:38px; }
 .tl-hint { margin:0; font-size:11px; color:var(--app-muted); line-height:1.5; }
 .tl-roster, .tl-weeks { display:grid; gap:12px; }
+.tl-roster-groups { display:grid; gap:10px; }
+.tl-position-group { border:1px solid var(--app-border); border-radius:10px; overflow:hidden; background:var(--app-card); }
+.tl-position-group > summary { cursor:pointer; padding:14px; color:var(--app-text); font-size:15px; }
+.tl-position-group > summary > span { float:right; color:var(--app-muted); font-size:12px; }
+.tl-position-group > summary:focus-visible { outline:2px solid var(--app-away); outline-offset:-3px; }
+.tl-position-group .tl-table { border:0; border-top:1px solid var(--app-border); border-radius:0; }
 .tl-table { border:1px solid var(--app-border); border-radius:10px; background:var(--app-card); overflow:hidden; }
 .tl-tr { display:grid; grid-template-columns:minmax(150px,2fr) 100px 100px minmax(180px,1.5fr) 36px; gap:8px; align-items:center; padding:6px 10px; border-bottom:1px solid var(--app-border); }
 .tl-availability-cell, .tl-availability { display:grid; gap:4px; min-width:0; }
