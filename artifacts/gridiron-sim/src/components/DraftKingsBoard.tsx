@@ -4,6 +4,7 @@ import type { NflScheduledGame } from '@workspace/api-client-react';
 import { useDraftKingsBoard, type DraftKingsBoardController } from '@/hooks/use-draftkings-board';
 import { DK_POSITIONS, groupDKPlayers, type DKHistoryPlayer, type DKPosition } from '@/lib/draftkings-board';
 import './draftkings.css';
+import DraftKingsAccuracy from './DraftKingsAccuracy';
 
 const fmt = (n: number | null | undefined) => n === null || n === undefined ? 'unknown' : n.toFixed(2);
 const when = (iso: string) => new Date(iso).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'America/Chicago', timeZoneName: 'short' });
@@ -99,6 +100,7 @@ export default function DraftKingsBoard({ season }: { season: number }) {
     {slate && slate.failures.length > 0 && <div className="dk-err" role="alert" data-testid="dk-failures"><div>
       {slate.forecasts.length} game(s) covered, {slate.failures.length} failed: partial slate coverage.
       {slate.failures.map(f => <div key={f.gameId}>{f.matchup}: {f.reason}</div>)}</div></div>}
+    <DraftKingsAccuracy report={c.accuracy} season={season} loading={c.historyQuery.isLoading} failed={c.historyQuery.isError || !!c.storageError} refresh={c.storageError ? c.reloadArchive : c.refresh} />
     <div className="dk-controls">
       <div className="dk-seg" role="tablist" aria-label="Position">{DK_POSITIONS.map(p => <button key={p} role="tab" aria-selected={pos === p} className={pos === p ? 'on' : ''} onClick={() => { setPos(p); setAll(false); }} data-testid={`dk-pos-${p}`}>{p}</button>)}</div>
       <div className="dk-seg" role="tablist" aria-label="View">

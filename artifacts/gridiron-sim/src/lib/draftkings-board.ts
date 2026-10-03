@@ -26,6 +26,7 @@ export interface DKProjection {
 }
 export interface DKGameForecast {
   gameId: string;
+  generatedAt?: string;
   week: number;
   kickoff: string;
   awayTeam: string;
@@ -42,6 +43,7 @@ export interface DKSlate {
   season: number;
   sunday: string;
   createdAt: string;
+  savedAt?: string;
   timezone: typeof DK_TIMEZONE;
   forecasts: DKGameForecast[];
   failures: { gameId: string; matchup: string; reason: string }[];

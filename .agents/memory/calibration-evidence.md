@@ -38,3 +38,9 @@ Keep simulated DraftKings projections separate from observed player-performance 
 **Why:** The app is intended to support future DraftKings choices. Treating its own predictions as outcomes would reinforce model mistakes, while weighting both recorded stats and the DK totals derived from them can double-count the same evidence.
 
 **How to apply:** Archive forecasts for later comparisons. Use actual recorded stat history for simulation inputs; clearly distinguish complete official point entries, partial stat-derived subtotals, and unknown outcomes. Any new direct fantasy-score weighting needs a separate justified evaluation.
+
+A batch's start time alone does not establish that its forecasts were saved before kickoff. Do not retrofit older forecasts with invented completion times.
+
+**Why:** A Sunday batch can start before kickoff and finish afterward; accepting its start time would admit late forecasts into accuracy summaries.
+
+**How to apply:** Preserve older archives, but exclude insufficiently timed forecasts from strict pregame summaries. Use one whole-game snapshot per game, chosen by the latest eligible pregame save, to avoid overweighting repeated runs or selectively reviving players omitted from the final roster.

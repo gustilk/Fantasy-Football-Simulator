@@ -11,6 +11,7 @@ import {
   addDKSlate, DK_ARCHIVE_KEY, emptyDKArchive, readDKArchive, setOfficialScore, writeDKArchive, type DKArchive,
 } from '@/lib/draftkings-archive';
 import type { SimulationInput } from '@/lib/simulator';
+import { draftKingsAccuracy } from '@/lib/draftkings-accuracy';
 
 const message = (error: unknown) => error instanceof Error ? error.message : 'The operation failed. Please retry.';
 function initialArchive(): { archive: DKArchive; storageError: string } {
@@ -38,6 +39,7 @@ export function useDraftKingsBoard(season: number) {
   const activeSlate = slates.find(slate => slate.id === selectedSlateId) ?? slates[0] ?? null;
   const actualHistory = useMemo(() => dkHistory(teams, season, stored.archive.official), [teams, season, stored.archive.official]);
   const projections = useMemo(() => activeSlate ? slateBoard(activeSlate, actualHistory) : [], [activeSlate, actualHistory]);
+  const accuracy = useMemo(() => draftKingsAccuracy(stored.archive.slates, teams, stored.archive.official, season), [stored.archive, teams, season]);
 
   const reloadArchive = () => setStored(initialArchive());
   useEffect(() => {
@@ -128,13 +130,16 @@ export function useDraftKingsBoard(season: number) {
               awayTeam: game.awayTeam, homeTeam: game.homeTeam, gameId: game.id, season, week: game.week, kickoff: game.date,
             } : undefined,
           };
-          slate.forecasts.push(gameForecast(game, input, simulateEnsemble(input, 200)));
+          const forecast = gameForecast(game, input, simulateEnsemble(input, 200));
+          forecast.generatedAt = new Date().toISOString();
+          if (Date.parse(game.date) <= Date.now()) throw new Error('Kickoff passed while preparing this forecast. It was not saved.');
+          slate.forecasts.push(forecast);
         } catch (error) { slate.failures.push({ gameId: game.id, matchup, reason: message(error) }); }
         setProgress({ completed: index + 1, total: frozenGames.length, matchup });
       }
       if (!slate.forecasts.length) throw new Error(`No games completed. ${slate.failures.map(item => `${item.matchup}: ${item.reason}`).join(' ')}`);
       // Quota/corruption errors leave earlier archive entries untouched.
-      commit(archive => addDKSlate(archive, slate));
+      commit(archive => addDKSlate(archive, { ...slate, savedAt: new Date().toISOString() }));
       setSelectedSlateId(slate.id);
       setNotice(`${slate.forecasts.length} game(s) saved on this browser.${slate.failures.length ? ` ${slate.failures.length} failed; see the exclusion list.` : ''}`);
     } catch (error) { setError(`Slate was not saved: ${message(error)}`); }
@@ -171,7 +176,7 @@ export function useDraftKingsBoard(season: number) {
   };
   return {
     season, schedule, historyQuery, sundays, sundayOptions, sunday, setSunday: setSelectedSunday, games, slates,
-    activeSlate, selectSlate: setSelectedSlateId, actualHistory, projections, busy, progress,
+    activeSlate, selectSlate: setSelectedSlateId, actualHistory, projections, accuracy, busy, progress,
     error, notice, storageError: stored.storageError, runSlate, getMarket, updateMarket, usePublicMarket,
     saveOfficial, removeOfficial, deleteSlate, exportArchive, reloadArchive,
     refresh: () => { void schedule.refetch(); void historyQuery.refetch(); },
