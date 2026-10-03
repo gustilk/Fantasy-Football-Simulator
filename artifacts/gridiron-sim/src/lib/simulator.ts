@@ -1,5 +1,7 @@
 import { calculateDraftKings } from "./draftkings";
 import { getDivision, isDivisionGame } from "./nfl-divisions";
+import type { AvailabilityCheck } from "./availability";
+import type { historyStrength, playerUsage } from "./history-signals";
 
 export type Precipitation = "none" | "light" | "moderate" | "heavy";
 
@@ -43,6 +45,7 @@ export interface SimulationRosterPlayer {
   depthRank?: number;
   depthRankBasis?: "ESPN" | "saved" | "usage";
   historyObservations?: number;
+  usage?: ReturnType<typeof playerUsage>;
 }
 
 export interface TeamSetup {
@@ -72,6 +75,8 @@ export interface TeamSetup {
   historyGames?: number;
   headToHead?: { opponent: string; games: number; usableGames: number; maxWeight: number };
   depthChartSource?: { fetchedAt: string; url: string };
+  availabilityChecks?: AvailabilityCheck[];
+  modelEvidence?: { strength: ReturnType<typeof historyStrength>["evidence"]; warnings: string[] };
 }
 
 export interface SimulationInput {
@@ -129,6 +134,7 @@ export interface SimulationResult {
 
 interface PlayerAccumulator extends Omit<PlayerProjection, "draftKings"> {
   historyObservations?: number;
+  usage?: ReturnType<typeof playerUsage>;
   attempts: number;
   completions: number;
   recentStats?: PlayerRecentStats;
@@ -216,7 +222,7 @@ function makeTeamSimulation(setup: TeamSetup): TeamSimulation {
       ranks[player.position] = (ranks[player.position] ?? 0) + 1;
       return {
         ...makePlayer(player.name, player.position, teamName, player.depthRank ?? ranks[player.position]),
-        recentStats: player.recentStats, historyObservations: player.historyObservations,
+        recentStats: player.recentStats, historyObservations: player.historyObservations, usage: player.usage,
       };
     }) : [
       makePlayer(setup.qb, "QB", teamName),
@@ -239,8 +245,10 @@ function receiverFor(
   const fallback = receivers.map(player => receivingRoleWeight(player.position, player.depthRank ?? 1));
   const weighted = receivers.map((player, index) => {
     const playerStats = recentForPlayer(team, player);
-    const recentTargetWeight = supplied(playerStats?.targets)
-      ? roleGuidedWeight(fallback[index]!, playerStats.targets, playerReliability(team.setup, player))
+    const targetWeight = supplied(player.usage?.targetShare) ? player.usage.targetShare * 34 : playerStats?.targets;
+    const usageReliability = supplied(player.usage?.targetShare) ? clamp((player.usage.targetGames + 1) / 6, 0.2, 1) : playerReliability(team.setup, player);
+    const recentTargetWeight = supplied(targetWeight)
+      ? roleGuidedWeight(fallback[index]!, targetWeight, usageReliability)
       : fallback[index]!;
     const redZoneBoost =
       redZone && supplied(playerStats?.receivingTD)
@@ -300,9 +308,11 @@ function runningBackFor(team: TeamSimulation, random: Random): PlayerAccumulator
   if (team.setup.roster) {
     const runners = team.players.filter((player, index) => index === 0 || (player.position !== "QB" && (player.position === "RB" || (player.recentStats?.rushAttempts ?? 0) > 0)));
     const defaults = runners.map(player => player.position === "QB" ? 3 : player.position === "RB" ? rushingRoleWeight(player.depthRank ?? 1) : 1);
-    let weights = runners.map((player, index) => player.recentStats?.rushAttempts === undefined
-      ? defaults[index]!
-      : roleGuidedWeight(defaults[index]!, player.recentStats.rushAttempts, playerReliability(team.setup, player)));
+    let weights = runners.map((player, index) => {
+      const carries = supplied(player.usage?.carryShare) ? player.usage.carryShare * 28 : player.recentStats?.rushAttempts;
+      const reliability = supplied(player.usage?.carryShare) ? clamp((player.usage.carryGames + 1) / 6, 0.2, 1) : playerReliability(team.setup, player);
+      return carries === undefined ? defaults[index]! : roleGuidedWeight(defaults[index]!, carries, reliability);
+    });
     if (weights.every(weight => weight === 0)) weights = defaults;
     let roll = random() * weights.reduce((sum, weight) => sum + weight, 0);
     for (let i = 0; i < runners.length; i++) {
@@ -747,6 +757,10 @@ function makeOverview(
     ? `Division game: both teams are in ${awayDivision}. Familiarity can matter, but no blanket difficulty, scoring or fantasy-point penalty is applied.`
     : `Non-division or unclassified matchup: ${input.away.name} (${awayDivision ?? "unknown division"}) vs ${input.home.name} (${homeDivision ?? "unknown division"}). Division labels use current NFL alignment.`);
   for (const [team, opponent] of [[input.away, input.home], [input.home, input.away]] as const) {
+    if (team.modelEvidence) {
+      overview.push(`${team.name}: ${team.modelEvidence.strength.basis}. Strength ratings shrink toward baseline 55 with sparse history. Workload shares use reported targets/carries, not verified complete snap or route coverage.`);
+      overview.push(...team.modelEvidence.warnings.map(warning => `${team.name}: ${warning}`));
+    }
     const evidence = team.headToHead;
     overview.push(evidence?.opponent === opponent.name && evidence.usableGames > 0
       ? `${team.name}: ${evidence.games} earlier head-to-head game(s) against ${opponent.name}, ${evidence.usableGames} with usable model statistics. Opponent-specific averages contribute up to ${Math.round(evidence.maxWeight * 100)}% per reported field; changes are bounded and can raise or lower projections. This is an uncalibrated heuristic, not a guaranteed rivalry effect.`

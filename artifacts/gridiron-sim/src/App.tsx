@@ -170,7 +170,7 @@ function App() {
   const changeSource = (value: typeof source) => {
     setSource(value);
     if (value === 'manual') setSetup(current => {
-      const clearHistory = (team: TeamSetup): TeamSetup => ({ ...team, roster: undefined, record: undefined, historyGames: undefined, headToHead: undefined, depthChartSource: undefined });
+      const clearHistory = (team: TeamSetup): TeamSetup => ({ ...team, roster: undefined, record: undefined, historyGames: undefined, headToHead: undefined, depthChartSource: undefined, availabilityChecks: undefined, modelEvidence: undefined });
       return { ...current, away: clearHistory(current.away), home: clearHistory(current.home) };
     });
   };

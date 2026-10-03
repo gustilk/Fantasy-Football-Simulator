@@ -2,6 +2,7 @@ import type { TeamSeasonRecord } from '@workspace/api-client-react';
 import { setupFromHistory } from '@/lib/season-model';
 import type { TeamSetup } from '@/lib/simulator';
 import { getDivision } from '@/lib/nfl-divisions';
+import { availabilityLabels } from '@/lib/availability';
 
 export default function HistoryTeamPicker({ name, teams, week, venue, opponent, onChange, onLibrary, snapshot }: {
   name: string; teams: TeamSeasonRecord[]; week: number; venue: 'away' | 'home';
@@ -22,6 +23,17 @@ export default function HistoryTeamPicker({ name, teams, week, venue, opponent, 
     <p className="stats-help" data-testid={`division-${venue}`}>Current division: <strong>{getDivision(name) ?? 'Unknown'}</strong></p>
     {!setup ? <p className="stats-help">Save this team’s roster and weekly games in Team Library first. <button className="text-button" onClick={onLibrary}>Open Team Library</button></p> : <>
       <p className="stats-help"><strong>Record: {setup.record?.wins ?? 0}–{setup.record?.losses ?? 0}–{setup.record?.ties ?? 0}</strong> · {setup.historyGames ?? 0} recorded games before this matchup.</p>
+      {setup.modelEvidence && <>
+        <p className="stats-help" data-testid={`strength-${venue}`}>History-derived strength: <strong>Pass {setup.passRating} · Rush {setup.rushRating} · Defense {setup.defenseRating}</strong>. Passing: {setup.modelEvidence.strength.passGames} usable games; rushing: {setup.modelEvidence.strength.rushGames}; defense: {setup.modelEvidence.strength.passDefenseGames} passing / {setup.modelEvidence.strength.rushDefenseGames} rushing. Sparse data shrinks ratings toward 55. These are heuristic estimates, not opponent-adjusted or validated accuracy gains.</p>
+        <details className="recent-stats"><summary>Data quality · {setup.modelEvidence.warnings.length} caution(s)</summary>
+          {setup.modelEvidence.warnings.length ? setup.modelEvidence.warnings.map(warning => <p key={warning} className="history-warning">{warning}</p>) : <p className="stats-help">No missing-history or availability-freshness warnings. This does not certify prediction accuracy or game-day participation.</p>}
+        </details>
+      </>}
+      {setup.availabilityChecks && <details className="recent-stats">
+        <summary>Week {week} availability · {setup.availabilityChecks.filter(p => !p.included).length} excluded</summary>
+        <p className="stats-help">Roster reports are not confirmed game-day participation. Weekly overrides take precedence and are retained in saved inputs.</p>
+        {setup.availabilityChecks.map(player => <div className="history-player" key={player.id}><strong>{player.name} · {availabilityLabels[player.status]} · {player.included ? 'included' : 'excluded'}</strong><span>{player.basis} · {player.checkedAt ? `checked ${new Date(player.checkedAt).toLocaleString()}` : 'no availability timestamp'}</span></div>)}
+      </details>}
       {setup.depthChartSource && <p className="stats-help">Current depth chart fetched {new Date(setup.depthChartSource.fetchedAt).toLocaleString()}. <a href={setup.depthChartSource.url} target="_blank" rel="noreferrer">ESPN source</a>. This is not a historical pregame availability record.</p>}
       <p className="stats-help" data-testid={`head-to-head-${venue}`}>{setup.headToHead?.opponent === opponent && setup.headToHead.usableGames > 0
         ? `${setup.headToHead.games} earlier head-to-head game(s) against ${opponent}; ${setup.headToHead.usableGames} with usable stats. Up to ${Math.round(setup.headToHead.maxWeight * 100)}% weight per known field, with bounded changes.`
@@ -29,10 +41,11 @@ export default function HistoryTeamPicker({ name, teams, week, venue, opponent, 
       {(setup.historyGames ?? 0) < 3 && <p className="history-warning">Limited history: fewer than 3 games. Missing statistics use baseline assumptions; enter more weeks to inform projections.</p>}
       <details className="recent-stats">
         <summary>Loaded offense · {setup.roster?.length ?? 0} skill players</summary>
-        <p className="stats-help">Active QB/RB/WR/TE players retain their depth roles. QB1 starts when available; deeper backups receive smaller workload priors. Missing injury games do not become zero-stat performances. “Usage estimate” means no explicit chart role was supplied.</p>
+        <p className="stats-help">Available QB/RB/WR/TE players retain their depth roles. QB1 starts when available; deeper backups receive smaller workload priors. Missing injury games do not become zero-stat performances. Shares are of reported targets/carries in games with that player’s observed statistic, not verified complete team opportunities. They guide workload but remain bounded by depth roles. No snap, route or goal-line data is invented.</p>
         {setup.roster?.map(player => <div className="history-player" key={player.id}>
           <strong>{player.position}{player.depthRank ?? ''} · {player.name} · {player.depthRankBasis === 'ESPN' ? 'ESPN chart' : player.depthRankBasis === 'saved' ? 'Saved role' : 'Usage estimate'}</strong>
           <span>{Object.entries(player.recentStats ?? {}).map(([key, value]) => `${key}: ${Number(value).toFixed(1)}`).join(' · ') || 'No earlier statistics recorded'}</span>
+          {player.usage && <span>{player.usage.targetShare !== undefined ? `Reported target share ${(player.usage.targetShare * 100).toFixed(1)}% (${player.usage.targetGames} games)` : 'Target share unknown'} · {player.usage.carryShare !== undefined ? `Reported carry share ${(player.usage.carryShare * 100).toFixed(1)}% (${player.usage.carryGames} games)` : 'Carry share unknown'}</span>}
         </div>)}
       </details>
       <details className="recent-stats">

@@ -33,6 +33,8 @@ export const listSeasonTeamsResponsePlayersItemIdMax = 100;
 
 export const listSeasonTeamsResponsePlayersItemNameMax = 100;
 
+export const listSeasonTeamsResponsePlayersItemAvailabilityOverrideWeekMax = 18;
+
 export const listSeasonTeamsResponsePlayersItemDepthRankMax = 50;
 
 export const listSeasonTeamsResponseWeeksItemWeekMax = 18;
@@ -72,6 +74,22 @@ export const ListSeasonTeamsResponseItem = zod.object({
 }).optional(),
   "sourcePosition": zod.string().optional(),
   "availability": zod.string().optional(),
+  "availabilityReport": zod.object({
+  "status": zod.enum(['available', 'out', 'questionable', 'doubtful', 'limited', 'unknown']),
+  "rosterActive": zod.boolean(),
+  "source": zod.object({
+  "provider": zod.enum(['ESPN']),
+  "url": zod.string().url(),
+  "fetchedAt": zod.coerce.date(),
+  "athleteId": zod.string().optional(),
+  "eventId": zod.string().optional()
+})
+}).optional(),
+  "availabilityOverride": zod.object({
+  "week": zod.number().int().min(1).max(listSeasonTeamsResponsePlayersItemAvailabilityOverrideWeekMax),
+  "status": zod.enum(['available', 'out', 'questionable', 'doubtful', 'limited']),
+  "updatedAt": zod.coerce.date()
+}).optional(),
   "depthRank": zod.number().int().min(1).max(listSeasonTeamsResponsePlayersItemDepthRankMax).optional(),
   "depthSource": zod.object({
   "provider": zod.enum(['ESPN']),
@@ -124,6 +142,8 @@ export const saveSeasonTeamBodyPlayersItemIdMax = 100;
 
 export const saveSeasonTeamBodyPlayersItemNameMax = 100;
 
+export const saveSeasonTeamBodyPlayersItemAvailabilityOverrideWeekMax = 18;
+
 export const saveSeasonTeamBodyPlayersItemDepthRankMax = 50;
 
 export const saveSeasonTeamBodyPlayersMax = 200;
@@ -165,6 +185,22 @@ export const SaveSeasonTeamBody = zod.object({
 }).optional(),
   "sourcePosition": zod.string().optional(),
   "availability": zod.string().optional(),
+  "availabilityReport": zod.object({
+  "status": zod.enum(['available', 'out', 'questionable', 'doubtful', 'limited', 'unknown']),
+  "rosterActive": zod.boolean(),
+  "source": zod.object({
+  "provider": zod.enum(['ESPN']),
+  "url": zod.string().url(),
+  "fetchedAt": zod.coerce.date(),
+  "athleteId": zod.string().optional(),
+  "eventId": zod.string().optional()
+})
+}).optional(),
+  "availabilityOverride": zod.object({
+  "week": zod.number().int().min(1).max(saveSeasonTeamBodyPlayersItemAvailabilityOverrideWeekMax),
+  "status": zod.enum(['available', 'out', 'questionable', 'doubtful', 'limited']),
+  "updatedAt": zod.coerce.date()
+}).optional(),
   "depthRank": zod.number().int().min(1).max(saveSeasonTeamBodyPlayersItemDepthRankMax).optional(),
   "depthSource": zod.object({
   "provider": zod.enum(['ESPN']),
@@ -197,6 +233,8 @@ export const SaveSeasonTeamBody = zod.object({
 export const saveSeasonTeamResponsePlayersItemIdMax = 100;
 
 export const saveSeasonTeamResponsePlayersItemNameMax = 100;
+
+export const saveSeasonTeamResponsePlayersItemAvailabilityOverrideWeekMax = 18;
 
 export const saveSeasonTeamResponsePlayersItemDepthRankMax = 50;
 
@@ -237,6 +275,22 @@ export const SaveSeasonTeamResponse = zod.object({
 }).optional(),
   "sourcePosition": zod.string().optional(),
   "availability": zod.string().optional(),
+  "availabilityReport": zod.object({
+  "status": zod.enum(['available', 'out', 'questionable', 'doubtful', 'limited', 'unknown']),
+  "rosterActive": zod.boolean(),
+  "source": zod.object({
+  "provider": zod.enum(['ESPN']),
+  "url": zod.string().url(),
+  "fetchedAt": zod.coerce.date(),
+  "athleteId": zod.string().optional(),
+  "eventId": zod.string().optional()
+})
+}).optional(),
+  "availabilityOverride": zod.object({
+  "week": zod.number().int().min(1).max(saveSeasonTeamResponsePlayersItemAvailabilityOverrideWeekMax),
+  "status": zod.enum(['available', 'out', 'questionable', 'doubtful', 'limited']),
+  "updatedAt": zod.coerce.date()
+}).optional(),
   "depthRank": zod.number().int().min(1).max(saveSeasonTeamResponsePlayersItemDepthRankMax).optional(),
   "depthSource": zod.object({
   "provider": zod.enum(['ESPN']),
@@ -268,7 +322,7 @@ export const SaveSeasonTeamResponse = zod.object({
 
 
 /**
- * @summary Fetch ESPN roster and last three completed regular-season games without saving
+ * @summary Fetch ESPN roster and completed regular-season history without saving
  */
 export const previewNflTeamPathSeasonMin = 2000;
 export const previewNflTeamPathSeasonMax = 2100;
@@ -282,9 +336,20 @@ export const PreviewNflTeamParams = zod.object({
   "team": zod.coerce.string().min(1).max(previewNflTeamPathTeamMax)
 })
 
+export const previewNflTeamQueryGameLimitDefault = 17;
+export const previewNflTeamQueryGameLimitMax = 17;
+
+
+
+export const PreviewNflTeamQueryParams = zod.object({
+  "gameLimit": zod.coerce.number().int().min(1).max(previewNflTeamQueryGameLimitMax).default(previewNflTeamQueryGameLimitDefault)
+})
+
 export const previewNflTeamResponsePlayersItemIdMax = 100;
 
 export const previewNflTeamResponsePlayersItemNameMax = 100;
+
+export const previewNflTeamResponsePlayersItemAvailabilityOverrideWeekMax = 18;
 
 export const previewNflTeamResponsePlayersItemDepthRankMax = 50;
 
@@ -326,6 +391,22 @@ export const PreviewNflTeamResponse = zod.object({
 }).optional(),
   "sourcePosition": zod.string().optional(),
   "availability": zod.string().optional(),
+  "availabilityReport": zod.object({
+  "status": zod.enum(['available', 'out', 'questionable', 'doubtful', 'limited', 'unknown']),
+  "rosterActive": zod.boolean(),
+  "source": zod.object({
+  "provider": zod.enum(['ESPN']),
+  "url": zod.string().url(),
+  "fetchedAt": zod.coerce.date(),
+  "athleteId": zod.string().optional(),
+  "eventId": zod.string().optional()
+})
+}).optional(),
+  "availabilityOverride": zod.object({
+  "week": zod.number().int().min(1).max(previewNflTeamResponsePlayersItemAvailabilityOverrideWeekMax),
+  "status": zod.enum(['available', 'out', 'questionable', 'doubtful', 'limited']),
+  "updatedAt": zod.coerce.date()
+}).optional(),
   "depthRank": zod.number().int().min(1).max(previewNflTeamResponsePlayersItemDepthRankMax).optional(),
   "depthSource": zod.object({
   "provider": zod.enum(['ESPN']),

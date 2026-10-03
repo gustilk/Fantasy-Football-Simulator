@@ -63,7 +63,11 @@ Depth roles load read-only from season-validated current ESPN charts for selecte
 
 The user wants two sections: enter and save all offensive and defensive players and their weekly stats for each team, then automatically reuse those stats when simulating matchups.
 
-For internet-sourced 2026 data, the user wants players' team assignments and offensive/defensive statistics from the last three completed games, not a full-season dataset.
+The user approved starting with public data: expand game history, calculate team strength and player usage, and expose availability timestamps with manual overrides. The import now offers all completed regular-season games in the selected season, while retaining a latest-three option. Preview/apply/save remains explicit; do not silently overwrite saved teams or add paid feeds.
+
+Availability reports are timestamped roster information, not confirmed game-day participation. A missing injury designation is unknown, not confirmed healthy. Weekly QB/RB/WR/TE overrides take precedence over saved Active flags for that week only; source refreshes preserve them. Out/Doubtful excludes, while Questionable/Limited includes without an invented missed-game probability or workload reduction. The UI currently retains one weekly override per player.
+
+History-derived strength ratings and reported target/carry shares are bounded heuristics, not validated improvements in accuracy. Strength shrinks toward baseline 55 with sparse paired observations; missing observations stay unknown. Current ratings are not opponent-adjusted. Workload shares use reported statistics only and do not claim complete targets, snaps, routes or goal-line coverage. Require leakage-free held-out comparisons before claiming better predictions.
 
 The user wants DraftKings-style readable player stats, DraftKings fantasy points calculated from the stats, and no non-participants in game-stat displays. Keep the full roster available for management; game tables use recorded participation, not current activity or positive points. Zero/negative scorers and inactive historical participants still appear.
 

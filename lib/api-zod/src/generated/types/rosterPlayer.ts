@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { NflDataSource } from './nflDataSource';
+import type { PlayerAvailabilityOverride } from './playerAvailabilityOverride';
+import type { PlayerAvailabilityReport } from './playerAvailabilityReport';
 import type { RosterPlayerPosition } from './rosterPlayerPosition';
 import type { RosterPlayerSide } from './rosterPlayerSide';
 
@@ -26,6 +28,8 @@ export interface RosterPlayer {
   source?: NflDataSource;
   sourcePosition?: string;
   availability?: string;
+  availabilityReport?: PlayerAvailabilityReport;
+  availabilityOverride?: PlayerAvailabilityOverride;
   /**
      * @minimum 1
      * @maximum 50

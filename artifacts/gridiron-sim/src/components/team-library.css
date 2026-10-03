@@ -29,7 +29,10 @@
 .tl-hint { margin:0; font-size:11px; color:var(--app-muted); line-height:1.5; }
 .tl-roster, .tl-weeks { display:grid; gap:12px; }
 .tl-table { border:1px solid var(--app-border); border-radius:10px; background:var(--app-card); overflow:hidden; }
-.tl-tr { display:grid; grid-template-columns:minmax(150px,2fr) 100px 120px 110px 36px; gap:8px; align-items:center; padding:6px 10px; border-bottom:1px solid var(--app-border); }
+.tl-tr { display:grid; grid-template-columns:minmax(150px,2fr) 100px 100px minmax(180px,1.5fr) 36px; gap:8px; align-items:center; padding:6px 10px; border-bottom:1px solid var(--app-border); }
+.tl-availability-cell, .tl-availability { display:grid; gap:4px; min-width:0; }
+.tl-availability small { font-size:10px; line-height:1.4; color:var(--app-muted); }
+.tl-availability select { width:100%; }
 .tl-tr.th { font:10px var(--app-font-mono); text-transform:uppercase; color:var(--app-muted); }
 .tl-tr.off input, .tl-tr.off select { opacity:.6; }
 .tl-check { flex-direction:row !important; align-items:center; gap:7px !important; font-size:12px !important; letter-spacing:0 !important; text-transform:none !important; font-weight:500 !important; min-height:32px; }

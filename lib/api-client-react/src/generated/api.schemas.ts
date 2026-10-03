@@ -52,6 +52,45 @@ export interface NflDataSource {
   eventId?: string;
 }
 
+export type PlayerAvailabilityReportStatus = typeof PlayerAvailabilityReportStatus[keyof typeof PlayerAvailabilityReportStatus];
+
+
+export const PlayerAvailabilityReportStatus = {
+  available: 'available',
+  out: 'out',
+  questionable: 'questionable',
+  doubtful: 'doubtful',
+  limited: 'limited',
+  unknown: 'unknown',
+} as const;
+
+export interface PlayerAvailabilityReport {
+  status: PlayerAvailabilityReportStatus;
+  rosterActive: boolean;
+  source: NflDataSource;
+}
+
+export type PlayerAvailabilityOverrideStatus = typeof PlayerAvailabilityOverrideStatus[keyof typeof PlayerAvailabilityOverrideStatus];
+
+
+export const PlayerAvailabilityOverrideStatus = {
+  available: 'available',
+  out: 'out',
+  questionable: 'questionable',
+  doubtful: 'doubtful',
+  limited: 'limited',
+} as const;
+
+export interface PlayerAvailabilityOverride {
+  /**
+     * @minimum 1
+     * @maximum 18
+     */
+  week: number;
+  status: PlayerAvailabilityOverrideStatus;
+  updatedAt: string;
+}
+
 export interface RosterPlayer {
   /**
      * @minLength 1
@@ -69,6 +108,8 @@ export interface RosterPlayer {
   source?: NflDataSource;
   sourcePosition?: string;
   availability?: string;
+  availabilityReport?: PlayerAvailabilityReport;
+  availabilityOverride?: PlayerAvailabilityOverride;
   /**
      * @minimum 1
      * @maximum 50
@@ -198,5 +239,13 @@ export type ListSeasonTeamsParams = {
  * @maximum 2100
  */
 season: number;
+};
+
+export type PreviewNflTeamParams = {
+/**
+ * @minimum 1
+ * @maximum 17
+ */
+gameLimit?: number;
 };
 

@@ -121,7 +121,17 @@ export async function getNflDepthChart(season: number, team: string): Promise<Nf
   }
 }
 
-async function buildPreview(season: number, team: string): Promise<NflImportPreview> {
+export function reportedAvailability(injury?: string): NonNullable<RosterPlayer["availabilityReport"]>["status"] {
+  const status = injury?.trim().toLowerCase();
+  if (["out", "suspended", "injured reserve"].includes(status ?? "")) return "out";
+  if (status === "doubtful") return "doubtful";
+  if (status === "questionable") return "questionable";
+  if (["limited", "limited participation"].includes(status ?? "")) return "limited";
+  if (["active", "available", "probable"].includes(status ?? "")) return "available";
+  return "unknown";
+}
+
+async function buildPreview(season: number, team: string, gameLimit: number): Promise<NflImportPreview> {
   const list = await json<{ sports: { leagues: { teams: { team: { id: string; displayName: string; abbreviation: string } }[] }[] }[] }>("teams?limit=32");
   const sourceTeam = list.sports?.[0]?.leagues?.[0]?.teams?.find(t => t.team.displayName === team)?.team;
   if (!sourceTeam) throw new NflSourceError("Choose one of the 32 NFL teams.", 400);
@@ -141,13 +151,18 @@ async function buildPreview(season: number, team: string): Promise<NflImportPrev
     const original = athlete.position?.abbreviation ?? "OTHER";
     const position = positions[original] ?? "OTHER";
     const injury = athlete.injuries?.[0]?.status;
+    const reportStatus = reportedAvailability(injury);
     const active = ["offense", "defense", "specialTeam"].includes(group.position) &&
-      athlete.status?.type === "active" && !["Out", "Suspended", "Injured Reserve", "Doubtful"].includes(injury ?? "");
+      athlete.status?.type === "active" && !["out", "doubtful"].includes(reportStatus);
     const player: RosterPlayer = {
       id: `espn:${athlete.id}`, name: athlete.displayName, position,
       side: defensive.has(position) || athlete.position?.parent?.abbreviation === "DEF" ? "defense" : "offense",
       active, sourcePosition: original, availability: injury || group.position,
       source: { provider: "ESPN", url: rosterUrl, fetchedAt, athleteId: athlete.id },
+      availabilityReport: {
+        status: reportStatus, rosterActive: active,
+        source: { provider: "ESPN", url: rosterUrl, fetchedAt, athleteId: athlete.id },
+      },
     };
     // Some ESPN groups repeat the same athlete; prefer the available roster entry.
     if (!players.has(player.id) || player.active) players.set(player.id, player);
@@ -156,10 +171,17 @@ async function buildPreview(season: number, team: string): Promise<NflImportPrev
     event.competitions?.[0]?.status?.type?.completed === true &&
     Number.isFinite(Date.parse(event.date)) && Date.parse(event.date) <= Date.now() &&
     (event.week?.number ?? 0) >= 1 && (event.week?.number ?? 0) <= 18)
-    .sort((a, b) => Date.parse(a.date) - Date.parse(b.date)).slice(-3);
+    .sort((a, b) => Date.parse(a.date) - Date.parse(b.date)).slice(-gameLimit);
+  const summaries = new Map<string, Summary>();
+  // Bound fan-out even for a full season; previews remain read-only and all-or-nothing.
+  for (let offset = 0; offset < events.length; offset += 3) {
+    await Promise.all(events.slice(offset, offset + 3).map(async event => {
+      summaries.set(event.id, await json<Summary>(`summary?event=${event.id}`));
+    }));
+  }
   const weeks: TeamWeek[] = [];
   for (const event of events) {
-    const game = await json<Summary>(`summary?event=${event.id}`);
+    const game = summaries.get(event.id)!;
     const competition = game.header?.competitions?.[0];
     if (game.header?.season.year !== season || game.header.season.type !== 2 ||
         game.header.week !== event.week!.number || !competition?.status?.type?.completed ||
@@ -224,21 +246,23 @@ async function buildPreview(season: number, team: string): Promise<NflImportPrev
     season, team, fetchedAt, rosterUrl, players: [...players.values()], weeks: weeks.sort((a, b) => a.week - b.week),
     warnings: [
       ...(depthWarning ? [depthWarning] : []),
-      ...(events.length < 3 ? [`Only ${events.length} completed regular-season games are available for ${season}; no older season was substituted.`] : []),
+      ...(events.length < gameLimit ? [`Only ${events.length} completed regular-season games are available for ${season}; no older season was substituted.`] : []),
       "Unknown or unpublished fields remain blank. Box scores do not consistently publish OL blocking metrics, snaps or forced fumbles.",
       "Active follows ESPN roster/injury categories. Reserve, practice-squad and unavailable players retain their history but are inactive. Verify availability before simulating.",
+      "Availability is a timestamped roster report, not confirmed game-day participation. An absent injury designation means unknown, not confirmed healthy. Weekly manual overrides take precedence.",
       "ESPN public data is not a guaranteed feed. Imports use a five-minute cache; corrections may appear on a later refresh.",
     ],
   };
 }
 
-export async function previewNflTeam(season: number, team: string): Promise<NflImportPreview> {
-  const key = `${season}:${team}`;
+export async function previewNflTeam(season: number, team: string, gameLimit = 17): Promise<NflImportPreview> {
+  if (!Number.isInteger(gameLimit) || gameLimit < 1 || gameLimit > 17) throw new NflSourceError("Choose between 1 and 17 completed games.", 400);
+  const key = `${season}:${team}:${gameLimit}`;
   const cached = previewCache.get(key);
   if (cached && cached.expires > Date.now()) return cached.value;
   if (pendingPreviews >= 4) throw new NflSourceError("Several teams are refreshing. Wait a moment and try again.", 429);
   pendingPreviews++;
-  const value = buildPreview(season, team).catch(error => { previewCache.delete(key); throw error; }).finally(() => pendingPreviews--);
+  const value = buildPreview(season, team, gameLimit).catch(error => { previewCache.delete(key); throw error; }).finally(() => pendingPreviews--);
   for (const [key, entry] of previewCache) if (entry.expires <= Date.now()) previewCache.delete(key);
   previewCache.set(key, { expires: Date.now() + TTL, value });
   return value;

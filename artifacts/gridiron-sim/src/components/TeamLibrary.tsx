@@ -7,6 +7,7 @@ import DivisionMatchup from './DivisionMatchup';
 import { getDivision } from '@/lib/nfl-divisions';
 import { rolesForRoster } from '@/lib/depth-chart';
 import PlayerStatsTable, { type StatRow } from './PlayerStatsTable';
+import PlayerAvailabilityEditor from './PlayerAvailabilityEditor';
 import './team-library.css';
 
 type Position = (typeof positions)[number];
@@ -181,19 +182,20 @@ export default function TeamLibrary({ season, onSeasonChange, teams, loading, er
           ))}
         </div>
         {view === 'roster'
-          ? <><p className="tl-hint">{depth.isLoading ? 'Loading source-listed depth roles…' : depth.isError ? 'Depth chart unavailable for this season. Set roles manually below.' : 'Automatic roles follow the current ESPN chart; manual choices override it. Rank 1 is the primary option, not guaranteed fantasy points. Save team to persist manual changes.'}</p><Roster players={draft.players} patch={patchPlayers} setDraft={setDraft} depth={depth.data} /></>
+          ? <><p className="tl-hint">{depth.isLoading ? 'Loading source-listed depth roles…' : depth.isError ? 'Depth chart unavailable for this season. Set roles manually below.' : 'Automatic roles follow the current ESPN chart; manual choices override it. Rank 1 is the primary option, not guaranteed fantasy points. Save team to persist manual changes.'}</p><Roster key={`${season}:${team}`} players={draft.players} patch={patchPlayers} setDraft={setDraft} depth={depth.data} nextWeek={Math.min(18, Math.max(0, ...draft.weeks.filter(w => w.status === 'played').map(w => w.week)) + 1)} /></>
           : <Weeks key={`${season}:${team}`} draft={draft} weekNo={weekNo} setWeekNo={setWeekNo} patchWeek={patchWeek} teamNames={teamNames} team={team} />}
       </fieldset>}
     </section>
   );
 }
 
-function Roster({ players, patch, setDraft, depth }: { players: Player[]; patch: (fn: (p: Player[]) => Player[]) => void; setDraft: React.Dispatch<React.SetStateAction<Draft>>; depth?: NflDepthChart }) {
+function Roster({ players, patch, setDraft, depth, nextWeek }: { players: Player[]; patch: (fn: (p: Player[]) => Player[]) => void; setDraft: React.Dispatch<React.SetStateAction<Draft>>; depth?: NflDepthChart; nextWeek: number }) {
   const [bulk, setBulk] = useState('');
   const [msg, setMsg] = useState('');
   const [name, setName] = useState('');
   const [pos, setPos] = useState<Position>('QB');
   const [filter, setFilter] = useState<'all' | 'offense' | 'defense'>('all');
+  const [availabilityWeek, setAvailabilityWeek] = useState(nextWeek);
 
   const add = () => {
     if (!name.trim()) return;
@@ -245,6 +247,12 @@ function Roster({ players, patch, setDraft, depth }: { players: Player[]; patch:
       <div className="tl-filter">
         {(['all', 'offense', 'defense'] as const).map(f => <button key={f} className={filter === f ? 'on' : ''} onClick={() => setFilter(f)}>{f}</button>)}
       </div>
+      <label className="tl-row tl-hint">Availability override week
+        <select aria-label="Availability override week" data-testid="select-availability-week" value={availabilityWeek} onChange={e => setAvailabilityWeek(Number(e.target.value))}>
+          {Array.from({ length: 18 }, (_, i) => <option key={i + 1} value={i + 1}>Week {i + 1}</option>)}
+        </select>
+      </label>
+      <p className="tl-hint">QB/RB/WR/TE overrides apply only to the selected week and take precedence over the saved Active flag. Out/Doubtful excludes; Questionable/Limited includes without modeling missed-game probability or a workload reduction. One weekly override per player is retained. Save team to persist it. Roster reports are not confirmed game-day participation.</p>
       {players.length === 0 ? (
         <div className="tl-empty"><Database size={26} /><strong>No roster saved for this team and season</strong><span>Refresh recent NFL data above, add players, or paste a list. Nothing is stored until you save.</span></div>
       ) : (
@@ -262,13 +270,15 @@ function Roster({ players, patch, setDraft, depth }: { players: Player[]; patch:
                  </select>}
                </div>
                <select aria-label="Side" value={p.side} onChange={e => upd(p.id, { side: e.target.value as Side, depthRank: undefined, depthSource: undefined })}><option value="offense">Offense</option><option value="defense">Defense</option></select>
-              <label className="tl-check"><input type="checkbox" checked={p.active} onChange={e => upd(p.id, { active: e.target.checked })} /> {p.active ? 'Active' : 'Inactive'}</label>
+              <div className="tl-availability-cell"><label className="tl-check"><input type="checkbox" checked={p.active} onChange={e => upd(p.id, { active: e.target.checked })} /> {p.active ? 'Active' : 'Inactive'}</label>
+                {p.side === 'offense' && ['QB', 'RB', 'WR', 'TE'].includes(p.position) && <PlayerAvailabilityEditor player={p} week={availabilityWeek} onChange={ch => upd(p.id, ch)} />}
+              </div>
               <button className="saved-remove" aria-label={`Delete ${p.name || 'player'}`} onClick={() => remove(p)}><Trash2 size={14} /></button>
             </div>
           );})}
         </div>
       )}
-      <p className="tl-hint">Inactive players keep their history but are left out of new projections.</p>
+      <p className="tl-hint">Excluded players keep their history and depth rank. A weekly override does not permanently demote or deactivate a returning starter.</p>
     </div>
   );
 }

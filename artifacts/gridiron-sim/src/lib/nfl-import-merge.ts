@@ -24,8 +24,10 @@ export function mergeNflImport(current: ImportDraft, preview: NflImportPreview, 
       const differs = player.name !== incoming.name || player.position !== incoming.position || player.side !== incoming.side || player.active !== incoming.active;
       if (differs) rosterChanges++;
       const manualDepth = player.depthRank !== undefined && !player.depthSource ? player.depthRank : undefined;
+      const manualAvailability = player.availabilityOverride;
       if (options.updateRoster) Object.assign(player, incoming, { id: player.id });
-      else Object.assign(player, { source: incoming.source, sourcePosition: incoming.sourcePosition, availability: incoming.availability });
+      else Object.assign(player, { source: incoming.source, sourcePosition: incoming.sourcePosition, availability: incoming.availability, availabilityReport: incoming.availabilityReport });
+      if (manualAvailability) player.availabilityOverride = manualAvailability;
       if (manualDepth !== undefined) { player.depthRank = manualDepth; player.depthSource = undefined; }
       else if (incoming.depthRank !== undefined) { player.depthRank = incoming.depthRank; player.depthSource = incoming.depthSource; }
     }

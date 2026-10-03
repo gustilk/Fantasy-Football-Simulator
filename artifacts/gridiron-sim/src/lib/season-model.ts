@@ -1,5 +1,7 @@
 import type { NumericStats, TeamSeasonRecord, TeamWeek } from "@workspace/api-client-react";
 import type { PlayerRecentStats, SimulationRosterPlayer, TeamSetup } from "./simulator";
+import { availabilityForWeek, availabilityWarnings } from "./availability";
+import { historyStrength, historyWarnings, playerUsage } from "./history-signals";
 
 const average = (rows: NumericStats[], key: string): number | undefined => {
   const values = rows.map(row => row[key]).filter((value): value is number => typeof value === "number" && Number.isFinite(value));
@@ -63,13 +65,16 @@ export function setupFromHistory(team: TeamSeasonRecord, week: number, venue: "h
   const games = priorGames(team, week);
   const matchupOpponent = opponent && opponent !== team.team ? opponent : undefined;
   const skill = new Set(["QB", "RB", "WR", "TE"]);
-  const roster: SimulationRosterPlayer[] = team.players.filter(player => player.active && player.side === "offense" && skill.has(player.position)).map(player => {
+  const availabilityChecks = team.players.filter(p => p.side === "offense" && skill.has(p.position)).map(p => availabilityForWeek(p, week));
+  const available = new Set(availabilityChecks.filter(p => p.included).map(p => p.id));
+  const roster: SimulationRosterPlayer[] = team.players.filter(player => available.has(player.id)).map(player => {
     const rows = games.filter(game => game.playerStats[player.id] !== undefined).map(game => ({ stats: game.playerStats[player.id]!, venue: game.venue, opponent: game.opponent }));
     return {
       id: player.id, name: player.name, position: player.position as SimulationRosterPlayer["position"],
       depthRank: player.depthRank, depthRankBasis: player.depthRank === undefined ? "usage" as const : player.depthSource ? "ESPN" as const : "saved" as const,
       historyObservations: rows.filter(row => ["passAttempts", "rushAttempts", "targets", "receptions", "receivingYards"].some(key => Number.isFinite(row.stats[key]))).length,
       recentStats: blendedStats(rows, venue, matchupOpponent) as PlayerRecentStats,
+      usage: playerUsage(games, player.id),
     };
   });
   const order = { QB: 0, RB: 1, WR: 2, TE: 3 };
@@ -98,6 +103,7 @@ export function setupFromHistory(team: TeamSeasonRecord, week: number, venue: "h
     Object.entries(defenseRows[games.indexOf(game)]!.stats).some(([key, value]) => defenseKeys.has(key) && Number.isFinite(value)),
   );
   const names = (position: string) => roster.filter(player => player.position === position);
+  const strength = historyStrength(team, games);
   return {
     name: team.team,
     qb: names("QB")[0]?.name ?? "",
@@ -106,11 +112,13 @@ export function setupFromHistory(team: TeamSeasonRecord, week: number, venue: "h
     wr2: names("WR")[1]?.name ?? "",
     wr3: names("WR")[2]?.name ?? "",
     te: names("TE")[0]?.name ?? "",
-    kicker: team.players.find(player => player.active && player.side === "offense" && player.position === "K")?.name ?? "Kicker",
-    passRating: 55, rushRating: 55, defenseRating: 55,
+    kicker: team.players.find(player => availabilityForWeek(player, week).included && player.side === "offense" && player.position === "K")?.name ?? "Kicker",
+    passRating: strength.passRating, rushRating: strength.rushRating, defenseRating: strength.defenseRating,
     roster,
     record: teamRecord(team, week),
     historyGames: games.length,
+    availabilityChecks,
+    modelEvidence: { strength: strength.evidence, warnings: [...historyWarnings(games, strength.evidence), ...availabilityWarnings(availabilityChecks)] },
     depthChartSource: team.players.find(p => p.depthSource)?.depthSource,
     headToHead: matchupOpponent ? { opponent: matchupOpponent, games: meetings.length, usableGames: usable.length, maxWeight: headToHeadWeight(usable.length) } : undefined,
     defenseRecent: blendedStats(defenseRows, venue, matchupOpponent),

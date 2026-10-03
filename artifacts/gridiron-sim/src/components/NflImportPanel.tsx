@@ -24,6 +24,7 @@ export default function NflImportPanel({ season, team, draft, disabled, onApply,
   const [replaceStats, setReplaceStats] = useState(false);
   const [updateRoster, setUpdateRoster] = useState(false);
   const [showRoster, setShowRoster] = useState(false);
+  const [gameLimit, setGameLimit] = useState(17);
 
   const reset = () => { token.current++; setLoading(false); setData(null); setError(''); setReplaceStats(false); setUpdateRoster(false); busyRef.current(false); };
 
@@ -34,7 +35,7 @@ export default function NflImportPanel({ season, team, draft, disabled, onApply,
     const my = ++token.current;
     setLoading(true); setError(''); setData(null); busyRef.current(true);
     try {
-      const res = await mutateRef.current({ season, team: encodeURIComponent(team) });
+      const res = await mutateRef.current({ season, team: encodeURIComponent(team), params: { gameLimit } });
       if (my !== token.current) return;
       setData(res); setLoading(false);
     } catch (e) {
@@ -75,15 +76,16 @@ export default function NflImportPanel({ season, team, draft, disabled, onApply,
     <section className="nfl" aria-labelledby="nfl-title" aria-busy={loading}>
       <div className="nfl-head">
         <div>
-          <h3 id="nfl-title">Import recent NFL games</h3>
-          <p className="nfl-hint">Reads the {team} roster and last 3 completed games for {season} from ESPN. Nothing is changed until you apply, and applying stays unsaved until you press Save team.</p>
+          <h3 id="nfl-title">Import NFL game history</h3>
+          <p className="nfl-hint">Reads the {team} roster and {gameLimit === 17 ? 'all available completed regular-season games' : 'latest 3 completed games'} for {season} from ESPN. No older season is substituted. Nothing is changed until you apply, and applying stays unsaved until you press Save team.</p>
           <p className="nfl-src" data-testid="text-nfl-saved-source">
             {saved ? <>Latest source in this draft: {fmt(saved.at)}{safeUrl(saved.url) && <> / <a href={safeUrl(saved.url)} target="_blank" rel="noopener noreferrer" data-testid="link-nfl-latest-source">ESPN link</a></>}</> : 'No imported source in this draft yet.'}
           </p>
         </div>
         <div className="nfl-actions">
+          <label className="nfl-hint">History range <select aria-label="History import range" value={gameLimit} disabled={disabled || loading || !!data} onChange={e => setGameLimit(Number(e.target.value))} data-testid="select-history-range"><option value={17}>All completed games</option><option value={3}>Latest 3 games</option></select></label>
           <button type="button" className="btn-secondary" onClick={refresh} disabled={disabled || loading || !!data} data-testid="button-nfl-refresh">
-            {loading ? <><RotateCw size={14} className="spin-icon" /> Fetching</> : <><Download size={14} /> Refresh latest 3 games</>}
+            {loading ? <><RotateCw size={14} className="spin-icon" /> Fetching</> : <><Download size={14} /> Fetch game history</>}
           </button>
           {(loading || data) && <button type="button" className="btn-secondary" onClick={cancel} data-testid="button-nfl-cancel"><X size={14} /> Cancel</button>}
         </div>

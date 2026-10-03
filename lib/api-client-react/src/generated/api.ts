@@ -24,6 +24,7 @@ import type {
   ListSeasonTeamsParams,
   NflDepthChart,
   NflImportPreview,
+  PreviewNflTeamParams,
   SeasonError,
   TeamSeasonInput,
   TeamSeasonRecord
@@ -310,21 +311,30 @@ export const useSaveSeasonTeam = <TError = ErrorType<SeasonError>,
     }
 
 export const getPreviewNflTeamUrl = (season: number,
-    team: string,) => {
+    team: string,
+    params?: PreviewNflTeamParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/nfl-import/${season}/${team}`
+  return stringifiedParams.length > 0 ? `/api/nfl-import/${season}/${team}?${stringifiedParams}` : `/api/nfl-import/${season}/${team}`
 }
 
 /**
- * @summary Fetch ESPN roster and last three completed regular-season games without saving
+ * @summary Fetch ESPN roster and completed regular-season history without saving
  */
 export const previewNflTeam = async (season: number,
-    team: string, options?: Parameters<typeof customFetch>[1]): Promise<NflImportPreview> => {
+    team: string,
+    params?: PreviewNflTeamParams, options?: Parameters<typeof customFetch>[1]): Promise<NflImportPreview> => {
 
-  return customFetch<NflImportPreview>(getPreviewNflTeamUrl(season,team),
+  return customFetch<NflImportPreview>(getPreviewNflTeamUrl(season,team,params),
   {
     ...options,
     method: 'POST'
@@ -354,9 +364,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
       const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewNflTeam>>, PreviewNflTeamMutationVariables> = (props) => {
-          const {season,team} = props ?? {};
+          const {season,team,params} = props ?? {};
 
-          return  previewNflTeam(season,team,requestOptions)
+          return  previewNflTeam(season,team,params,requestOptions)
         }
 
 
@@ -369,10 +379,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type PreviewNflTeamMutationResult = NonNullable<Awaited<ReturnType<typeof previewNflTeam>>>
 
     export type PreviewNflTeamMutationError = ErrorType<SeasonError>
-    export type PreviewNflTeamMutationVariables = {season: number;team: string}
+    export type PreviewNflTeamMutationVariables = {season: number;team: string;params?: PreviewNflTeamParams}
 
     /**
- * @summary Fetch ESPN roster and last three completed regular-season games without saving
+ * @summary Fetch ESPN roster and completed regular-season history without saving
  */
 export const usePreviewNflTeam = <TError = ErrorType<SeasonError>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewNflTeam>>, TError,PreviewNflTeamMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}

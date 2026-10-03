@@ -83,7 +83,7 @@ paths:
   /nfl-import/{season}/{team}:
     post:
       operationId: previewNflTeam
-      summary: Fetch ESPN roster and last three completed regular-season games without saving
+      summary: Fetch ESPN roster and completed regular-season history without saving
       parameters:
         - in: path
           name: season
@@ -93,6 +93,9 @@ paths:
           name: team
           required: true
           schema: { type: string, minLength: 1, maxLength: 100 }
+        - in: query
+          name: gameLimit
+          schema: { type: integer, minimum: 1, maximum: 17, default: 17 }
       responses:
         "200":
           description: Read-only import preview
@@ -170,8 +173,24 @@ components:
         source: { $ref: "#/components/schemas/NflDataSource" }
         sourcePosition: { type: string }
         availability: { type: string }
+        availabilityReport: { $ref: "#/components/schemas/PlayerAvailabilityReport" }
+        availabilityOverride: { $ref: "#/components/schemas/PlayerAvailabilityOverride" }
         depthRank: { type: integer, minimum: 1, maximum: 50 }
         depthSource: { $ref: "#/components/schemas/NflDataSource" }
+    PlayerAvailabilityReport:
+      type: object
+      required: [status, rosterActive, source]
+      properties:
+        status: { type: string, enum: [available, out, questionable, doubtful, limited, unknown] }
+        rosterActive: { type: boolean }
+        source: { $ref: "#/components/schemas/NflDataSource" }
+    PlayerAvailabilityOverride:
+      type: object
+      required: [week, status, updatedAt]
+      properties:
+        week: { type: integer, minimum: 1, maximum: 18 }
+        status: { type: string, enum: [available, out, questionable, doubtful, limited] }
+        updatedAt: { type: string, format: date-time }
     NflDepthRole:
       type: object
       required: [athleteId, position, depthRank]
