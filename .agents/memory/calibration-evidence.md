@@ -32,3 +32,9 @@ Local checksums and archive URLs establish consistency, not independent historic
 **Why:** A perfectly hashed JSON file can still contain backdated declarations. Offline evaluation cannot verify when the original source actually became available.
 
 **How to apply:** Require source/receipt review before making accuracy claims. When independently frozen pregame inputs are unavailable, use prospective collection rather than backdating a retrospective reconstruction.
+
+Keep simulated DraftKings projections separate from observed player-performance history. Do not feed saved forecasts back into the simulator as real results.
+
+**Why:** The app is intended to support future DraftKings choices. Treating its own predictions as outcomes would reinforce model mistakes, while weighting both recorded stats and the DK totals derived from them can double-count the same evidence.
+
+**How to apply:** Archive forecasts for later comparisons. Use actual recorded stat history for simulation inputs; clearly distinguish complete official point entries, partial stat-derived subtotals, and unknown outcomes. Any new direct fantasy-score weighting needs a separate justified evaluation.

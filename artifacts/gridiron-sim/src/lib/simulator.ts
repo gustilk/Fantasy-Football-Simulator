@@ -101,6 +101,8 @@ export interface SimulatedDrive {
 }
 
 export interface PlayerProjection {
+  /** Stable roster identity, when simulating from saved team history. */
+  id?: string;
   name: string;
   position: string;
   team: string;
@@ -226,6 +228,7 @@ function makeTeamSimulation(setup: TeamSetup): TeamSimulation {
       ranks[player.position] = (ranks[player.position] ?? 0) + 1;
       return {
         ...makePlayer(player.name, player.position, teamName, player.depthRank ?? ranks[player.position]),
+        id: player.id,
         recentStats: player.recentStats, historyObservations: player.historyObservations, usage: player.usage,
       };
     }) : [

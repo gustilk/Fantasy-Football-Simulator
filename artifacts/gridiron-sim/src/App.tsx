@@ -15,6 +15,7 @@ import UpcomingGames from '@/components/UpcomingGames';
 import MarketOddsInputs from '@/components/MarketOddsInputs';
 import MarketOddsSummary from '@/components/MarketOddsSummary';
 import { withDepthChart } from '@/lib/depth-chart';
+import DraftKingsBoard from '@/components/DraftKingsBoard';
 import './season.css';
 
 type SavedSimulation = { id: string; savedAt: string; awayName: string; homeName: string; result: SimulationResult; setup?: StoredSetup };
@@ -71,7 +72,8 @@ function formatSavedDate(value: string) {
   return Number.isNaN(date.getTime()) ? 'Saved matchup' : date.toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
 }
 function App() {
-  const [tab, setTab] = useState<'library' | 'simulator'>('library');
+  const [tab, setTab] = useState<'library' | 'simulator' | 'draftkings'>(() =>
+    new URLSearchParams(window.location.search).get('view') === 'draftkings' ? 'draftkings' : 'library');
   const [season, setSeason] = useState(() => readSetup().market?.season ?? new Date().getFullYear());
   const [week, setWeek] = useState(() => readSetup().market?.week ?? 2);
   const [source, setSource] = useState<'library' | 'manual' | 'snapshot'>('library');
@@ -226,11 +228,13 @@ function App() {
         <nav className="section-tabs" aria-label="App sections">
           <button className={tab === 'library' ? 'selected' : ''} onClick={() => setTab('library')} data-testid="tab-library">Team Library</button>
           <button className={tab === 'simulator' ? 'selected' : ''} onClick={() => setTab('simulator')} data-testid="tab-simulator">Game Simulator</button>
+          <button className={tab === 'draftkings' ? 'selected' : ''} onClick={() => setTab('draftkings')} data-testid="tab-draftkings">DraftKings</button>
         </nav>
         <div style={{ display: tab === 'library' ? undefined : 'none' }}>
           <TeamLibrary season={season} onSeasonChange={changeSeason} teams={storedTeams} loading={history.isLoading}
             error={history.isError ? 'Could not load saved team history. Please retry.' : ''} onReload={() => { void history.refetch(); }} onSaved={onTeamSaved} teamNames={NFL_TEAMS} />
         </div>
+        <div style={{ display: tab === 'draftkings' ? undefined : 'none' }}><DraftKingsBoard season={season} /></div>
         <div style={{ display: tab === 'simulator' ? undefined : 'none' }}>
         <div className="page-heading">
           <div>
