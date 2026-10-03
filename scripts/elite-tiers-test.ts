@@ -12,6 +12,7 @@ import { setupFromHistory } from '../artifacts/gridiron-sim/src/lib/season-model
 const assignments = [
   ['Lamar Jackson', 'QB', 2], ['Trey McBride', 'TE', 2], ["Ja'Marr Chase", 'WR', 2],
   ['Amon-Ra St. Brown', 'WR', 2], ['Puka Nacua', 'WR', 2], ['CeeDee Lamb', 'WR', 2],
+  ['Justin Jefferson', 'WR', 2],
   ['Jahmyr Gibbs', 'RB', 3], ['Brock Bowers', 'TE', 3], ['Bijan Robinson', 'RB', 3],
   ['Jaxon Smith-Njigba', 'WR', 3], ['Josh Allen', 'QB', 3],
   ['Nico Collins', 'WR', 1], ['Zay Flowers', 'WR', 1], ['Parker Washington', 'WR', 1], ['Ashton Jeanty', 'RB', 1],
@@ -88,4 +89,4 @@ assert.equal(forecast.players.find(p => p.playerId === 'wr' && p.team === team.n
 const storage = { value: '', getItem() { return this.value; }, setItem(_key: string, value: string) { this.value = value; } };
 writeDKArchive(storage, { version: 1, official: [], slates: [{ id: 'slate', season: 2026, sunday: '2026-10-04', createdAt: '2026-10-03T12:00:00Z', timezone: 'America/Chicago', forecasts: [forecast], failures: [] }] });
 assert.deepEqual(readDKArchive(storage).slates[0]!.forecasts[0]!.players, forecast.players, 'Reload retains exact tier badges and projections');
-console.log('All 15 assignments, 20/40/60 weights, aliases, None overrides, legacy snapshots, import preservation, injury filtering, API contracts, monotonic QB/receiving usage and DK archive tiers passed.', usage);
+console.log('All requested assignments, 20/40/60 weights, aliases, None overrides, legacy snapshots, import preservation, injury filtering, API contracts, monotonic QB/receiving usage and DK archive tiers passed.', usage);

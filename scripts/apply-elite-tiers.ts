@@ -4,6 +4,7 @@ import { ListSeasonTeamsResponse, SaveSeasonTeamResponse } from '../lib/api-zod/
 
 // Explicit maintenance action only; never run automatically on app startup.
 const season = Number(process.argv[2]);
+const nameFilter = process.argv[3]?.trim().toLowerCase();
 assert.ok(Number.isInteger(season) && season >= 2000 && season <= 2100, 'Provide a season, e.g. 2026');
 assert.ok(process.env.REPLIT_DEV_DOMAIN, 'Development domain is required');
 const base = `https://${process.env.REPLIT_DEV_DOMAIN}/api/season-teams`;
@@ -14,6 +15,7 @@ let updated = 0;
 for (const team of teams) {
   const changes: { name: string; tier: number }[] = [];
   const players = team.players.map(player => {
+    if (nameFilter && player.name.toLowerCase() !== nameFilter) return player;
     const tier = player.side === 'offense' ? assignedEliteTier(player) : undefined;
     if (tier === undefined || (player.eliteTier === tier && player.elite1x === true)) return player;
     changes.push({ name: player.name, tier });

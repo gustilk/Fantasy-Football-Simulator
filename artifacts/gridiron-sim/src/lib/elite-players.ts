@@ -18,6 +18,7 @@ export type EliteTier = NonNullable<RosterPlayer['eliteTier']>;
 export const ELITE_TIER_ASSIGNMENTS = [
   ['Lamar Jackson', 'QB', 2], ['Trey McBride', 'TE', 2], ["Ja'Marr Chase", 'WR', 2],
   ['Amon-Ra St. Brown', 'WR', 2], ['Puka Nacua', 'WR', 2], ['CeeDee Lamb', 'WR', 2],
+  ['Justin Jefferson', 'WR', 2],
   ['Jahmyr Gibbs', 'RB', 3], ['Brock Bowers', 'TE', 3], ['Bijan Robinson', 'RB', 3],
   ['Jaxon Smith-Njigba', 'WR', 3], ['Josh Allen', 'QB', 3],
   ['Nico Collins', 'WR', 1], ['Zay Flowers', 'WR', 1], ['Parker Washington', 'WR', 1],
