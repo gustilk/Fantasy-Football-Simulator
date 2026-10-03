@@ -1,0 +1,45 @@
+export type StatField = { key: string; label: string; signed?: boolean };
+export const offenseFields: StatField[] = [
+  { key: 'passAttempts', label: 'Pass attempts' },
+  { key: 'passCompletions', label: 'Completions' },
+  { key: 'passYards', label: 'Passing yards', signed: true },
+  { key: 'passTD', label: 'Passing TDs' },
+  { key: 'interceptions', label: 'INTs thrown' },
+  { key: 'rushAttempts', label: 'Carries' },
+  { key: 'rushYards', label: 'Rushing yards', signed: true },
+  { key: 'rushTD', label: 'Rushing TDs' },
+  { key: 'targets', label: 'Targets' },
+  { key: 'receptions', label: 'Receptions' },
+  { key: 'receivingYards', label: 'Receiving yards', signed: true },
+  { key: 'receivingTD', label: 'Receiving TDs' },
+  { key: 'fumblesLost', label: 'Fumbles lost' },
+  { key: 'snaps', label: 'Snaps played' },
+  { key: 'fieldGoalAttempts', label: 'FG attempts' },
+  { key: 'fieldGoalsMade', label: 'FG made' },
+  { key: 'extraPointAttempts', label: 'XP attempts' },
+  { key: 'extraPointsMade', label: 'XP made' },
+];
+export const defenseFields: StatField[] = [
+  { key: 'soloTackles', label: 'Solo tackles' },
+  { key: 'assistedTackles', label: 'Assisted tackles' },
+  { key: 'tacklesForLoss', label: 'Tackles for loss' },
+  { key: 'sacks', label: 'Sacks' },
+  { key: 'qbHits', label: 'QB hits' },
+  { key: 'interceptions', label: 'INTs made' },
+  { key: 'passesDefended', label: 'Passes defended' },
+  { key: 'fumblesForced', label: 'Forced fumbles' },
+  { key: 'fumblesRecovered', label: 'Fumble recoveries' },
+  { key: 'defensiveTD', label: 'Defensive TDs' },
+  { key: 'snaps', label: 'Snaps played' },
+];
+export const teamDefenseFields: StatField[] = [
+  { key: 'passYardsAllowed', label: 'Pass yards allowed' },
+  { key: 'passTDAllowed', label: 'Pass TDs allowed' },
+  { key: 'rushYardsAllowed', label: 'Rush yards allowed' },
+  { key: 'rushTDAllowed', label: 'Rush TDs allowed' },
+  { key: 'interceptions', label: 'Team INTs made' },
+  { key: 'fumblesForced', label: 'Team forced fumbles' },
+  { key: 'sacks', label: 'Team sacks' },
+  { key: 'passesDefended', label: 'Team passes defended' },
+];
+export const positions = ['QB', 'RB', 'WR', 'TE', 'K', 'OL', 'DL', 'EDGE', 'LB', 'CB', 'S', 'OTHER'] as const;

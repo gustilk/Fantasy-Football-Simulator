@@ -24,6 +24,62 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /season-teams:
+    get:
+      operationId: listSeasonTeams
+      summary: List saved team rosters and weekly history for a season
+      parameters:
+        - in: query
+          name: season
+          required: true
+          schema: { type: integer, minimum: 2000, maximum: 2100 }
+      responses:
+        "200":
+          description: Saved teams
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/TeamSeasonRecord" }
+        "400":
+          description: Invalid season
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeasonError" }
+  /season-teams/{season}/{team}:
+    put:
+      operationId: saveSeasonTeam
+      summary: Save a complete team roster and history with optimistic concurrency
+      parameters:
+        - in: path
+          name: season
+          required: true
+          schema: { type: integer, minimum: 2000, maximum: 2100 }
+        - in: path
+          name: team
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 100 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TeamSeasonInput" }
+      responses:
+        "200":
+          description: Saved team with current version
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TeamSeasonRecord" }
+        "400":
+          description: Invalid roster or weekly statistics
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeasonError" }
+        "409":
+          description: Another session changed this team; reload before saving
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeasonError" }
 components:
   schemas:
     HealthStatus:
@@ -33,4 +89,65 @@ components:
           type: string
       required:
         - status
+    NumericStats:
+      type: object
+      additionalProperties:
+        type: number
+        minimum: -1000
+        maximum: 10000
+    RosterPlayer:
+      type: object
+      required: [id, name, position, side, active]
+      properties:
+        id: { type: string, minLength: 1, maxLength: 100 }
+        name: { type: string, minLength: 1, maxLength: 100 }
+        position: { type: string, enum: [QB, RB, WR, TE, K, OL, DL, EDGE, LB, CB, S, OTHER] }
+        side: { type: string, enum: [offense, defense] }
+        active: { type: boolean }
+    TeamWeek:
+      type: object
+      required: [week, status, opponent, venue, result, teamScore, opponentScore, teamDefense, playerStats]
+      properties:
+        week: { type: integer, minimum: 1, maximum: 18 }
+        status: { type: string, enum: [played, bye, upcoming] }
+        opponent: { type: string, maxLength: 100 }
+        venue: { type: string, enum: [home, away] }
+        result: { type: string, enum: [W, L, T, none] }
+        teamScore: { type: [number, "null"], minimum: 0, maximum: 100 }
+        opponentScore: { type: [number, "null"], minimum: 0, maximum: 100 }
+        teamDefense: { $ref: "#/components/schemas/NumericStats" }
+        playerStats:
+          type: object
+          additionalProperties: { $ref: "#/components/schemas/NumericStats" }
+    TeamSeasonInput:
+      type: object
+      required: [expectedVersion, players, weeks]
+      properties:
+        expectedVersion: { type: integer, minimum: 0 }
+        players:
+          type: array
+          maxItems: 200
+          items: { $ref: "#/components/schemas/RosterPlayer" }
+        weeks:
+          type: array
+          maxItems: 18
+          items: { $ref: "#/components/schemas/TeamWeek" }
+    TeamSeasonRecord:
+      type: object
+      required: [season, team, version, players, weeks]
+      properties:
+        season: { type: integer }
+        team: { type: string }
+        version: { type: integer }
+        players:
+          type: array
+          items: { $ref: "#/components/schemas/RosterPlayer" }
+        weeks:
+          type: array
+          items: { $ref: "#/components/schemas/TeamWeek" }
+    SeasonError:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
 

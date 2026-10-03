@@ -1,10 +1,18 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Activity, ArrowRight, Bookmark, ChevronDown, CircleHelp, Cloud, CloudRain, Crosshair, RotateCw, Shield, SlidersHorizontal, Trash2, Trophy, Wind } from 'lucide-react';
-import { simulateGame, type WeatherSetup as Weather, type TeamSetup, type SimulationInput, type SimulationResult, type PlayerProjection as SimPlayer, type PlayerRecentStats, type DefenseRecentStats } from '@/lib/simulator';
+import { type WeatherSetup as Weather, type TeamSetup, type SimulationInput, type SimulationResult, type PlayerProjection as SimPlayer, type PlayerRecentStats, type DefenseRecentStats } from '@/lib/simulator';
+import { useListSeasonTeams, getListSeasonTeamsQueryKey, type TeamSeasonRecord } from '@workspace/api-client-react';
+import { useQueryClient } from '@tanstack/react-query';
+import TeamLibrary from '@/components/TeamLibrary';
+import HistoryTeamPicker from '@/components/HistoryTeamPicker';
+import { setupFromHistory } from '@/lib/season-model';
+import { simulateEnsemble } from '@/lib/ensemble';
+import './season.css';
 
 type SavedSimulation = { id: string; savedAt: string; awayName: string; homeName: string; result: SimulationResult; setup?: StoredSetup };
-type StoredSetup = { away: TeamSetup; home: TeamSetup; weather: Weather };
+type StoredSetup = { away: TeamSetup; home: TeamSetup; weather: Weather; importance?: SimulationInput['importance'] };
 type PatchTeam = (side: 'away' | 'home', field: keyof TeamSetup, value: TeamSetup[keyof TeamSetup]) => void;
+type ProjectedPlayer = SimPlayer & { estimate?: { mean: number; p10: number; p90: number } };
 
 const NFL_TEAMS = [
   'Arizona Cardinals','Atlanta Falcons','Baltimore Ravens','Buffalo Bills','Carolina Panthers','Chicago Bears','Cincinnati Bengals','Cleveland Browns',
@@ -56,6 +64,13 @@ function formatSavedDate(value: string) {
   return Number.isNaN(date.getTime()) ? 'Saved matchup' : date.toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
 }
 function App() {
+  const [tab, setTab] = useState<'library' | 'simulator'>('library');
+  const [season, setSeason] = useState(new Date().getFullYear());
+  const [week, setWeek] = useState(2);
+  const [source, setSource] = useState<'library' | 'manual' | 'snapshot'>('library');
+  const queryClient = useQueryClient();
+  const history = useListSeasonTeams({ season });
+  const teams = history.data ?? [];
   const [setup, setSetup] = useState<StoredSetup>(readSetup);
   const [saved, setSaved] = useState<SavedSimulation[]>(readSaved);
   const [active, setActive] = useState<SimulationResult | null>(null);
@@ -84,11 +99,24 @@ function App() {
     setError('');
     window.setTimeout(() => {
       try {
+        let away = setup.away, home = setup.home;
+        if (source === 'library') {
+          if (history.isError || history.isLoading) throw new Error('Team history is not available yet. Retry loading the library.');
+          const awayTeam = teams.find(team => team.team === setup.away.name);
+          const homeTeam = teams.find(team => team.team === setup.home.name);
+          if (!awayTeam || !homeTeam) throw new Error('Save both teams in Team Library before running from saved history.');
+          for (const team of [awayTeam, homeTeam]) {
+            if (team.weeks.find(game => game.week === week)?.status === 'bye') throw new Error(`${team.team} has a bye in week ${week}. Choose a game week.`);
+          }
+          away = setupFromHistory(awayTeam, week, 'away');
+          home = setupFromHistory(homeTeam, week, 'home');
+        }
         const input: SimulationInput = {
           ...setup,
+          away, home,
           seed: Math.floor(Math.random() * 2_000_000_000) + 1,
         };
-        const result = simulateGame(input) as SimulationResult;
+        const result = simulateEnsemble(input, 200);
         setActive(result);
         setActiveNames({ away: setup.away.name, home: setup.home.name });
         const entry: SavedSimulation = {
@@ -97,10 +125,10 @@ function App() {
           awayName: setup.away.name,
           homeName: setup.home.name,
           result,
-          setup: structuredClone(setup),
+          setup: structuredClone({ ...setup, away, home }),
         };
         setSaved(current => [entry, ...current.filter(item => item.id !== entry.id)].slice(0, 10));
-        setNotice('Simulation complete. Result saved to this device.');
+        setNotice('200 simulations complete. Fantasy averages and example game saved to this device.');
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : 'The simulation could not be completed. Check your setup and try again.');
       } finally { setBusy(false); }
@@ -109,7 +137,10 @@ function App() {
   const openSaved = (item: SavedSimulation) => {
     setActive(item.result);
     setActiveNames({ away: item.awayName, home: item.homeName });
-    if (item.setup) setSetup(normalizeSetup(item.setup));
+    if (item.setup) {
+      setSetup(normalizeSetup(item.setup));
+      setSource(item.setup.away.roster ? 'snapshot' : 'manual');
+    }
     setError('');
     setNotice('Saved result reopened.');
   };
@@ -119,6 +150,18 @@ function App() {
   };
   const currentAwayName = activeNames?.away || setup.away.name;
   const currentHomeName = activeNames?.home || setup.home.name;
+  const onTeamSaved = (savedTeam: TeamSeasonRecord) => {
+    queryClient.setQueryData<TeamSeasonRecord[]>(getListSeasonTeamsQueryKey({ season }), current =>
+      [...(current ?? []).filter(team => team.team !== savedTeam.team), savedTeam].sort((a, b) => a.team.localeCompare(b.team)));
+    void history.refetch();
+  };
+  const changeSource = (value: typeof source) => {
+    setSource(value);
+    if (value === 'manual') setSetup(current => {
+      const clearHistory = (team: TeamSetup): TeamSetup => ({ ...team, roster: undefined, record: undefined, historyGames: undefined });
+      return { ...current, away: clearHistory(current.away), home: clearHistory(current.home) };
+    });
+  };
 
   return (
     <div className="app-shell">
@@ -127,9 +170,18 @@ function App() {
           <div className="brand-mark" aria-hidden="true"><Activity size={19} strokeWidth={2.4} /></div>
           <div><div className="brand-name">GRIDIRON SIM</div><div className="brand-sub">Fantasy matchup lab</div></div>
         </div>
-        <div className="top-status"><span className="live-dot" /> LOCAL SIMULATION <span aria-hidden="true">·</span> NO FEED REQUIRED</div>
+        <div className="top-status"><span className="live-dot" /> SAVED SEASON HISTORY <span aria-hidden="true">·</span> NO LIVE FEED</div>
       </header>
       <main className="workspace">
+        <nav className="section-tabs" aria-label="App sections">
+          <button className={tab === 'library' ? 'selected' : ''} onClick={() => setTab('library')} data-testid="tab-library">Team Library</button>
+          <button className={tab === 'simulator' ? 'selected' : ''} onClick={() => setTab('simulator')} data-testid="tab-simulator">Game Simulator</button>
+        </nav>
+        <div style={{ display: tab === 'library' ? undefined : 'none' }}>
+          <TeamLibrary season={season} onSeasonChange={setSeason} teams={teams} loading={history.isLoading}
+            error={history.isError ? 'Could not load saved team history. Please retry.' : ''} onReload={() => { void history.refetch(); }} onSaved={onTeamSaved} teamNames={NFL_TEAMS} />
+        </div>
+        <div style={{ display: tab === 'simulator' ? undefined : 'none' }}>
         <div className="page-heading">
           <div>
             <div className="eyebrow">WEEKEND WORKBENCH / MATCHUP MODEL</div>
@@ -145,10 +197,29 @@ function App() {
               <div className="panel-title" id="setup-title">MATCHUP SETUP</div>
               <div className="panel-index">01 / CONFIGURE</div>
             </div>
-            <TeamEditor team={setup.away} side="away" patchTeam={patchTeam} />
-            <TeamEditor team={setup.home} side="home" patchTeam={patchTeam} />
+            <div className="team-block">
+              <Field label="Player data source" htmlFor="data-source"><select id="data-source" value={source} onChange={e => changeSource(e.target.value as typeof source)}>
+                <option value="library">Saved Team Library</option><option value="manual">Manual one-game setup</option>
+                {source === 'snapshot' && <option value="snapshot">Reopened saved input snapshot</option>}
+              </select></Field>
+              {source === 'library' && <>
+                <p className="stats-help">Season {season}. <button className="text-button" onClick={() => setTab('library')}>Change season in Team Library</button>. Only games before the selected week are used.</p>
+                <Field label="Matchup week" htmlFor="matchup-week"><select id="matchup-week" value={week} onChange={e => setWeek(Number(e.target.value))}>
+                  {Array.from({length:18}, (_, i) => <option key={i} value={i+1}>Week {i+1}</option>)}
+                </select></Field>
+              </>}
+              {source === 'snapshot' && <p className="stats-help">Uses the original saved inputs, not newer weekly entries. Choose Saved Team Library to use updated history.</p>}
+            </div>
+            {source === 'manual' ? <>
+              <TeamEditor team={setup.away} side="away" patchTeam={patchTeam} />
+              <TeamEditor team={setup.home} side="home" patchTeam={patchTeam} />
+            </> : (['away', 'home'] as const).map(side => <HistoryTeamPicker key={side} name={setup[side].name} teams={teams} week={week} venue={side}
+              onChange={name => patchTeam(side, 'name', name)} onLibrary={() => setTab('library')} snapshot={source === 'snapshot' ? setup[side] : undefined} />)}
             <div className="config-bottom">
               <h3 className="section-mini-title">GAME CONDITIONS</h3>
+              <Field label="Game importance" htmlFor="importance"><select id="importance" value={setup.importance ?? 'regular'} onChange={e => setSetup(s => ({...s, importance:e.target.value as SimulationInput['importance']}))}>
+                <option value="regular">Regular season</option><option value="must-win">Must-win / playoff race</option><option value="playoff">Playoff-level stakes</option>
+              </select></Field>
               <div className="weather-grid">
                  <Field label="Temperature · °F" htmlFor="temperature"><input id="temperature" type="number" min="-30" max="120" value={setup.weather.temperatureF} onChange={e => setSetup(s => ({ ...s, weather:{ ...s.weather, temperatureF:Number(e.target.value) } }))} data-testid="input-temperature" /></Field>
                 <Field label="Wind · mph" htmlFor="wind"><input id="wind" type="number" min="0" max="80" value={setup.weather.windMph} onChange={e => setSetup(s => ({ ...s, weather:{ ...s.weather, windMph:Number(e.target.value) } }))} data-testid="input-wind" /></Field>
@@ -194,8 +265,9 @@ function App() {
                   </div>
                 ))}</div>}
             </section>
-             <div className="footnote"><strong>Method note.</strong> This is an experimental simulation, not a verified forecast. There is no live roster, injury, weather, or statistics feed. Replace the example player labels with current names. Optional recent stats shape workload and efficiency; context notes are displayed, not automatically analyzed. Results are stored only in this browser.</div>
+             <div className="footnote"><strong>Method note.</strong> The Team Library is saved in the project database and shared by this app’s users; it is not a private signed-in account. Simulation settings and saved runs remain browser-local. History mode blends season and recent-five averages, with home/away splits when available. Home field, recorded W–L–T, opposing defense, weather, and game importance make bounded adjustments. Each run averages 200 simulated games; its score and drive log show one example. This is experimental and not backtested. Missing stats use baseline assumptions. OL, kicker, and individual-defense stats can be saved, but fantasy points here are QB/RB/WR/TE Half-PPR—not IDP or kicker scoring.</div>
           </div>
+        </div>
         </div>
       </main>
       {notice && <div className="notice" role="status">{notice}</div>}
@@ -317,14 +389,14 @@ function RecentStatsEditor({ team, side, patchTeam }: { team: TeamSetup; side: '
 
 function SimulationResults({ result, awayName, homeName, onRun, busy }: { result:SimulationResult; awayName:string; homeName:string; onRun:()=>void; busy:boolean }) {
   const playersByTeam = useMemo(() => {
-    const groups = new Map<string, SimPlayer[]>();
-    result.players.forEach(player => groups.set(player.team, [...(groups.get(player.team) || []), player]));
+    const groups = new Map<string, ProjectedPlayer[]>();
+    result.players.forEach((player, index) => groups.set(player.team, [...(groups.get(player.team) || []), { ...player, estimate: result.ensemble?.fantasy[index] }]));
     return [...groups.entries()];
   }, [result.players]);
   const winner = result.awayScore === result.homeScore ? 'Even on the board' : result.awayScore > result.homeScore ? awayName : homeName;
   return <>
     <div className="result-topline">
-      <div><div className="result-label"><Trophy size={13}/> MODEL OUTPUT <span>·</span> SEED {result.seed}</div><h2 id="results-title">Final simulation</h2></div>
+      <div><div className="result-label"><Trophy size={13}/> MODEL OUTPUT <span>·</span> SEED {result.seed}</div><h2 id="results-title">{result.ensemble ? 'One example game' : 'Final simulation'}</h2></div>
       <div className="result-actions"><button className="icon-button" aria-label="Run a new simulation" title="Run a new simulation" onClick={onRun} disabled={busy} data-testid="button-rerun"><RotateCw size={15}/></button></div>
     </div>
     <div className="scoreboard" data-testid="simulation-score">
@@ -344,6 +416,7 @@ function SimulationResults({ result, awayName, homeName, onRun, busy }: { result
     </div>
     <div className="result-content">
       <section aria-labelledby="overview-title">
+        {result.ensemble && <p className="ensemble-note"><strong>{result.ensemble.runs} simulated games.</strong> Model outcomes: {awayName} wins {result.ensemble.awayWinPct}%, {homeName} wins {result.ensemble.homeWinPct}%, ties {result.ensemble.tiePct}%. Fantasy means and ranges below use all runs; this score and drive log show just one example.</p>}
         <div className="content-heading" id="overview-title"><Crosshair size={15} className="heading-icon"/> MATCHUP READ &amp; X-FACTORS</div>
         {result.overview.length ? <ul className="overview-list" data-testid="simulation-overview">{result.overview.map((line,index) => <li key={`${index}-${line}`}>{line}</li>)}</ul> : <p style={{fontSize:12,color:'#777'}}>No overview notes were returned for this run.</p>}
       </section>
@@ -364,23 +437,24 @@ function SimulationResults({ result, awayName, homeName, onRun, busy }: { result
           <div className="content-heading" id="players-title"><Trophy size={15} className="heading-icon"/> HALF-PPR PROJECTIONS <span className="panel-index">{result.players.length} PLAYERS</span></div>
           <div className="player-table-wrap">
             <table className="player-table" data-testid="player-projections">
-               <thead><tr><th>Player</th><th>Pass<br/>Yds</th><th>Pass<br/>TD / INT</th><th>Rush<br/>Yds / TD</th><th>Rec<br/>REC / YDS / TD</th><th>FUM<br/>LOST</th><th>½ PPR</th></tr></thead>
+               <thead><tr><th>Player</th><th>Pass<br/>Yds</th><th>Pass<br/>TD / INT</th><th>Rush<br/>Yds / TD</th><th>Rec<br/>REC / YDS / TD</th><th>FUM<br/>LOST</th><th>{result.ensemble ? 'Mean ½ PPR' : '½ PPR'}</th></tr></thead>
               <tbody>{playersByTeam.map(([team,players]) => <FragmentGroup key={team} team={team} players={players}/>)}</tbody>
             </table>
           </div>
+           {result.ensemble && <p className="ensemble-note">Mean Half-PPR across {result.ensemble.runs} runs. The range is the 10th–90th percentile of simulated outcomes, not a calibrated forecast interval. Stat columns show the example game. Backups with no modeled playing time can have zero projections.</p>}
         </section>
       </div>
        <div className="footnote"><strong>Scoring.</strong> 0.5/catch, 1/10 rush or receiving yards, 1/25 passing yards, 4/passing TD, 6/rush or receiving TD. Turnovers are shown without point deductions, following your supplied rules. Kicking points are not included.</div>
     </div>
   </>;
 }
-function FragmentGroup({ team, players }: { team:string; players:SimPlayer[] }) {
+function FragmentGroup({ team, players }: { team:string; players:ProjectedPlayer[] }) {
   return <>
     <tr className="team-group-row"><td colSpan={7}>{team}</td></tr>
     {players.map((player,index)=><tr key={`${team}-${player.name}-${index}`} data-testid={`projection-${team}-${index}`}>
       <td className="player-name">{player.name}<span className="player-pos">{player.position}</span></td>
       <td>{player.passYards}</td><td>{player.passTD} / {player.interceptions}</td><td>{player.rushYards} / {player.rushTD}</td>
-      <td>{player.receptions} / {player.receivingYards} / {player.receivingTD}</td><td>{player.fumblesLost}</td><td className="fantasy-points">{Number(player.halfPpr).toFixed(1)}</td>
+      <td>{player.receptions} / {player.receivingYards} / {player.receivingTD}</td><td>{player.fumblesLost}</td><td className="fantasy-points">{Number(player.estimate?.mean ?? player.halfPpr).toFixed(1)}{player.estimate && <span className="fantasy-range">{player.estimate.p10.toFixed(1)}–{player.estimate.p90.toFixed(1)}</span>}</td>
     </tr>)}
   </>;
 }
