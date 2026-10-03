@@ -1,3 +1,7 @@
+.division-matchup { display:grid; gap:6px; margin:12px 0; padding:12px; border:1px solid var(--app-border); border-radius:8px; background:var(--app-bg); font-size:12px; line-height:1.6; overflow-wrap:anywhere; }
+.division-matchup.divisional { border-left:3px solid var(--app-home); background:rgb(240 180 41 / .06); }
+.division-matchup.divisional strong { color:var(--app-home); }
+.division-matchup span, .division-matchup small { color:var(--app-muted); }
 .section-tabs { display:flex; gap:8px; margin-bottom:28px; }
 .section-tabs button { border:1px solid var(--app-border); border-radius:8px; padding:12px 20px; background:var(--app-card); font:600 14px var(--app-font-body); color:var(--app-muted); cursor:pointer; }
 .section-tabs button.selected { background:var(--app-away); color:var(--app-bg); border-color:var(--app-away); }

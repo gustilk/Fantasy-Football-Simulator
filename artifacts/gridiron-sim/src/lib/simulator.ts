@@ -1,4 +1,5 @@
 import { calculateDraftKings } from "./draftkings";
+import { getDivision, isDivisionGame } from "./nfl-divisions";
 
 export type Precipitation = "none" | "light" | "moderate" | "heavy";
 
@@ -66,6 +67,7 @@ export interface TeamSetup {
   roster?: SimulationRosterPlayer[];
   record?: { wins: number; losses: number; ties: number };
   historyGames?: number;
+  headToHead?: { opponent: string; games: number; usableGames: number; maxWeight: number };
 }
 
 export interface SimulationInput {
@@ -710,6 +712,16 @@ function makeOverview(
   if (input.away.record || input.home.record) {
     const record = (team: TeamSetup) => team.record ? `${team.record.wins}-${team.record.losses}-${team.record.ties}` : "unknown";
     overview.push(`Records before this matchup: ${input.away.name} ${record(input.away)}; ${input.home.name} ${record(input.home)}. Winning percentage is only a small strength prior, not a guarantee.`);
+  }
+  const awayDivision = getDivision(input.away.name), homeDivision = getDivision(input.home.name);
+  overview.push(isDivisionGame(input.away.name, input.home.name)
+    ? `Division game: both teams are in ${awayDivision}. Familiarity can matter, but no blanket difficulty, scoring or fantasy-point penalty is applied.`
+    : `Non-division or unclassified matchup: ${input.away.name} (${awayDivision ?? "unknown division"}) vs ${input.home.name} (${homeDivision ?? "unknown division"}). Division labels use current NFL alignment.`);
+  for (const [team, opponent] of [[input.away, input.home], [input.home, input.away]] as const) {
+    const evidence = team.headToHead;
+    overview.push(evidence?.opponent === opponent.name && evidence.usableGames > 0
+      ? `${team.name}: ${evidence.games} earlier head-to-head game(s) against ${opponent.name}, ${evidence.usableGames} with usable model statistics. Opponent-specific averages contribute up to ${Math.round(evidence.maxWeight * 100)}% per reported field; changes are bounded and can raise or lower projections. This is an uncalibrated heuristic, not a guaranteed rivalry effect.`
+      : `${team.name}: no usable earlier head-to-head statistics loaded against ${opponent.name}. No opponent-specific history adjustment is applied.`);
   }
   if (input.importance && input.importance !== "regular") overview.push(`Game importance: ${input.importance}. A small passing-aggression adjustment is applied; motivation cannot be measured reliably from this label.`);
   return overview;

@@ -1,13 +1,15 @@
 import type { TeamSeasonRecord } from '@workspace/api-client-react';
 import { setupFromHistory } from '@/lib/season-model';
 import type { TeamSetup } from '@/lib/simulator';
+import { getDivision } from '@/lib/nfl-divisions';
 
-export default function HistoryTeamPicker({ name, teams, week, venue, onChange, onLibrary, snapshot }: {
+export default function HistoryTeamPicker({ name, teams, week, venue, opponent, onChange, onLibrary, snapshot }: {
   name: string; teams: TeamSeasonRecord[]; week: number; venue: 'away' | 'home';
+  opponent: string;
   onChange: (name: string) => void; onLibrary: () => void; snapshot?: TeamSetup;
 }) {
   const team = teams.find(team => team.team === name);
-  const setup = snapshot ?? (team ? setupFromHistory(team, week, venue) : undefined);
+  const setup = snapshot ?? (team ? setupFromHistory(team, week, venue, opponent) : undefined);
   return <div className={`team-block history-team team-${venue}`}>
     <h3 className="section-mini-title">{venue.toUpperCase()} TEAM</h3>
     <label htmlFor={`history-${venue}`} className="input-help">Saved team</label>
@@ -17,8 +19,12 @@ export default function HistoryTeamPicker({ name, teams, week, venue, onChange, 
         {teams.map(team => <option key={team.team} value={team.team}>{team.team}</option>)}
       </>}
     </select>
+    <p className="stats-help" data-testid={`division-${venue}`}>Current division: <strong>{getDivision(name) ?? 'Unknown'}</strong></p>
     {!setup ? <p className="stats-help">Save this team’s roster and weekly games in Team Library first. <button className="text-button" onClick={onLibrary}>Open Team Library</button></p> : <>
       <p className="stats-help"><strong>Record: {setup.record?.wins ?? 0}–{setup.record?.losses ?? 0}–{setup.record?.ties ?? 0}</strong> · {setup.historyGames ?? 0} recorded games before this matchup.</p>
+      <p className="stats-help" data-testid={`head-to-head-${venue}`}>{setup.headToHead?.opponent === opponent && setup.headToHead.usableGames > 0
+        ? `${setup.headToHead.games} earlier head-to-head game(s) against ${opponent}; ${setup.headToHead.usableGames} with usable stats. Up to ${Math.round(setup.headToHead.maxWeight * 100)}% weight per known field, with bounded changes.`
+        : `No usable earlier head-to-head stats against ${opponent}. No opponent-specific history adjustment.`}</p>
       {(setup.historyGames ?? 0) < 3 && <p className="history-warning">Limited history: fewer than 3 games. Missing statistics use baseline assumptions; enter more weeks to inform projections.</p>}
       <details className="recent-stats">
         <summary>Loaded offense · {setup.roster?.length ?? 0} skill players</summary>

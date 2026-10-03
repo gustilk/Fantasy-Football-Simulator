@@ -8,6 +8,8 @@ import HistoryTeamPicker from '@/components/HistoryTeamPicker';
 import { setupFromHistory } from '@/lib/season-model';
 import { simulateEnsemble } from '@/lib/ensemble';
 import { calculateDraftKings, DRAFTKINGS_RULES_URL } from '@/lib/draftkings';
+import { NFL_TEAM_NAMES } from '@/lib/nfl-divisions';
+import DivisionMatchup from '@/components/DivisionMatchup';
 import './season.css';
 
 type SavedSimulation = { id: string; savedAt: string; awayName: string; homeName: string; result: SimulationResult; setup?: StoredSetup };
@@ -20,13 +22,7 @@ const projectionStats = (p: SimPlayer) => ({
   receivingYards: p.receivingYards, receivingTD: p.receivingTD, fumblesLost: p.fumblesLost,
 });
 
-const NFL_TEAMS = [
-  'Arizona Cardinals','Atlanta Falcons','Baltimore Ravens','Buffalo Bills','Carolina Panthers','Chicago Bears','Cincinnati Bengals','Cleveland Browns',
-  'Dallas Cowboys','Denver Broncos','Detroit Lions','Green Bay Packers','Houston Texans','Indianapolis Colts','Jacksonville Jaguars','Kansas City Chiefs',
-  'Las Vegas Raiders','Los Angeles Chargers','Los Angeles Rams','Miami Dolphins','Minnesota Vikings','New England Patriots','New Orleans Saints',
-  'New York Giants','New York Jets','Philadelphia Eagles','Pittsburgh Steelers','San Francisco 49ers','Seattle Seahawks','Tampa Bay Buccaneers',
-  'Tennessee Titans','Washington Commanders',
-];
+const NFL_TEAMS = NFL_TEAM_NAMES;
 const defaultAway: TeamSetup = {
   name:'San Francisco 49ers', qb:'Brock Purdy', rb:'Christian McCaffrey', wr1:'Brandon Aiyuk', wr2:'Deebo Samuel', wr3:'', te:'George Kittle', kicker:'Jake Moody',
   passRating:65, rushRating:67, defenseRating:62, context:'Strong play-action offense; keep an eye on red-zone usage.',
@@ -114,8 +110,8 @@ function App() {
           for (const team of [awayTeam, homeTeam]) {
             if (team.weeks.find(game => game.week === week)?.status === 'bye') throw new Error(`${team.team} has a bye in week ${week}. Choose a game week.`);
           }
-          away = setupFromHistory(awayTeam, week, 'away');
-          home = setupFromHistory(homeTeam, week, 'home');
+          away = setupFromHistory(awayTeam, week, 'away', homeTeam.team);
+          home = setupFromHistory(homeTeam, week, 'home', awayTeam.team);
         }
         const input: SimulationInput = {
           ...setup,
@@ -164,7 +160,7 @@ function App() {
   const changeSource = (value: typeof source) => {
     setSource(value);
     if (value === 'manual') setSetup(current => {
-      const clearHistory = (team: TeamSetup): TeamSetup => ({ ...team, roster: undefined, record: undefined, historyGames: undefined });
+      const clearHistory = (team: TeamSetup): TeamSetup => ({ ...team, roster: undefined, record: undefined, historyGames: undefined, headToHead: undefined });
       return { ...current, away: clearHistory(current.away), home: clearHistory(current.home) };
     });
   };
@@ -219,8 +215,9 @@ function App() {
             {source === 'manual' ? <>
               <TeamEditor team={setup.away} side="away" patchTeam={patchTeam} />
               <TeamEditor team={setup.home} side="home" patchTeam={patchTeam} />
-            </> : (['away', 'home'] as const).map(side => <HistoryTeamPicker key={side} name={setup[side].name} teams={teams} week={week} venue={side}
+            </> : (['away', 'home'] as const).map(side => <HistoryTeamPicker key={side} name={setup[side].name} opponent={setup[side === 'away' ? 'home' : 'away'].name} teams={teams} week={week} venue={side}
               onChange={name => patchTeam(side, 'name', name)} onLibrary={() => setTab('library')} snapshot={source === 'snapshot' ? setup[side] : undefined} />)}
+            <DivisionMatchup team={setup.away.name} opponent={setup.home.name} />
             <div className="config-bottom">
               <h3 className="section-mini-title">GAME CONDITIONS</h3>
               <Field label="Game importance" htmlFor="importance"><select id="importance" value={setup.importance ?? 'regular'} onChange={e => setSetup(s => ({...s, importance:e.target.value as SimulationInput['importance']}))}>

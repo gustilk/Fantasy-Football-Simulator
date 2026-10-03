@@ -6,8 +6,12 @@ const average = (rows: NumericStats[], key: string): number | undefined => {
   return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : undefined;
 };
 
-function blendedStats(rows: { stats: NumericStats; venue: string }[], venue: string): NumericStats {
+type HistoryRow = { stats: NumericStats; venue: string; opponent: string };
+export const headToHeadWeight = (observations: number) => Math.min(0.15, observations * 0.05);
+
+function blendedStats(rows: HistoryRow[], venue: string, opponent?: string): NumericStats {
   const result: NumericStats = {};
+  const baseline: NumericStats = {};
   const all = rows.map(row => row.stats);
   const recent = all.slice(-5);
   const split = rows.filter(row => row.venue === venue).map(row => row.stats);
@@ -19,7 +23,25 @@ function blendedStats(rows: { stats: NumericStats; venue: string }[], venue: str
     let value = season * 0.35 + (lastFive ?? season) * 0.65;
     const venueAverage = average(split, key);
     if (split.filter(row => row[key] !== undefined).length >= 2 && venueAverage !== undefined) value = value * 0.8 + venueAverage * 0.2;
+    baseline[key] = value;
+    const meetings = opponent ? rows.filter(row => row.opponent === opponent).map(row => row.stats) : [];
+    const matchupAverage = average(meetings, key);
+    if (matchupAverage !== undefined) {
+      const count = meetings.filter(row => Number.isFinite(row[key])).length;
+      const delta = (matchupAverage - value) * headToHeadWeight(count);
+      // Sparse head-to-head samples must not overwhelm season/recent history.
+      const limit = Math.max(Math.abs(value) * 0.2, 0.2);
+      value += Math.max(-limit, Math.min(limit, delta));
+    }
     result[key] = value;
+  }
+  // Opponent rows may omit one half of a pair. Skip the adjustment rather
+  // than inventing attempts/targets or returning contradictory averages.
+  for (const [made, attempts] of [['passCompletions', 'passAttempts'], ['receptions', 'targets']]) {
+    if (result[made!] !== undefined && result[attempts!] !== undefined && result[made!]! > result[attempts!]!) {
+      result[made!] = baseline[made!]!;
+      result[attempts!] = baseline[attempts!]!;
+    }
   }
   return result;
 }
@@ -37,12 +59,13 @@ export function teamRecord(team: TeamSeasonRecord, week = 19) {
   };
 }
 
-export function setupFromHistory(team: TeamSeasonRecord, week: number, venue: "home" | "away"): TeamSetup {
+export function setupFromHistory(team: TeamSeasonRecord, week: number, venue: "home" | "away", opponent?: string): TeamSetup {
   const games = priorGames(team, week);
+  const matchupOpponent = opponent && opponent !== team.team ? opponent : undefined;
   const skill = new Set(["QB", "RB", "WR", "TE"]);
   const roster: SimulationRosterPlayer[] = team.players.filter(player => player.active && player.side === "offense" && skill.has(player.position)).map(player => {
-    const rows = games.filter(game => game.playerStats[player.id] !== undefined).map(game => ({ stats: game.playerStats[player.id]!, venue: game.venue }));
-    return { id: player.id, name: player.name, position: player.position as SimulationRosterPlayer["position"], recentStats: blendedStats(rows, venue) as PlayerRecentStats };
+    const rows = games.filter(game => game.playerStats[player.id] !== undefined).map(game => ({ stats: game.playerStats[player.id]!, venue: game.venue, opponent: game.opponent }));
+    return { id: player.id, name: player.name, position: player.position as SimulationRosterPlayer["position"], recentStats: blendedStats(rows, venue, matchupOpponent) as PlayerRecentStats };
   });
   const order = { QB: 0, RB: 1, WR: 2, TE: 3 };
   const volume = (player: SimulationRosterPlayer) => player.position === "QB"
@@ -56,8 +79,15 @@ export function setupFromHistory(team: TeamSeasonRecord, week: number, venue: "h
       const values = team.players.filter(player => player.side === "defense").map(player => game.playerStats[player.id]?.[key]).filter((value): value is number => value !== undefined);
       if (values.length) stats[key] = values.reduce((sum, value) => sum + value, 0);
     }
-    return { stats, venue: game.venue };
+    return { stats, venue: game.venue, opponent: game.opponent };
   });
+  const meetings = matchupOpponent ? games.filter(game => game.opponent === matchupOpponent) : [];
+  const modelKeys = new Set(['passAttempts', 'passCompletions', 'passYards', 'passTD', 'interceptions', 'rushAttempts', 'rushYards', 'rushTD', 'targets', 'receptions', 'receivingYards', 'receivingTD']);
+  const defenseKeys = new Set(['passYardsAllowed', 'passTDAllowed', 'rushYardsAllowed', 'rushTDAllowed', 'interceptions', 'fumblesForced', 'sacks', 'passesDefended']);
+  const usable = meetings.filter(game =>
+    roster.some(player => Object.entries(game.playerStats[player.id] ?? {}).some(([key, value]) => modelKeys.has(key) && Number.isFinite(value))) ||
+    Object.entries(defenseRows[games.indexOf(game)]!.stats).some(([key, value]) => defenseKeys.has(key) && Number.isFinite(value)),
+  );
   const names = (position: string) => roster.filter(player => player.position === position);
   return {
     name: team.team,
@@ -72,7 +102,8 @@ export function setupFromHistory(team: TeamSeasonRecord, week: number, venue: "h
     roster,
     record: teamRecord(team, week),
     historyGames: games.length,
-    defenseRecent: blendedStats(defenseRows, venue),
-    context: `${team.season} season: ${games.length} recorded games before week ${week}. Season/recent-five averages are blended; matching-venue splits contribute when at least two observations exist. Missing values are unknown, not zero.`,
+    headToHead: matchupOpponent ? { opponent: matchupOpponent, games: meetings.length, usableGames: usable.length, maxWeight: headToHeadWeight(usable.length) } : undefined,
+    defenseRecent: blendedStats(defenseRows, venue, matchupOpponent),
+    context: `${team.season} season: ${games.length} recorded games before week ${week}. Season/recent-five averages are blended; matching-venue splits contribute when at least two observations exist. ${matchupOpponent ? `${meetings.length} earlier head-to-head game(s) against ${matchupOpponent}; known fields receive up to ${Math.round(headToHeadWeight(usable.length) * 100)}% opponent-specific weight, capped at a 20% change to each baseline average (minimum cap 0.2). ` : ''}Missing values are unknown, not zero.`,
   };
 }

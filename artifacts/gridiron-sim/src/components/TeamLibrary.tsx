@@ -3,6 +3,8 @@ import { AlertTriangle, Plus, RotateCw, Save, Trash2, ClipboardPaste, Database }
 import { useSaveSeasonTeam, type TeamSeasonRecord, type RosterPlayer, type TeamWeek } from '@workspace/api-client-react';
 import { offenseFields, defenseFields, teamDefenseFields, positions, type StatField } from '@/lib/stat-fields';
 import NflImportPanel from './NflImportPanel';
+import DivisionMatchup from './DivisionMatchup';
+import { getDivision } from '@/lib/nfl-divisions';
 import PlayerStatsTable, { type StatRow } from './PlayerStatsTable';
 import './team-library.css';
 
@@ -119,6 +121,7 @@ export default function TeamLibrary({ season, onSeasonChange, teams, loading, er
         <div>
           <div className="eyebrow">TEAM LIBRARY / SHARED PROJECT DATA</div>
           <h2 id="tl-title">Rosters &amp; weekly history</h2>
+          <p className="tl-note" data-testid="division-library">Current division: <strong>{getDivision(team) ?? 'Unknown'}</strong></p>
           <p className="tl-note">There is no sign-in yet. Everything saved here is shared by anyone who opens this project.</p>
         </div>
         <div className="tl-pickers">
@@ -326,6 +329,7 @@ function Weeks({ draft, weekNo, setWeekNo, patchWeek, teamNames, team }: { draft
             <label>Opponent score<input type="number" min={0} max={100} value={wk.opponentScore ?? ''} onChange={e => set({ opponentScore: score(e.target.value) })} /></label></>}
           </>}
         </div>
+        {wk.status !== 'bye' && <DivisionMatchup team={team} opponent={wk.opponent} />}
         {wk.status === 'bye' && <p className="tl-hint">Bye week. Any stats entered earlier are kept in the draft but not shown.</p>}
         {wk.status === 'upcoming' && <p className="tl-hint">Set status to Played to enter team defense and player stats.</p>}
       </div>
