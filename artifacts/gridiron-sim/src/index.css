@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Oswald:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap');
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @plugin "@tailwindcss/typography";
@@ -311,3 +311,25 @@ input::placeholder, textarea::placeholder { color: var(--app-muted); opacity: .8
   .game-stats { justify-content:space-around; }
   .game-stat { padding:0 6px; gap:4px; font-size:8px; }
 }
+/* Calm light theme overrides */
+:root {
+  color-scheme: light;
+  --app-bg:#f4f1ea; --app-card:#fbf9f4; --app-text:#2b2a26; --app-muted:#6d6a5f; --app-border:#ddd7c9;
+  --app-away:#2f6b4f; --app-home:#a8691a; --app-danger:#b3412d;
+  --background:42 28% 94%; --foreground:50 8% 16%; --border:42 20% 83%; --card:42 40% 97%;
+  --primary:154 40% 30%; --primary-foreground:42 40% 97%; --muted-foreground:50 6% 40%; --accent:33 72% 38%;
+  --accent-foreground:42 40% 97%; --destructive:10 60% 43%;
+  --app-font-sans:'Figtree', sans-serif; --app-font-display:'Fraunces', serif; --app-font-mono:'Figtree', sans-serif;
+}
+body { font-feature-settings:'tnum'; }
+.panel { box-shadow:0 1px 2px rgb(60 50 30 / .06); }
+.notice { box-shadow:0 4px 16px rgb(60 50 30 / .12); }
+.eyebrow, .panel-index, .brand-sub, .result-label, .score-meta, .team-chip { letter-spacing:.02em; text-transform:none; font-size:12px; }
+.brand-name, .panel-title, .section-mini-title, .content-heading, .team-label, .saved-title, .score-name, .result-topline h2 { letter-spacing:0; font-weight:600; }
+.field label, .label-row label { text-transform:none; letter-spacing:0; font-size:12px; font-weight:600; }
+.stats-help, .input-help, .footnote, .drive-summary, .play-list span { font-size:12px; }
+.player-table { font-size:13px; } .player-table th { font-size:11px; text-transform:none; letter-spacing:0; }
+.player-name { font-size:13px; } .player-pos { font-size:11px; }
+.team-crest { background:rgb(47 107 79 / .1); } .team-crest.orange { background:rgb(168 105 26 / .1); }
+.btn-primary:hover { background:color-mix(in srgb, var(--app-away), black 10%); }
+.page-heading h1 { font-weight:600; letter-spacing:0; }

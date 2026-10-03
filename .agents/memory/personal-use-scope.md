@@ -14,3 +14,9 @@ The user stated: “the whole purpose of this app is to win in fantasy points be
 **Why:** The user stated the app's primary purpose.
 
 **How to apply:** Prioritize DraftKings fantasy-point projections and useful comparisons with actual performance. Do not frame the app primarily as a tool for predicting game winners or promise fantasy wins.
+
+The user said the theme was “too tedious” and there was “too much information showing.”
+
+**Why:** The user requested a simpler interface for this app.
+
+**How to apply:** Keep the main fantasy-point rankings easy to scan. Make detailed odds, model explanations and history available on request instead of displaying everything at once.

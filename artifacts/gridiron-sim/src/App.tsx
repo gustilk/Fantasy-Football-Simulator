@@ -72,8 +72,7 @@ function formatSavedDate(value: string) {
   return Number.isNaN(date.getTime()) ? 'Saved matchup' : date.toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
 }
 function App() {
-  const [tab, setTab] = useState<'library' | 'simulator' | 'draftkings'>(() =>
-    new URLSearchParams(window.location.search).get('view') === 'draftkings' ? 'draftkings' : 'library');
+  const [tab, setTab] = useState<'library' | 'simulator' | 'draftkings'>(() => { const v = new URLSearchParams(window.location.search).get('view'); return v === 'library' || v === 'simulator' ? v : 'draftkings'; });
   const [season, setSeason] = useState(() => readSetup().market?.season ?? new Date().getFullYear());
   const [week, setWeek] = useState(() => readSetup().market?.week ?? 2);
   const [source, setSource] = useState<'library' | 'manual' | 'snapshot'>('library');
@@ -220,15 +219,14 @@ function App() {
       <header className="topbar">
         <div className="brand">
           <div className="brand-mark" aria-hidden="true"><Activity size={19} strokeWidth={2.4} /></div>
-          <div><div className="brand-name">GRIDIRON SIM</div><div className="brand-sub">Fantasy matchup lab</div></div>
+          <div><div className="brand-name">Gridiron Sim</div></div>
         </div>
-        <div className="top-status"><span className="live-dot" /> SAVED SEASON HISTORY <span aria-hidden="true">·</span> NO LIVE FEED</div>
       </header>
       <main className="workspace">
         <nav className="section-tabs" aria-label="App sections">
+          <button className={tab === 'draftkings' ? 'selected' : ''} onClick={() => setTab('draftkings')} data-testid="tab-draftkings">DraftKings</button>
           <button className={tab === 'library' ? 'selected' : ''} onClick={() => setTab('library')} data-testid="tab-library">Team Library</button>
           <button className={tab === 'simulator' ? 'selected' : ''} onClick={() => setTab('simulator')} data-testid="tab-simulator">Game Simulator</button>
-          <button className={tab === 'draftkings' ? 'selected' : ''} onClick={() => setTab('draftkings')} data-testid="tab-draftkings">DraftKings</button>
         </nav>
         <div style={{ display: tab === 'library' ? undefined : 'none' }}>
           <TeamLibrary season={season} onSeasonChange={changeSeason} teams={storedTeams} loading={history.isLoading}

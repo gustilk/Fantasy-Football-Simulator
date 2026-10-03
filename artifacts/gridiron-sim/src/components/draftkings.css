@@ -37,3 +37,24 @@
 .dk-skel{height:90px;border-radius:8px;background:var(--app-card);animation:dkp 1.2s ease infinite alternate}
 @keyframes dkp{to{opacity:.4}}
 @media(max-width:760px){.dk-grid{grid-template-columns:1fr}}
+.dk{max-width:760px;margin:0 auto;gap:16px}
+.dk-head h1{font:600 clamp(28px,4vw,38px)/1.1 var(--app-font-display);margin:0 0 4px}
+.dk-head p{margin:0;color:var(--app-muted);font-size:15px}
+.dk-short{margin:0;font-size:13px;color:var(--app-muted);line-height:1.5}
+.dk-note{font-size:13px}.dk-err{font-size:13px;background:rgb(179 65 45/.07)}
+.dk-panel{padding:16px 18px}
+.dk .player-table-wrap{max-height:none;border:1px solid var(--app-border);background:var(--app-card)}
+.dk .player-table{min-width:0}
+.dk .player-table thead{background:var(--app-card);position:static}
+.dk .player-table td{padding:12px 10px}
+.dk-mean{font:600 17px var(--app-font-sans);text-align:right}
+.dk-rank{display:inline-block;width:26px;color:var(--app-muted);font-size:12px}
+.dk .player-pos{display:inline;margin-left:8px}
+.dk-controls{display:flex;gap:12px;flex-wrap:wrap;justify-content:space-between}
+.dk-seg{display:inline-flex;padding:3px;border-radius:10px;background:rgb(60 50 30/.07)}
+.dk-seg button{border:0;background:transparent;padding:8px 18px;border-radius:8px;font-weight:600;font-size:14px;color:var(--app-muted)}
+.dk-seg button.on{background:var(--app-card);color:var(--app-away);box-shadow:0 1px 2px rgb(60 50 30/.15)}
+.dk-more{justify-self:start}
+.dk-archive{border-top:1px solid var(--app-border);padding-top:6px}
+.dk-grid>div{background:var(--app-card)}
+.dk-week{font-size:12px}
