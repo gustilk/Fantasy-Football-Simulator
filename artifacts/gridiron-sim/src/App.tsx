@@ -10,6 +10,7 @@ import { simulateEnsemble } from '@/lib/ensemble';
 import { calculateDraftKings, DRAFTKINGS_RULES_URL } from '@/lib/draftkings';
 import { NFL_TEAM_NAMES } from '@/lib/nfl-divisions';
 import DivisionMatchup from '@/components/DivisionMatchup';
+import FantasyLeaders from '@/components/FantasyLeaders';
 import { withDepthChart } from '@/lib/depth-chart';
 import './season.css';
 
@@ -445,6 +446,7 @@ function SimulationResults({ result, awayName, homeName, onRun, busy }: { result
         <div className="content-heading" id="overview-title"><Crosshair size={15} className="heading-icon"/> MATCHUP READ &amp; X-FACTORS</div>
         {result.overview.length ? <ul className="overview-list" data-testid="simulation-overview">{result.overview.map((line,index) => <li key={`${index}-${line}`}>{line}</li>)}</ul> : <p style={{fontSize:12,color:'var(--app-muted)'}}>No overview notes were returned for this run.</p>}
       </section>
+      <FantasyLeaders players={playersByTeam.flatMap(([, players]) => players)} />
       <div className="result-sections">
         <section className="subsection" aria-labelledby="drives-title">
           <div className="content-heading" id="drives-title"><Activity size={15} className="heading-icon"/> DRIVE TRACKER <span className="panel-index">{result.drives.length} SERIES</span></div>
