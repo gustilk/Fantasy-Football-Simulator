@@ -1,0 +1,1 @@
+- [ESPN season handling](espn-season-handling.md) — public schedule responses can ignore the requested year; validate roster and schedule seasons independently.

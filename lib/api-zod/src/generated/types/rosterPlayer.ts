@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { NflDataSource } from './nflDataSource';
 import type { RosterPlayerPosition } from './rosterPlayerPosition';
 import type { RosterPlayerSide } from './rosterPlayerSide';
 
@@ -22,4 +23,7 @@ export interface RosterPlayer {
   position: RosterPlayerPosition;
   side: RosterPlayerSide;
   active: boolean;
+  source?: NflDataSource;
+  sourcePosition?: string;
+  availability?: string;
 }

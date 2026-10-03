@@ -60,7 +60,16 @@ export const ListSeasonTeamsResponseItem = zod.object({
   "name": zod.string().min(1).max(listSeasonTeamsResponsePlayersItemNameMax),
   "position": zod.enum(['QB', 'RB', 'WR', 'TE', 'K', 'OL', 'DL', 'EDGE', 'LB', 'CB', 'S', 'OTHER']),
   "side": zod.enum(['offense', 'defense']),
-  "active": zod.boolean()
+  "active": zod.boolean(),
+  "source": zod.object({
+  "provider": zod.enum(['ESPN']),
+  "url": zod.string().url(),
+  "fetchedAt": zod.coerce.date(),
+  "athleteId": zod.string().optional(),
+  "eventId": zod.string().optional()
+}).optional(),
+  "sourcePosition": zod.string().optional(),
+  "availability": zod.string().optional()
 })),
   "weeks": zod.array(zod.object({
   "week": zod.number().int().min(1).max(listSeasonTeamsResponseWeeksItemWeekMax),
@@ -71,7 +80,14 @@ export const ListSeasonTeamsResponseItem = zod.object({
   "teamScore": zod.number().min(listSeasonTeamsResponseWeeksItemTeamScoreMin).max(listSeasonTeamsResponseWeeksItemTeamScoreMax).nullable(),
   "opponentScore": zod.number().min(listSeasonTeamsResponseWeeksItemOpponentScoreMin).max(listSeasonTeamsResponseWeeksItemOpponentScoreMax).nullable(),
   "teamDefense": zod.record(zod.string(), zod.number().min(listSeasonTeamsResponseWeeksItemTeamDefenseMinOne).max(listSeasonTeamsResponseWeeksItemTeamDefenseMaxOne)),
-  "playerStats": zod.record(zod.string(), zod.record(zod.string(), zod.number().min(listSeasonTeamsResponseWeeksItemPlayerStatsMinTwo).max(listSeasonTeamsResponseWeeksItemPlayerStatsMaxTwo)))
+  "playerStats": zod.record(zod.string(), zod.record(zod.string(), zod.number().min(listSeasonTeamsResponseWeeksItemPlayerStatsMinTwo).max(listSeasonTeamsResponseWeeksItemPlayerStatsMaxTwo))),
+  "source": zod.object({
+  "provider": zod.enum(['ESPN']),
+  "url": zod.string().url(),
+  "fetchedAt": zod.coerce.date(),
+  "athleteId": zod.string().optional(),
+  "eventId": zod.string().optional()
+}).optional()
 }))
 })
 export const ListSeasonTeamsResponse = zod.array(ListSeasonTeamsResponseItem)
@@ -127,7 +143,16 @@ export const SaveSeasonTeamBody = zod.object({
   "name": zod.string().min(1).max(saveSeasonTeamBodyPlayersItemNameMax),
   "position": zod.enum(['QB', 'RB', 'WR', 'TE', 'K', 'OL', 'DL', 'EDGE', 'LB', 'CB', 'S', 'OTHER']),
   "side": zod.enum(['offense', 'defense']),
-  "active": zod.boolean()
+  "active": zod.boolean(),
+  "source": zod.object({
+  "provider": zod.enum(['ESPN']),
+  "url": zod.string().url(),
+  "fetchedAt": zod.coerce.date(),
+  "athleteId": zod.string().optional(),
+  "eventId": zod.string().optional()
+}).optional(),
+  "sourcePosition": zod.string().optional(),
+  "availability": zod.string().optional()
 })).max(saveSeasonTeamBodyPlayersMax),
   "weeks": zod.array(zod.object({
   "week": zod.number().int().min(1).max(saveSeasonTeamBodyWeeksItemWeekMax),
@@ -138,7 +163,14 @@ export const SaveSeasonTeamBody = zod.object({
   "teamScore": zod.number().min(saveSeasonTeamBodyWeeksItemTeamScoreMin).max(saveSeasonTeamBodyWeeksItemTeamScoreMax).nullable(),
   "opponentScore": zod.number().min(saveSeasonTeamBodyWeeksItemOpponentScoreMin).max(saveSeasonTeamBodyWeeksItemOpponentScoreMax).nullable(),
   "teamDefense": zod.record(zod.string(), zod.number().min(saveSeasonTeamBodyWeeksItemTeamDefenseMinOne).max(saveSeasonTeamBodyWeeksItemTeamDefenseMaxOne)),
-  "playerStats": zod.record(zod.string(), zod.record(zod.string(), zod.number().min(saveSeasonTeamBodyWeeksItemPlayerStatsMinTwo).max(saveSeasonTeamBodyWeeksItemPlayerStatsMaxTwo)))
+  "playerStats": zod.record(zod.string(), zod.record(zod.string(), zod.number().min(saveSeasonTeamBodyWeeksItemPlayerStatsMinTwo).max(saveSeasonTeamBodyWeeksItemPlayerStatsMaxTwo))),
+  "source": zod.object({
+  "provider": zod.enum(['ESPN']),
+  "url": zod.string().url(),
+  "fetchedAt": zod.coerce.date(),
+  "athleteId": zod.string().optional(),
+  "eventId": zod.string().optional()
+}).optional()
 })).max(saveSeasonTeamBodyWeeksMax)
 })
 
@@ -173,7 +205,16 @@ export const SaveSeasonTeamResponse = zod.object({
   "name": zod.string().min(1).max(saveSeasonTeamResponsePlayersItemNameMax),
   "position": zod.enum(['QB', 'RB', 'WR', 'TE', 'K', 'OL', 'DL', 'EDGE', 'LB', 'CB', 'S', 'OTHER']),
   "side": zod.enum(['offense', 'defense']),
-  "active": zod.boolean()
+  "active": zod.boolean(),
+  "source": zod.object({
+  "provider": zod.enum(['ESPN']),
+  "url": zod.string().url(),
+  "fetchedAt": zod.coerce.date(),
+  "athleteId": zod.string().optional(),
+  "eventId": zod.string().optional()
+}).optional(),
+  "sourcePosition": zod.string().optional(),
+  "availability": zod.string().optional()
 })),
   "weeks": zod.array(zod.object({
   "week": zod.number().int().min(1).max(saveSeasonTeamResponseWeeksItemWeekMax),
@@ -184,8 +225,95 @@ export const SaveSeasonTeamResponse = zod.object({
   "teamScore": zod.number().min(saveSeasonTeamResponseWeeksItemTeamScoreMin).max(saveSeasonTeamResponseWeeksItemTeamScoreMax).nullable(),
   "opponentScore": zod.number().min(saveSeasonTeamResponseWeeksItemOpponentScoreMin).max(saveSeasonTeamResponseWeeksItemOpponentScoreMax).nullable(),
   "teamDefense": zod.record(zod.string(), zod.number().min(saveSeasonTeamResponseWeeksItemTeamDefenseMinOne).max(saveSeasonTeamResponseWeeksItemTeamDefenseMaxOne)),
-  "playerStats": zod.record(zod.string(), zod.record(zod.string(), zod.number().min(saveSeasonTeamResponseWeeksItemPlayerStatsMinTwo).max(saveSeasonTeamResponseWeeksItemPlayerStatsMaxTwo)))
+  "playerStats": zod.record(zod.string(), zod.record(zod.string(), zod.number().min(saveSeasonTeamResponseWeeksItemPlayerStatsMinTwo).max(saveSeasonTeamResponseWeeksItemPlayerStatsMaxTwo))),
+  "source": zod.object({
+  "provider": zod.enum(['ESPN']),
+  "url": zod.string().url(),
+  "fetchedAt": zod.coerce.date(),
+  "athleteId": zod.string().optional(),
+  "eventId": zod.string().optional()
+}).optional()
 }))
+})
+
+
+/**
+ * @summary Fetch ESPN roster and last three completed regular-season games without saving
+ */
+export const previewNflTeamPathSeasonMin = 2000;
+export const previewNflTeamPathSeasonMax = 2100;
+
+export const previewNflTeamPathTeamMax = 100;
+
+
+
+export const PreviewNflTeamParams = zod.object({
+  "season": zod.coerce.number().int().min(previewNflTeamPathSeasonMin).max(previewNflTeamPathSeasonMax),
+  "team": zod.coerce.string().min(1).max(previewNflTeamPathTeamMax)
+})
+
+export const previewNflTeamResponsePlayersItemIdMax = 100;
+
+export const previewNflTeamResponsePlayersItemNameMax = 100;
+
+export const previewNflTeamResponseWeeksItemWeekMax = 18;
+
+export const previewNflTeamResponseWeeksItemOpponentMax = 100;
+
+export const previewNflTeamResponseWeeksItemTeamScoreMin = 0;
+export const previewNflTeamResponseWeeksItemTeamScoreMax = 100;
+
+export const previewNflTeamResponseWeeksItemOpponentScoreMin = 0;
+export const previewNflTeamResponseWeeksItemOpponentScoreMax = 100;
+
+export const previewNflTeamResponseWeeksItemTeamDefenseMinOne = -1000;
+export const previewNflTeamResponseWeeksItemTeamDefenseMaxOne = 10000;
+
+export const previewNflTeamResponseWeeksItemPlayerStatsMinTwo = -1000;
+export const previewNflTeamResponseWeeksItemPlayerStatsMaxTwo = 10000;
+
+
+
+export const PreviewNflTeamResponse = zod.object({
+  "season": zod.number().int(),
+  "team": zod.string(),
+  "fetchedAt": zod.coerce.date(),
+  "rosterUrl": zod.string().url(),
+  "players": zod.array(zod.object({
+  "id": zod.string().min(1).max(previewNflTeamResponsePlayersItemIdMax),
+  "name": zod.string().min(1).max(previewNflTeamResponsePlayersItemNameMax),
+  "position": zod.enum(['QB', 'RB', 'WR', 'TE', 'K', 'OL', 'DL', 'EDGE', 'LB', 'CB', 'S', 'OTHER']),
+  "side": zod.enum(['offense', 'defense']),
+  "active": zod.boolean(),
+  "source": zod.object({
+  "provider": zod.enum(['ESPN']),
+  "url": zod.string().url(),
+  "fetchedAt": zod.coerce.date(),
+  "athleteId": zod.string().optional(),
+  "eventId": zod.string().optional()
+}).optional(),
+  "sourcePosition": zod.string().optional(),
+  "availability": zod.string().optional()
+})),
+  "weeks": zod.array(zod.object({
+  "week": zod.number().int().min(1).max(previewNflTeamResponseWeeksItemWeekMax),
+  "status": zod.enum(['played', 'bye', 'upcoming']),
+  "opponent": zod.string().max(previewNflTeamResponseWeeksItemOpponentMax),
+  "venue": zod.enum(['home', 'away']),
+  "result": zod.enum(['W', 'L', 'T', 'none']),
+  "teamScore": zod.number().min(previewNflTeamResponseWeeksItemTeamScoreMin).max(previewNflTeamResponseWeeksItemTeamScoreMax).nullable(),
+  "opponentScore": zod.number().min(previewNflTeamResponseWeeksItemOpponentScoreMin).max(previewNflTeamResponseWeeksItemOpponentScoreMax).nullable(),
+  "teamDefense": zod.record(zod.string(), zod.number().min(previewNflTeamResponseWeeksItemTeamDefenseMinOne).max(previewNflTeamResponseWeeksItemTeamDefenseMaxOne)),
+  "playerStats": zod.record(zod.string(), zod.record(zod.string(), zod.number().min(previewNflTeamResponseWeeksItemPlayerStatsMinTwo).max(previewNflTeamResponseWeeksItemPlayerStatsMaxTwo))),
+  "source": zod.object({
+  "provider": zod.enum(['ESPN']),
+  "url": zod.string().url(),
+  "fetchedAt": zod.coerce.date(),
+  "athleteId": zod.string().optional(),
+  "eventId": zod.string().optional()
+}).optional()
+})),
+  "warnings": zod.array(zod.string())
 })
 
 

@@ -10,7 +10,7 @@ A saved NFL season library and fantasy matchup lab: full rosters, raw weekly pla
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - `PORT=8080 BASE_PATH=/ pnpm --filter @workspace/gridiron-sim run build` — standalone frontend build check; managed artifact workflows supply these routing variables automatically.
-- The simulator runs in the browser and requires no external sports feed or user API keys.
+- The simulator runs in the browser. Optional roster/stat imports use ESPN public site data and need no user API keys.
 
 ## Stack
 
@@ -38,7 +38,7 @@ A saved NFL season library and fantasy matchup lab: full rosters, raw weekly pla
 - Explicit team defensive totals override sums from individual defenders. **Why:** the same sack or interception must not be counted twice.
 - Team rosters/history are atomic versioned database documents. **Why:** a stale browser must receive a conflict rather than overwrite another session's entered statistics.
 - Free-text injury/context notes are displayed but not automatically interpreted. **Why:** heuristic text parsing could silently misread availability; the user should adjust ratings explicitly.
-- No live NFL roster or injury feed is claimed. Example player labels must be updated by the user.
+- ESPN imports fetch rosters and each team's last three completed regular-season games for the selected season. They never silently substitute another season. Preview → apply to draft → Save team is explicit; default merge preserves entered values. Updating roster activity/details and replacing existing game values are separate opt-ins. Source links and checked timestamps persist inside the roster/week documents. The public endpoint is not a guaranteed live feed; data is cached for five minutes and missing fields stay unknown.
 - Half-PPR follows the user's exact supplied formula, which does not specify interception or fumble deductions. Kicking points are outside that formula.
 
 ## Product

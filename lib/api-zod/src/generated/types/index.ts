@@ -8,6 +8,9 @@
 
 export * from './healthStatus';
 export * from './listSeasonTeamsParams';
+export * from './nflDataSource';
+export * from './nflDataSourceProvider';
+export * from './nflImportPreview';
 export * from './numericStats';
 export * from './rosterPlayer';
 export * from './rosterPlayerPosition';

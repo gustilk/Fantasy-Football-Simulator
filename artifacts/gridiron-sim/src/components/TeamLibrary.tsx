@@ -1,17 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Plus, RotateCw, Save, Trash2, ClipboardPaste, Database } from 'lucide-react';
-import { useSaveSeasonTeam, type TeamSeasonRecord } from '@workspace/api-client-react';
+import { useSaveSeasonTeam, type TeamSeasonRecord, type RosterPlayer, type TeamWeek } from '@workspace/api-client-react';
 import { offenseFields, defenseFields, teamDefenseFields, positions, type StatField } from '@/lib/stat-fields';
+import NflImportPanel from './NflImportPanel';
 import './team-library.css';
 
 type Position = (typeof positions)[number];
 type Side = 'offense' | 'defense';
-type Player = { id: string; name: string; position: Position; side: Side; active: boolean };
-type Week = {
-  week: number; status: 'played' | 'bye' | 'upcoming'; opponent: string; venue: 'home' | 'away';
-  result: 'W' | 'L' | 'T' | 'none'; teamScore: number | null; opponentScore: number | null;
-  teamDefense: Record<string, number>; playerStats: Record<string, Record<string, number>>;
-};
+type Player = RosterPlayer;
+type Week = TeamWeek;
 type Draft = { players: Player[]; weeks: Week[] };
 type Props = {
   season: number; onSeasonChange: (n: number) => void; teams: TeamSeasonRecord[]; loading: boolean; error: string;
@@ -42,6 +39,7 @@ export default function TeamLibrary({ season, onSeasonChange, teams, loading, er
   const [weekNo, setWeekNo] = useState(1);
   const [status, setStatus] = useState<{ kind: 'ok' | 'err' | 'conflict'; text: string } | null>(null);
   const [pendingAdopt, setPendingAdopt] = useState(false);
+  const [importBusy, setImportBusy] = useState(false);
   const save = useSaveSeasonTeam();
 
   const record = useMemo(() => teams.find(t => t.team === team && t.season === season), [teams, team, season]);
@@ -76,15 +74,15 @@ export default function TeamLibrary({ season, onSeasonChange, teams, loading, er
     const blank = normalize(undefined);
     setDraft(blank); setBase({ version: 0, snap: snap(blank) }); setCtx(null); setPendingAdopt(false); setStatus(null); setWeekNo(1);
   };
-  const changeTeam = (t: string) => { if (save.isPending || t === team || !guard()) return; resetClean(); setTeam(t); };
-  const changeSeason = (n: number) => { if (save.isPending || !Number.isInteger(n) || n < 2000 || n > 2100 || n === season || !guard()) return; resetClean(); onSeasonChange(n); };
+  const changeTeam = (t: string) => { if (save.isPending || importBusy || t === team || !guard()) return; resetClean(); setTeam(t); };
+  const changeSeason = (n: number) => { if (save.isPending || importBusy || !Number.isInteger(n) || n < 2000 || n > 2100 || n === season || !guard()) return; resetClean(); onSeasonChange(n); };
 
   const ctxMismatch = ctx && (ctx.season !== season || ctx.team !== team);
   const names = draft.players.map(p => p.name.trim());
   const invalid = names.some(n => !n) || draft.players.length > 200 || draft.players.some(p => p.name.length > 100);
 
   const doSave = async () => {
-    if (!ctx || save.isPending || invalid) return;
+    if (!ctx || save.isPending || importBusy || invalid) return;
     setStatus(null);
     try {
       const res = await save.mutateAsync({
@@ -123,12 +121,12 @@ export default function TeamLibrary({ season, onSeasonChange, teams, loading, er
         </div>
         <div className="tl-pickers">
           <label>Team
-            <select value={team} disabled={save.isPending} onChange={e => changeTeam(e.target.value)} data-testid="select-library-team">
+            <select value={team} disabled={save.isPending || importBusy} onChange={e => changeTeam(e.target.value)} data-testid="select-library-team">
               {teamNames.map(n => <option key={n}>{n}</option>)}
             </select>
           </label>
           <label>Season
-            <input key={season} type="number" min={2000} max={2100} defaultValue={season} disabled={save.isPending}
+            <input key={season} type="number" min={2000} max={2100} defaultValue={season} disabled={save.isPending || importBusy}
               onBlur={e => { changeSeason(Number(e.target.value)); e.currentTarget.value = String(season); }}
               onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }} data-testid="input-library-season" />
           </label>
@@ -147,11 +145,17 @@ export default function TeamLibrary({ season, onSeasonChange, teams, loading, er
         </div>
         <div className="tl-actions">
           {dirty && <span className="tl-dirty">Unsaved changes</span>}
-          <button className="btn-primary tl-save" onClick={doSave} disabled={!dirty || save.isPending || invalid || !ctx} data-testid="button-library-save">
+          <button className="btn-primary tl-save" onClick={doSave} disabled={!dirty || save.isPending || importBusy || invalid || !ctx} data-testid="button-library-save">
             {save.isPending ? <><RotateCw size={14} className="spin-icon" /> Saving</> : <><Save size={15} /> Save team</>}
           </button>
         </div>
       </div>
+      <NflImportPanel season={season} team={team} draft={draft}
+        disabled={save.isPending || loading || !ctx || !!ctxMismatch}
+        onBusyChange={setImportBusy}
+        onApply={next => {
+          setDraft(next); setStatus({ kind: 'ok', text: 'Imported data is in your draft. Press Save team to store it and use it in the simulator.' });
+        }} />
       {invalid && dirty && <div className="tl-banner warn" role="status">Every player needs a name before saving.</div>}
       {status && (
         <div className={`tl-banner ${status.kind === 'ok' ? 'ok' : 'err'}`} role={status.kind === 'ok' ? 'status' : 'alert'} data-testid="status-library-save">
@@ -234,13 +238,13 @@ function Roster({ players, patch, setDraft }: { players: Player[]; patch: (fn: (
         {(['all', 'offense', 'defense'] as const).map(f => <button key={f} className={filter === f ? 'on' : ''} onClick={() => setFilter(f)}>{f}</button>)}
       </div>
       {players.length === 0 ? (
-        <div className="tl-empty"><Database size={26} /><strong>No roster saved for this team and season</strong><span>Add players above or paste a list. Nothing is created until you save.</span></div>
+        <div className="tl-empty"><Database size={26} /><strong>No roster saved for this team and season</strong><span>Refresh recent NFL data above, add players, or paste a list. Nothing is stored until you save.</span></div>
       ) : (
         <div className="tl-table" role="table" aria-label="Roster">
           <div className="tl-tr th" role="row"><span>Name</span><span>Position</span><span>Side</span><span>Active</span><span /></div>
           {shown.map(p => (
             <div className={`tl-tr${p.active ? '' : ' off'}`} role="row" key={p.id} data-testid={`row-player-${p.id}`}>
-              <input aria-label="Name" value={p.name} onChange={e => upd(p.id, { name: e.target.value })} />
+              <input aria-label="Name" value={p.name} title={p.source ? `ESPN: ${p.sourcePosition || p.position} · ${p.availability || 'availability unknown'}` : undefined} onChange={e => upd(p.id, { name: e.target.value })} />
               <select aria-label="Position" value={p.position} onChange={e => upd(p.id, { position: e.target.value as Position })}>{positions.map(x => <option key={x}>{x}</option>)}</select>
               <select aria-label="Side" value={p.side} onChange={e => upd(p.id, { side: e.target.value as Side })}><option value="offense">Offense</option><option value="defense">Defense</option></select>
               <label className="tl-check"><input type="checkbox" checked={p.active} onChange={e => upd(p.id, { active: e.target.checked })} /> {p.active ? 'Active' : 'Inactive'}</label>

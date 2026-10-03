@@ -1,0 +1,36 @@
+.nfl { display:grid; gap:12px; padding:14px; border:1px solid var(--app-border); border-left:4px solid var(--app-away); border-radius:12px; background:var(--app-card); }
+.nfl h3 { margin:0; font:600 15px var(--app-font-display); letter-spacing:.045em; }
+.nfl-head { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start; }
+.nfl-hint, .nfl-src { margin:0; font-size:11px; line-height:1.5; color:var(--app-muted); }
+.nfl-src { font-family:var(--app-font-mono); }
+.nfl a { color:var(--app-away); text-decoration:underline; text-underline-offset:2px; }
+.nfl a:focus-visible, .nfl button:focus-visible, .nfl input:focus-visible, .nfl summary:focus-visible { outline:2px solid var(--app-home); outline-offset:2px; }
+.nfl-actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.nfl-actions button { min-height:40px; }
+.nfl-banner { padding:10px 12px; border-radius:8px; border:1px solid; font-size:12px; line-height:1.5; }
+.nfl-banner.err { background:rgb(241 155 136 / .08); border-color:var(--app-danger); color:var(--app-danger); }
+.nfl-banner.warn { background:rgb(240 180 41 / .08); border-color:var(--app-home); color:var(--app-home); }
+.nfl-skel { display:grid; gap:8px; } .nfl-skel i { height:44px; border-radius:8px; background:var(--app-bg); animation:nfl-p 1.2s ease-in-out infinite alternate; }
+@keyframes nfl-p { to { opacity:.45; } }
+.nfl-games { display:grid; gap:8px; margin:0; padding:0; list-style:none; }
+.nfl-games li { display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center; padding:10px 12px; border:1px solid var(--app-border); border-radius:8px; background:var(--app-bg); font-size:13px; }
+.nfl-games li.home { border-left:4px solid var(--app-home); } .nfl-games li.away { border-left:4px solid var(--app-away); }
+.nfl-games b { font:600 15px var(--app-font-display); }
+.nfl-games .score { font:12px var(--app-font-mono); }
+.nfl-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:8px; }
+.nfl-stat { padding:8px 10px; border:1px solid var(--app-border); border-radius:8px; background:var(--app-bg); display:grid; gap:2px; }
+.nfl-stat span { font:10px var(--app-font-mono); color:var(--app-muted); text-transform:uppercase; }
+.nfl-stat strong { font:600 18px var(--app-font-display); }
+.nfl-opts { display:grid; gap:8px; border:1px solid var(--app-border); border-radius:8px; padding:10px 12px; margin:0; min-width:0; }
+.nfl-opts legend { font:10px var(--app-font-mono); text-transform:uppercase; color:var(--app-muted); padding:0 6px; }
+.nfl-opt { display:flex; gap:10px; align-items:flex-start; font-size:12px; line-height:1.5; cursor:pointer; }
+.nfl-opt input { width:20px; height:20px; flex:none; margin-top:1px; accent-color:var(--app-away); }
+.nfl-opt small { display:block; color:var(--app-muted); font-size:11px; }
+.nfl details { border:1px solid var(--app-border); border-radius:8px; background:var(--app-bg); }
+.nfl summary { cursor:pointer; padding:10px 12px; min-height:40px; font-size:12px; font-weight:600; display:flex; align-items:center; }
+.nfl-detail { padding:0 12px 12px; display:grid; gap:8px; overflow-x:auto; }
+.nfl-detail table { border-collapse:collapse; font:11px var(--app-font-mono); width:100%; }
+.nfl-detail th, .nfl-detail td { text-align:left; padding:4px 8px; border-bottom:1px solid var(--app-border); white-space:nowrap; }
+.nfl-detail th { color:var(--app-muted); font-weight:400; text-transform:uppercase; }
+@media (max-width:760px) { .nfl-actions button { flex:1; } }
+@media (prefers-reduced-motion:reduce) { .nfl-skel i { animation:none; } }

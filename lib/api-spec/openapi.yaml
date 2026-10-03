@@ -80,6 +80,40 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/SeasonError" }
+  /nfl-import/{season}/{team}:
+    post:
+      operationId: previewNflTeam
+      summary: Fetch ESPN roster and last three completed regular-season games without saving
+      parameters:
+        - in: path
+          name: season
+          required: true
+          schema: { type: integer, minimum: 2000, maximum: 2100 }
+        - in: path
+          name: team
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 100 }
+      responses:
+        "200":
+          description: Read-only import preview
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NflImportPreview" }
+        "400":
+          description: Invalid season or NFL team
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeasonError" }
+        "502":
+          description: Source unavailable or incomplete; nothing was saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeasonError" }
+        "429":
+          description: Too many simultaneous imports
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeasonError" }
 components:
   schemas:
     HealthStatus:
@@ -104,6 +138,9 @@ components:
         position: { type: string, enum: [QB, RB, WR, TE, K, OL, DL, EDGE, LB, CB, S, OTHER] }
         side: { type: string, enum: [offense, defense] }
         active: { type: boolean }
+        source: { $ref: "#/components/schemas/NflDataSource" }
+        sourcePosition: { type: string }
+        availability: { type: string }
     TeamWeek:
       type: object
       required: [week, status, opponent, venue, result, teamScore, opponentScore, teamDefense, playerStats]
@@ -119,6 +156,7 @@ components:
         playerStats:
           type: object
           additionalProperties: { $ref: "#/components/schemas/NumericStats" }
+        source: { $ref: "#/components/schemas/NflDataSource" }
     TeamSeasonInput:
       type: object
       required: [expectedVersion, players, weeks]
@@ -150,4 +188,30 @@ components:
       required: [error]
       properties:
         error: { type: string }
+    NflDataSource:
+      type: object
+      required: [provider, url, fetchedAt]
+      properties:
+        provider: { type: string, enum: [ESPN] }
+        url: { type: string, format: uri }
+        fetchedAt: { type: string, format: date-time }
+        athleteId: { type: string }
+        eventId: { type: string }
+    NflImportPreview:
+      type: object
+      required: [season, team, fetchedAt, rosterUrl, players, weeks, warnings]
+      properties:
+        season: { type: integer }
+        team: { type: string }
+        fetchedAt: { type: string, format: date-time }
+        rosterUrl: { type: string, format: uri }
+        players:
+          type: array
+          items: { $ref: "#/components/schemas/RosterPlayer" }
+        weeks:
+          type: array
+          items: { $ref: "#/components/schemas/TeamWeek" }
+        warnings:
+          type: array
+          items: { type: string }
 

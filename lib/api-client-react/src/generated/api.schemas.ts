@@ -37,6 +37,21 @@ export const RosterPlayerSide = {
   defense: 'defense',
 } as const;
 
+export type NflDataSourceProvider = typeof NflDataSourceProvider[keyof typeof NflDataSourceProvider];
+
+
+export const NflDataSourceProvider = {
+  ESPN: 'ESPN',
+} as const;
+
+export interface NflDataSource {
+  provider: NflDataSourceProvider;
+  url: string;
+  fetchedAt: string;
+  athleteId?: string;
+  eventId?: string;
+}
+
 export interface RosterPlayer {
   /**
      * @minLength 1
@@ -51,6 +66,9 @@ export interface RosterPlayer {
   position: RosterPlayerPosition;
   side: RosterPlayerSide;
   active: boolean;
+  source?: NflDataSource;
+  sourcePosition?: string;
+  availability?: string;
 }
 
 export type TeamWeekStatus = typeof TeamWeekStatus[keyof typeof TeamWeekStatus];
@@ -107,6 +125,7 @@ export interface TeamWeek {
   opponentScore: number | null;
   teamDefense: NumericStats;
   playerStats: TeamWeekPlayerStats;
+  source?: NflDataSource;
 }
 
 export interface TeamSeasonInput {
@@ -128,6 +147,16 @@ export interface TeamSeasonRecord {
 
 export interface SeasonError {
   error: string;
+}
+
+export interface NflImportPreview {
+  season: number;
+  team: string;
+  fetchedAt: string;
+  rosterUrl: string;
+  players: RosterPlayer[];
+  weeks: TeamWeek[];
+  warnings: string[];
 }
 
 export type ListSeasonTeamsParams = {

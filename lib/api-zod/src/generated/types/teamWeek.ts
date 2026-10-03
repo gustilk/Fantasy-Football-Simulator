@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { NflDataSource } from './nflDataSource';
 import type { NumericStats } from './numericStats';
 import type { TeamWeekPlayerStats } from './teamWeekPlayerStats';
 import type { TeamWeekResult } from './teamWeekResult';
@@ -36,4 +37,5 @@ export interface TeamWeek {
   opponentScore: number | null;
   teamDefense: NumericStats;
   playerStats: TeamWeekPlayerStats;
+  source?: NflDataSource;
 }
