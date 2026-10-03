@@ -22,15 +22,16 @@ export default function HistoryTeamPicker({ name, teams, week, venue, opponent, 
     <p className="stats-help" data-testid={`division-${venue}`}>Current division: <strong>{getDivision(name) ?? 'Unknown'}</strong></p>
     {!setup ? <p className="stats-help">Save this team’s roster and weekly games in Team Library first. <button className="text-button" onClick={onLibrary}>Open Team Library</button></p> : <>
       <p className="stats-help"><strong>Record: {setup.record?.wins ?? 0}–{setup.record?.losses ?? 0}–{setup.record?.ties ?? 0}</strong> · {setup.historyGames ?? 0} recorded games before this matchup.</p>
+      {setup.depthChartSource && <p className="stats-help">Current depth chart fetched {new Date(setup.depthChartSource.fetchedAt).toLocaleString()}. <a href={setup.depthChartSource.url} target="_blank" rel="noreferrer">ESPN source</a>. This is not a historical pregame availability record.</p>}
       <p className="stats-help" data-testid={`head-to-head-${venue}`}>{setup.headToHead?.opponent === opponent && setup.headToHead.usableGames > 0
         ? `${setup.headToHead.games} earlier head-to-head game(s) against ${opponent}; ${setup.headToHead.usableGames} with usable stats. Up to ${Math.round(setup.headToHead.maxWeight * 100)}% weight per known field, with bounded changes.`
         : `No usable earlier head-to-head stats against ${opponent}. No opponent-specific history adjustment.`}</p>
       {(setup.historyGames ?? 0) < 3 && <p className="history-warning">Limited history: fewer than 3 games. Missing statistics use baseline assumptions; enter more weeks to inform projections.</p>}
       <details className="recent-stats">
         <summary>Loaded offense · {setup.roster?.length ?? 0} skill players</summary>
-        <p className="stats-help">All active QB/RB/WR/TE players are included. The QB with the most entered passing attempts starts; backup QBs have no automatic playing time.</p>
+        <p className="stats-help">Active QB/RB/WR/TE players retain their depth roles. QB1 starts when available; deeper backups receive smaller workload priors. Missing injury games do not become zero-stat performances. “Usage estimate” means no explicit chart role was supplied.</p>
         {setup.roster?.map(player => <div className="history-player" key={player.id}>
-          <strong>{player.position} · {player.name}</strong>
+          <strong>{player.position}{player.depthRank ?? ''} · {player.name} · {player.depthRankBasis === 'ESPN' ? 'ESPN chart' : player.depthRankBasis === 'saved' ? 'Saved role' : 'Usage estimate'}</strong>
           <span>{Object.entries(player.recentStats ?? {}).map(([key, value]) => `${key}: ${Number(value).toFixed(1)}`).join(' · ') || 'No earlier statistics recorded'}</span>
         </div>)}
       </details>

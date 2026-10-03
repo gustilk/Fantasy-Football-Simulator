@@ -24,6 +24,14 @@ router.put("/season-teams/:season/:team", async (req, res): Promise<void> => {
   if (!team.trim() || players.some(p => !p.name.trim())) { fail("Team and player names cannot be blank."); return; }
   const ids = new Set(players.map(p => p.id));
   if (ids.size !== players.length) { fail("Each roster player must have a unique ID."); return; }
+  const roles = new Set<string>();
+  for (const player of players) {
+    if (player.depthRank === undefined) continue;
+    if (player.side !== "offense" || !["QB", "RB", "WR", "TE"].includes(player.position)) { fail("Depth roles apply to offensive QB/RB/WR/TE players only."); return; }
+    const role = `${player.position}${player.depthRank}`;
+    if (player.active && roles.has(role)) { fail(`Two active players cannot both be ${role}. Choose distinct depth ranks.`); return; }
+    if (player.active) roles.add(role);
+  }
   if (new Set(weeks.map(w => w.week)).size !== weeks.length) { fail("A week cannot be entered twice."); return; }
   if (weeks.filter(w => w.status === "played").length > 17) { fail("An NFL regular season has at most 17 played games."); return; }
   for (const week of weeks) {

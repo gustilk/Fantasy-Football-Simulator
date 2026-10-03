@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Plus, RotateCw, Save, Trash2, ClipboardPaste, Database } from 'lucide-react';
-import { useSaveSeasonTeam, type TeamSeasonRecord, type RosterPlayer, type TeamWeek } from '@workspace/api-client-react';
+import { useSaveSeasonTeam, useGetNflDepthChart, getGetNflDepthChartQueryKey, type NflDepthChart, type TeamSeasonRecord, type RosterPlayer, type TeamWeek } from '@workspace/api-client-react';
 import { offenseFields, defenseFields, teamDefenseFields, positions, type StatField } from '@/lib/stat-fields';
 import NflImportPanel from './NflImportPanel';
 import DivisionMatchup from './DivisionMatchup';
 import { getDivision } from '@/lib/nfl-divisions';
+import { rolesForRoster } from '@/lib/depth-chart';
 import PlayerStatsTable, { type StatRow } from './PlayerStatsTable';
 import './team-library.css';
 
@@ -44,6 +45,7 @@ export default function TeamLibrary({ season, onSeasonChange, teams, loading, er
   const [pendingAdopt, setPendingAdopt] = useState(false);
   const [importBusy, setImportBusy] = useState(false);
   const save = useSaveSeasonTeam();
+  const depth = useGetNflDepthChart(season, team, { query: { queryKey: getGetNflDepthChartQueryKey(season, team), enabled: view === 'roster', staleTime: 300_000, retry: false } });
 
   const record = useMemo(() => teams.find(t => t.team === team && t.season === season), [teams, team, season]);
   const dirty = snap(draft) !== base.snap;
@@ -179,14 +181,14 @@ export default function TeamLibrary({ season, onSeasonChange, teams, loading, er
           ))}
         </div>
         {view === 'roster'
-          ? <Roster players={draft.players} patch={patchPlayers} setDraft={setDraft} />
+          ? <><p className="tl-hint">{depth.isLoading ? 'Loading source-listed depth roles…' : depth.isError ? 'Depth chart unavailable for this season. Set roles manually below.' : 'Automatic roles follow the current ESPN chart; manual choices override it. Rank 1 is the primary option, not guaranteed fantasy points. Save team to persist manual changes.'}</p><Roster players={draft.players} patch={patchPlayers} setDraft={setDraft} depth={depth.data} /></>
           : <Weeks key={`${season}:${team}`} draft={draft} weekNo={weekNo} setWeekNo={setWeekNo} patchWeek={patchWeek} teamNames={teamNames} team={team} />}
       </fieldset>}
     </section>
   );
 }
 
-function Roster({ players, patch, setDraft }: { players: Player[]; patch: (fn: (p: Player[]) => Player[]) => void; setDraft: React.Dispatch<React.SetStateAction<Draft>> }) {
+function Roster({ players, patch, setDraft, depth }: { players: Player[]; patch: (fn: (p: Player[]) => Player[]) => void; setDraft: React.Dispatch<React.SetStateAction<Draft>>; depth?: NflDepthChart }) {
   const [bulk, setBulk] = useState('');
   const [msg, setMsg] = useState('');
   const [name, setName] = useState('');
@@ -220,6 +222,7 @@ function Roster({ players, patch, setDraft }: { players: Player[]; patch: (fn: (
   };
   const upd = (id: string, ch: Partial<Player>) => patch(ps => ps.map(p => (p.id === id ? { ...p, ...ch } : p)));
   const shown = players.filter(p => filter === 'all' || p.side === filter);
+  const automaticPlayers = rolesForRoster(players, depth);
 
   return (
     <div className="tl-roster">
@@ -246,16 +249,23 @@ function Roster({ players, patch, setDraft }: { players: Player[]; patch: (fn: (
         <div className="tl-empty"><Database size={26} /><strong>No roster saved for this team and season</strong><span>Refresh recent NFL data above, add players, or paste a list. Nothing is stored until you save.</span></div>
       ) : (
         <div className="tl-table" role="table" aria-label="Roster">
-          <div className="tl-tr th" role="row"><span>Name</span><span>Position</span><span>Side</span><span>Active</span><span /></div>
-          {shown.map(p => (
+          <div className="tl-tr th" role="row"><span>Name</span><span>Position / role</span><span>Side</span><span>Active</span><span /></div>
+          {shown.map(p => {
+            const automatic = automaticPlayers.find(player => player.id === p.id)?.depthRank;
+            return (
             <div className={`tl-tr${p.active ? '' : ' off'}`} role="row" key={p.id} data-testid={`row-player-${p.id}`}>
               <input aria-label="Name" value={p.name} title={p.source ? `ESPN: ${p.sourcePosition || p.position} · ${p.availability || 'availability unknown'}` : undefined} onChange={e => upd(p.id, { name: e.target.value })} />
-              <select aria-label="Position" value={p.position} onChange={e => upd(p.id, { position: e.target.value as Position })}>{positions.map(x => <option key={x}>{x}</option>)}</select>
-              <select aria-label="Side" value={p.side} onChange={e => upd(p.id, { side: e.target.value as Side })}><option value="offense">Offense</option><option value="defense">Defense</option></select>
+               <div className="tl-role-cell"><select aria-label="Position" value={p.position} onChange={e => upd(p.id, { position: e.target.value as Position, depthRank: undefined, depthSource: undefined })}>{positions.map(x => <option key={x}>{x}</option>)}</select>
+                 {p.side === 'offense' && ['QB', 'RB', 'WR', 'TE'].includes(p.position) && <select aria-label={`Depth role for ${p.name}`} data-testid={`depth-role-${p.id}`} value={p.depthSource ? '' : p.depthRank ?? ''} onChange={e => upd(p.id, { depthRank: e.target.value ? Number(e.target.value) : undefined, depthSource: undefined })}>
+                   <option value="">Auto{automatic ? ` · ${p.position}${automatic}` : ' · unranked'}</option>
+                   {Array.from({ length: 50 }, (_, i) => <option key={i + 1} value={i + 1}>{p.position}{i + 1}</option>)}
+                 </select>}
+               </div>
+               <select aria-label="Side" value={p.side} onChange={e => upd(p.id, { side: e.target.value as Side, depthRank: undefined, depthSource: undefined })}><option value="offense">Offense</option><option value="defense">Defense</option></select>
               <label className="tl-check"><input type="checkbox" checked={p.active} onChange={e => upd(p.id, { active: e.target.checked })} /> {p.active ? 'Active' : 'Inactive'}</label>
               <button className="saved-remove" aria-label={`Delete ${p.name || 'player'}`} onClick={() => remove(p)}><Trash2 size={14} /></button>
             </div>
-          ))}
+          );})}
         </div>
       )}
       <p className="tl-hint">Inactive players keep their history but are left out of new projections.</p>

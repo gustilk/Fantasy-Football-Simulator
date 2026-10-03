@@ -65,13 +65,22 @@ export function setupFromHistory(team: TeamSeasonRecord, week: number, venue: "h
   const skill = new Set(["QB", "RB", "WR", "TE"]);
   const roster: SimulationRosterPlayer[] = team.players.filter(player => player.active && player.side === "offense" && skill.has(player.position)).map(player => {
     const rows = games.filter(game => game.playerStats[player.id] !== undefined).map(game => ({ stats: game.playerStats[player.id]!, venue: game.venue, opponent: game.opponent }));
-    return { id: player.id, name: player.name, position: player.position as SimulationRosterPlayer["position"], recentStats: blendedStats(rows, venue, matchupOpponent) as PlayerRecentStats };
+    return {
+      id: player.id, name: player.name, position: player.position as SimulationRosterPlayer["position"],
+      depthRank: player.depthRank, depthRankBasis: player.depthRank === undefined ? "usage" as const : player.depthSource ? "ESPN" as const : "saved" as const,
+      historyObservations: rows.filter(row => ["passAttempts", "rushAttempts", "targets", "receptions", "receivingYards"].some(key => Number.isFinite(row.stats[key]))).length,
+      recentStats: blendedStats(rows, venue, matchupOpponent) as PlayerRecentStats,
+    };
   });
   const order = { QB: 0, RB: 1, WR: 2, TE: 3 };
   const volume = (player: SimulationRosterPlayer) => player.position === "QB"
     ? player.recentStats?.passAttempts ?? 0
     : player.position === "RB" ? player.recentStats?.rushAttempts ?? 0 : player.recentStats?.targets ?? 0;
-  roster.sort((a, b) => order[a.position] - order[b.position] || volume(b) - volume(a));
+  roster.sort((a, b) => order[a.position] - order[b.position] || (a.depthRank ?? Infinity) - (b.depthRank ?? Infinity) || volume(b) - volume(a));
+  for (const position of ["QB", "RB", "WR", "TE"]) {
+    let rank = Math.max(0, ...team.players.filter(p => p.position === position).map(p => p.depthRank ?? 0));
+    for (const player of roster.filter(p => p.position === position && p.depthRank === undefined)) player.depthRank = ++rank;
+  }
   const defenseRows = games.map(game => {
     const stats = { ...game.teamDefense };
     for (const key of ["interceptions", "fumblesForced", "sacks", "passesDefended"]) {
@@ -102,6 +111,7 @@ export function setupFromHistory(team: TeamSeasonRecord, week: number, venue: "h
     roster,
     record: teamRecord(team, week),
     historyGames: games.length,
+    depthChartSource: team.players.find(p => p.depthSource)?.depthSource,
     headToHead: matchupOpponent ? { opponent: matchupOpponent, games: meetings.length, usableGames: usable.length, maxWeight: headToHeadWeight(usable.length) } : undefined,
     defenseRecent: blendedStats(defenseRows, venue, matchupOpponent),
     context: `${team.season} season: ${games.length} recorded games before week ${week}. Season/recent-five averages are blended; matching-venue splits contribute when at least two observations exist. ${matchupOpponent ? `${meetings.length} earlier head-to-head game(s) against ${matchupOpponent}; known fields receive up to ${Math.round(headToHeadWeight(usable.length) * 100)}% opponent-specific weight, capped at a 20% change to each baseline average (minimum cap 0.2). ` : ''}Missing values are unknown, not zero.`,

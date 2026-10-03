@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Activity, ArrowRight, Bookmark, ChevronDown, CircleHelp, Cloud, CloudRain, Crosshair, RotateCw, Shield, SlidersHorizontal, Trash2, Trophy, Wind } from 'lucide-react';
 import { type WeatherSetup as Weather, type TeamSetup, type SimulationInput, type SimulationResult, type PlayerProjection as SimPlayer, type PlayerRecentStats, type DefenseRecentStats } from '@/lib/simulator';
-import { useListSeasonTeams, getListSeasonTeamsQueryKey, type TeamSeasonRecord } from '@workspace/api-client-react';
+import { useListSeasonTeams, useGetNflDepthChart, getGetNflDepthChartQueryKey, getListSeasonTeamsQueryKey, type TeamSeasonRecord } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import TeamLibrary from '@/components/TeamLibrary';
 import HistoryTeamPicker from '@/components/HistoryTeamPicker';
@@ -10,6 +10,7 @@ import { simulateEnsemble } from '@/lib/ensemble';
 import { calculateDraftKings, DRAFTKINGS_RULES_URL } from '@/lib/draftkings';
 import { NFL_TEAM_NAMES } from '@/lib/nfl-divisions';
 import DivisionMatchup from '@/components/DivisionMatchup';
+import { withDepthChart } from '@/lib/depth-chart';
 import './season.css';
 
 type SavedSimulation = { id: string; savedAt: string; awayName: string; homeName: string; result: SimulationResult; setup?: StoredSetup };
@@ -72,7 +73,7 @@ function App() {
   const [source, setSource] = useState<'library' | 'manual' | 'snapshot'>('library');
   const queryClient = useQueryClient();
   const history = useListSeasonTeams({ season });
-  const teams = history.data ?? [];
+  const storedTeams = history.data ?? [];
   const [setup, setSetup] = useState<StoredSetup>(readSetup);
   const [saved, setSaved] = useState<SavedSimulation[]>(readSaved);
   const [active, setActive] = useState<SimulationResult | null>(null);
@@ -80,6 +81,9 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
+  const awayDepth = useGetNflDepthChart(season, setup.away.name, { query: { queryKey: getGetNflDepthChartQueryKey(season, setup.away.name), enabled: source === 'library' && tab === 'simulator', staleTime: 300_000, retry: false } });
+  const homeDepth = useGetNflDepthChart(season, setup.home.name, { query: { queryKey: getGetNflDepthChartQueryKey(season, setup.home.name), enabled: source === 'library' && tab === 'simulator', staleTime: 300_000, retry: false } });
+  const teams = storedTeams.map(team => withDepthChart(team, team.team === setup.away.name ? awayDepth.data : team.team === setup.home.name ? homeDepth.data : undefined));
 
   useEffect(() => {
     try { localStorage.setItem(setupStorageKey, JSON.stringify(setup)); } catch { setNotice('Browser storage is unavailable; this setup will not persist.'); }
@@ -107,6 +111,12 @@ function App() {
           const awayTeam = teams.find(team => team.team === setup.away.name);
           const homeTeam = teams.find(team => team.team === setup.home.name);
           if (!awayTeam || !homeTeam) throw new Error('Save both teams in Team Library before running from saved history.');
+          if (awayDepth.isLoading || homeDepth.isLoading) throw new Error('Offensive depth charts are loading. Wait briefly before running.');
+          for (const [team, depth] of [[awayTeam, awayDepth], [homeTeam, homeDepth]] as const) {
+            if (depth.isError && !['QB', 'RB', 'WR', 'TE'].every(position => team.players.some(p => p.active && p.position === position && p.depthRank !== undefined))) {
+              throw new Error(`${team.team}: live depth chart unavailable. Set saved QB/RB/WR/TE ranks in Team Library before simulating; official roles will not be guessed.`);
+            }
+          }
           for (const team of [awayTeam, homeTeam]) {
             if (team.weeks.find(game => game.week === week)?.status === 'bye') throw new Error(`${team.team} has a bye in week ${week}. Choose a game week.`);
           }
@@ -160,7 +170,7 @@ function App() {
   const changeSource = (value: typeof source) => {
     setSource(value);
     if (value === 'manual') setSetup(current => {
-      const clearHistory = (team: TeamSetup): TeamSetup => ({ ...team, roster: undefined, record: undefined, historyGames: undefined, headToHead: undefined });
+      const clearHistory = (team: TeamSetup): TeamSetup => ({ ...team, roster: undefined, record: undefined, historyGames: undefined, headToHead: undefined, depthChartSource: undefined });
       return { ...current, away: clearHistory(current.away), home: clearHistory(current.home) };
     });
   };
@@ -180,7 +190,7 @@ function App() {
           <button className={tab === 'simulator' ? 'selected' : ''} onClick={() => setTab('simulator')} data-testid="tab-simulator">Game Simulator</button>
         </nav>
         <div style={{ display: tab === 'library' ? undefined : 'none' }}>
-          <TeamLibrary season={season} onSeasonChange={setSeason} teams={teams} loading={history.isLoading}
+          <TeamLibrary season={season} onSeasonChange={setSeason} teams={storedTeams} loading={history.isLoading}
             error={history.isError ? 'Could not load saved team history. Please retry.' : ''} onReload={() => { void history.refetch(); }} onSaved={onTeamSaved} teamNames={NFL_TEAMS} />
         </div>
         <div style={{ display: tab === 'simulator' ? undefined : 'none' }}>
@@ -205,6 +215,9 @@ function App() {
                 {source === 'snapshot' && <option value="snapshot">Reopened saved input snapshot</option>}
               </select></Field>
               {source === 'library' && <>
+                <p className="stats-help">Depth roles: current ESPN charts, with saved manual ranks taking priority. Roles guide workload; they do not guarantee fantasy points or describe past-week availability.</p>
+                {(awayDepth.isLoading || homeDepth.isLoading) && <p className="stats-help" role="status">Loading team depth charts…</p>}
+                {(awayDepth.isError || homeDepth.isError) && <p className="history-warning" role="status">A live depth chart is unavailable. Saved depth roles can be used; assign missing ranks in Team Library.</p>}
                 <p className="stats-help">Season {season}. <button className="text-button" onClick={() => setTab('library')}>Change season in Team Library</button>. Only games before the selected week are used.</p>
                 <Field label="Matchup week" htmlFor="matchup-week"><select id="matchup-week" value={week} onChange={e => setWeek(Number(e.target.value))}>
                   {Array.from({length:18}, (_, i) => <option key={i} value={i+1}>Week {i+1}</option>)}
@@ -467,7 +480,7 @@ function FragmentGroup({ team, players, side }: { team:string; players:Projected
   return <>
     <tr className={`team-group-row team-${side}`}><td colSpan={12}>{team}</td></tr>
     {players.map((player,index)=><tr className={`team-${side}`} key={`${team}-${player.name}-${index}`} data-testid={`projection-${team}-${index}`}>
-      <td className="player-name">{player.name}<span className="player-pos">{player.position}</span></td>
+      <td className="player-name">{player.name}<span className="player-pos">{player.position}{player.depthRank ?? ''}</span></td>
       <td>{player.passYards}</td><td>{player.passTD}</td><td>{player.interceptions}</td><td>{player.rushYards}</td><td>{player.rushTD}</td>
       <td>{player.receptions}</td><td>{player.receivingYards}</td><td>{player.receivingTD}</td><td>{player.fumblesLost}</td>
       <td className="fantasy-points" title="DraftKings points from the displayed example-game stats">{player.draftKings.toFixed(2)}</td>

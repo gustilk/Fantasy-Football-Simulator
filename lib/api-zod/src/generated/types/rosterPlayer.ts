@@ -26,4 +26,10 @@ export interface RosterPlayer {
   source?: NflDataSource;
   sourcePosition?: string;
   availability?: string;
+  /**
+     * @minimum 1
+     * @maximum 50
+     */
+  depthRank?: number;
+  depthSource?: NflDataSource;
 }

@@ -40,6 +40,9 @@ export interface SimulationRosterPlayer {
   name: string;
   position: "QB" | "RB" | "WR" | "TE";
   recentStats?: PlayerRecentStats;
+  depthRank?: number;
+  depthRankBasis?: "ESPN" | "saved" | "usage";
+  historyObservations?: number;
 }
 
 export interface TeamSetup {
@@ -68,6 +71,7 @@ export interface TeamSetup {
   record?: { wins: number; losses: number; ties: number };
   historyGames?: number;
   headToHead?: { opponent: string; games: number; usableGames: number; maxWeight: number };
+  depthChartSource?: { fetchedAt: string; url: string };
 }
 
 export interface SimulationInput {
@@ -92,6 +96,7 @@ export interface PlayerProjection {
   name: string;
   position: string;
   team: string;
+  depthRank?: number;
   passYards: number;
   passTD: number;
   interceptions: number;
@@ -123,6 +128,7 @@ export interface SimulationResult {
 }
 
 interface PlayerAccumulator extends Omit<PlayerProjection, "draftKings"> {
+  historyObservations?: number;
   attempts: number;
   completions: number;
   recentStats?: PlayerRecentStats;
@@ -177,11 +183,13 @@ function makePlayer(
   name: string,
   position: string,
   team: string,
+  depthRank = 1,
 ): PlayerAccumulator {
   return {
     name: name.trim() || position,
     position,
     team,
+    depthRank,
     passYards: 0,
     passTD: 0,
     interceptions: 0,
@@ -199,19 +207,23 @@ function makePlayer(
 
 function makeTeamSimulation(setup: TeamSetup): TeamSimulation {
   const teamName = setup.name.trim() || "Team";
+  const ranks: Record<string, number> = {};
   return {
     setup,
     score: 0,
     plays: 0,
-    players: setup.roster ? setup.roster.map(player => ({
-      ...makePlayer(player.name, player.position, teamName),
-      recentStats: player.recentStats,
-    })) : [
+    players: setup.roster ? setup.roster.map(player => {
+      ranks[player.position] = (ranks[player.position] ?? 0) + 1;
+      return {
+        ...makePlayer(player.name, player.position, teamName, player.depthRank ?? ranks[player.position]),
+        recentStats: player.recentStats, historyObservations: player.historyObservations,
+      };
+    }) : [
       makePlayer(setup.qb, "QB", teamName),
       makePlayer(setup.rb, "RB", teamName),
       makePlayer(setup.wr1, "WR", teamName),
-      makePlayer(setup.wr2, "WR", teamName),
-      makePlayer(setup.wr3?.trim() || "WR3", "WR", teamName),
+      makePlayer(setup.wr2, "WR", teamName, 2),
+      makePlayer(setup.wr3?.trim() || "WR3", "WR", teamName, 3),
       makePlayer(setup.te, "TE", teamName),
     ],
     drives: [],
@@ -224,15 +236,11 @@ function receiverFor(
   redZone: boolean,
 ): PlayerAccumulator {
   const receivers = team.players.filter(player => ["RB", "WR", "TE"].includes(player.position));
-  let wrIndex = 0, rbIndex = 0, teIndex = 0;
-  const fallback = receivers.map(player => player.position === "WR"
-    ? ([7, 5, 3][wrIndex++] ?? 1)
-    : player.position === "RB" ? (rbIndex++ === 0 ? 4 : 1)
-      : (teIndex++ === 0 ? 4 : 1));
+  const fallback = receivers.map(player => receivingRoleWeight(player.position, player.depthRank ?? 1));
   const weighted = receivers.map((player, index) => {
     const playerStats = recentForPlayer(team, player);
     const recentTargetWeight = supplied(playerStats?.targets)
-      ? blend(fallback[index]!, playerStats.targets, historyReliability(team.setup))
+      ? roleGuidedWeight(fallback[index]!, playerStats.targets, playerReliability(team.setup, player))
       : fallback[index]!;
     const redZoneBoost =
       redZone && supplied(playerStats?.receivingTD)
@@ -267,14 +275,34 @@ function historyReliability(setup: TeamSetup): number {
   return setup.historyGames === undefined ? 1 : clamp((setup.historyGames + 1) / 6, 0.2, 1);
 }
 
+function playerReliability(setup: TeamSetup, player: PlayerAccumulator): number {
+  return player.historyObservations === undefined ? historyReliability(setup) : clamp((player.historyObservations + 1) / 6, 0.2, 1);
+}
+
+/** Workload priors, not fixed points or talent guarantees. */
+export function receivingRoleWeight(position: string, rank: number): number {
+  if (position === "WR") return [10, 7, 4][rank - 1] ?? 0.9 / Math.max(1, rank - 3);
+  if (position === "RB") return [4, 2][rank - 1] ?? 0.4 / Math.max(1, rank - 2);
+  return [5, 1.5][rank - 1] ?? 0.4 / Math.max(1, rank - 2);
+}
+
+export function rushingRoleWeight(rank: number): number {
+  return [20, 7, 1][rank - 1] ?? 0.3 / Math.max(1, rank - 3);
+}
+
+export function roleGuidedWeight(prior: number, reported: number, reliability: number): number {
+  // A recent stint replacing an injured starter must not give today's deep
+  // backup a starter's entire workload. These are relative selection weights.
+  return clamp(blend(prior, reported, Math.min(0.75, reliability)), prior * 0.65, prior * 1.75);
+}
+
 function runningBackFor(team: TeamSimulation, random: Random): PlayerAccumulator {
   if (team.setup.roster) {
-    const runners = team.players.filter((player, index) => index === 0 || player.position === "RB" || (player.recentStats?.rushAttempts ?? 0) > 0);
-    let rbIndex = 0;
-    const defaults = runners.map(player => player.position === "QB" ? 3 : player.position === "RB" ? (rbIndex++ === 0 ? 20 : 5) : 1);
+    const runners = team.players.filter((player, index) => index === 0 || (player.position !== "QB" && (player.position === "RB" || (player.recentStats?.rushAttempts ?? 0) > 0)));
+    const defaults = runners.map(player => player.position === "QB" ? 3 : player.position === "RB" ? rushingRoleWeight(player.depthRank ?? 1) : 1);
     let weights = runners.map((player, index) => player.recentStats?.rushAttempts === undefined
       ? defaults[index]!
-      : blend(defaults[index]!, player.recentStats.rushAttempts, historyReliability(team.setup)));
+      : roleGuidedWeight(defaults[index]!, player.recentStats.rushAttempts, playerReliability(team.setup, player)));
     if (weights.every(weight => weight === 0)) weights = defaults;
     let roll = random() * weights.reduce((sum, weight) => sum + weight, 0);
     for (let i = 0; i < runners.length; i++) {
@@ -347,7 +375,7 @@ function simulateTeam(
   const windPenalty = clamp(weather.windMph * 0.0018, 0, 0.19);
   const coldPenalty = weather.temperatureF < 28 ? 0.025 : 0;
   const qbRecent = recentForPlayer(team, qb);
-  const reliability = historyReliability(setup);
+  const reliability = playerReliability(setup, qb);
   const defenseReliability = historyReliability(defense);
   const defenseRecent = defense.defenseRecent;
   const recentCarries = setup.roster
@@ -507,7 +535,7 @@ function simulateTeam(
             completionChance = blend(
               completionChance,
               clamp(receiverRecent.receptions / receiverRecent.targets, 0.25, 0.9),
-              0.3 * reliability,
+              0.3 * playerReliability(setup, receiver),
             );
           }
           if (yardsToGoal <= 15 && supplied(defenseRecent?.passTDAllowed)) {
@@ -521,7 +549,7 @@ function simulateTeam(
               supplied(receiverRecent?.receptions) &&
               receiverRecent.receptions > 0
                 ? clamp(
-                    blend(1, receiverRecent.receivingYards / receiverRecent.receptions / 12, 0.4 * reliability),
+                    blend(1, receiverRecent.receivingYards / receiverRecent.receptions / 12, 0.4 * playerReliability(setup, receiver)),
                     0.65,
                     1.4,
                   )
@@ -690,6 +718,7 @@ function makeOverview(
   const wind = input.weather.windMph;
   const precipitation = input.weather.precipitation;
   const overview = [
+    "Depth-chart roles guide workload: WR1/RB1/TE1 get primary-role priors, second/third options and deeper backups get progressively smaller priors. Reported usage still matters; rank is not a points floor. Missing injury-game rows are not inserted as zero performances.",
     `Conditions: ${weatherLabel(input.weather)}. ${
       wind >= 15 || precipitation === "heavy"
         ? "Wind and/or heavy rain lower the passing outlook and shift play selection toward the run."

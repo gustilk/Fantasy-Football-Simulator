@@ -69,6 +69,39 @@ export interface RosterPlayer {
   source?: NflDataSource;
   sourcePosition?: string;
   availability?: string;
+  /**
+     * @minimum 1
+     * @maximum 50
+     */
+  depthRank?: number;
+  depthSource?: NflDataSource;
+}
+
+export type NflDepthRolePosition = typeof NflDepthRolePosition[keyof typeof NflDepthRolePosition];
+
+
+export const NflDepthRolePosition = {
+  QB: 'QB',
+  RB: 'RB',
+  WR: 'WR',
+  TE: 'TE',
+} as const;
+
+export interface NflDepthRole {
+  athleteId: string;
+  position: NflDepthRolePosition;
+  /**
+     * @minimum 1
+     * @maximum 50
+     */
+  depthRank: number;
+}
+
+export interface NflDepthChart {
+  season: number;
+  team: string;
+  source: NflDataSource;
+  roles: NflDepthRole[];
 }
 
 export type TeamWeekStatus = typeof TeamWeekStatus[keyof typeof TeamWeekStatus];

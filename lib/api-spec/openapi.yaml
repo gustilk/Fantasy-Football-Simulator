@@ -114,6 +114,35 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/SeasonError" }
+  /nfl-depth-chart/{season}/{team}:
+    get:
+      operationId: getNflDepthChart
+      summary: Read current ESPN offensive depth-chart roles without changing saved teams
+      parameters:
+        - in: path
+          name: season
+          required: true
+          schema: { type: integer, minimum: 2000, maximum: 2100 }
+        - in: path
+          name: team
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 100 }
+      responses:
+        "200":
+          description: Season-validated current depth chart
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NflDepthChart" }
+        "400":
+          description: Invalid team or season
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeasonError" }
+        "502":
+          description: Depth chart unavailable or wrong season
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeasonError" }
 components:
   schemas:
     HealthStatus:
@@ -141,6 +170,25 @@ components:
         source: { $ref: "#/components/schemas/NflDataSource" }
         sourcePosition: { type: string }
         availability: { type: string }
+        depthRank: { type: integer, minimum: 1, maximum: 50 }
+        depthSource: { $ref: "#/components/schemas/NflDataSource" }
+    NflDepthRole:
+      type: object
+      required: [athleteId, position, depthRank]
+      properties:
+        athleteId: { type: string }
+        position: { type: string, enum: [QB, RB, WR, TE] }
+        depthRank: { type: integer, minimum: 1, maximum: 50 }
+    NflDepthChart:
+      type: object
+      required: [season, team, source, roles]
+      properties:
+        season: { type: integer }
+        team: { type: string }
+        source: { $ref: "#/components/schemas/NflDataSource" }
+        roles:
+          type: array
+          items: { $ref: "#/components/schemas/NflDepthRole" }
     TeamWeek:
       type: object
       required: [week, status, opponent, venue, result, teamScore, opponentScore, teamDefense, playerStats]

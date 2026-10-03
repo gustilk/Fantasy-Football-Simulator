@@ -55,6 +55,12 @@ A saved NFL season library and fantasy matchup lab: full rosters, raw weekly pla
 
 ## User preferences
 
+The user wants the simulator to know teams' top players: WR1 is the primary/best receiver, with WR2/WR3 below it; the same principle applies to RB and TE. Explicit depth roles must guide workload rather than ranking players solely by recent box-score volume. Injury availability is separate from role; missing injury-game rows must not demote a returning starter or become zero performances.
+
+Depth roles load read-only from season-validated current ESPN charts for selected teams; saved manual ranks override automatic roles. The roster editor exposes ranks, and source refreshes preserve manual choices. Source-listed rank is a workload prior, not a validated talent score or guaranteed fantasy-point floor. The inputs and results retain rank labels, and saved input snapshots retain their roles and source timestamp. Live charts describe current roles, not historical pregame availability; do not use them for retrospective backtests without appropriate as-of records.
+
+**Why:** short recent histories may cover an injury absence or temporary replacement stint. Primary roles should not be assigned just by who accumulated the most recent targets/carries. Deep-backup workload priors are smaller, and old usage is bounded relative to the current role.
+
 The user wants two sections: enter and save all offensive and defensive players and their weekly stats for each team, then automatically reuse those stats when simulating matchups.
 
 For internet-sourced 2026 data, the user wants players' team assignments and offensive/defensive statistics from the last three completed games, not a full-season dataset.

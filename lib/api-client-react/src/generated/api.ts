@@ -22,6 +22,7 @@ import type {
 import type {
   HealthStatus,
   ListSeasonTeamsParams,
+  NflDepthChart,
   NflImportPreview,
   SeasonError,
   TeamSeasonInput,
@@ -383,4 +384,86 @@ export const usePreviewNflTeam = <TError = ErrorType<SeasonError>,
       > => {
       return useMutation(getPreviewNflTeamMutationOptions(options));
     }
+
+export const getGetNflDepthChartUrl = (season: number,
+    team: string,) => {
+
+
+
+
+  return `/api/nfl-depth-chart/${season}/${team}`
+}
+
+/**
+ * @summary Read current ESPN offensive depth-chart roles without changing saved teams
+ */
+export const getNflDepthChart = async (season: number,
+    team: string, options?: Parameters<typeof customFetch>[1]): Promise<NflDepthChart> => {
+
+  return customFetch<NflDepthChart>(getGetNflDepthChartUrl(season,team),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetNflDepthChartQueryKey = (season: number,
+    team: string,) => {
+    return [
+    `/api/nfl-depth-chart/${season}/${team}`
+    ] as const;
+    }
+
+
+export const getGetNflDepthChartQueryOptions = <TData = Awaited<ReturnType<typeof getNflDepthChart>>, TError = ErrorType<SeasonError>>(season: number,
+    team: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNflDepthChart>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetNflDepthChartQueryKey(season,team);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getNflDepthChart>>> = ({ signal }) => getNflDepthChart(season,team, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: season !== null && season !== undefined && team !== null && team !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getNflDepthChart>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetNflDepthChartQueryResult = NonNullable<Awaited<ReturnType<typeof getNflDepthChart>>>
+export type GetNflDepthChartQueryError = ErrorType<SeasonError>
+
+
+/**
+ * @summary Read current ESPN offensive depth-chart roles without changing saved teams
+ */
+
+export function useGetNflDepthChart<TData = Awaited<ReturnType<typeof getNflDepthChart>>, TError = ErrorType<SeasonError>>(
+ season: number,
+    team: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNflDepthChart>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetNflDepthChartQueryOptions(season,team,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 

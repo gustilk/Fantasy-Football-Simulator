@@ -1,4 +1,5 @@
-import type { NflImportPreview, NumericStats, RosterPlayer, TeamWeek } from "@workspace/api-zod";
+import type { NflDepthChart, NflImportPreview, NumericStats, RosterPlayer, TeamWeek } from "@workspace/api-zod";
+import { parseDepthChart, depthSource, type SourceDepthChart } from "./nfl-depth-chart";
 
 // Public ESPN site data is not a contracted feed. Reject incomplete/wrong-season
 // responses instead of silently substituting an older season or invented zeros.
@@ -108,6 +109,18 @@ const score = (c: Competitor) => {
   return n;
 };
 
+export async function getNflDepthChart(season: number, team: string): Promise<NflDepthChart> {
+  const list = await json<{ sports: { leagues: { teams: { team: { id: string; displayName: string; abbreviation: string } }[] }[] }[] }>("teams?limit=32");
+  const sourceTeam = list.sports?.[0]?.leagues?.[0]?.teams?.find(t => t.team.displayName === team)?.team;
+  if (!sourceTeam) throw new NflSourceError("Choose one of the 32 NFL teams.", 400);
+  const raw = await json<SourceDepthChart>(`teams/${sourceTeam.id}/depthcharts?season=${season}`);
+  try {
+    return depthSource(season, team, parseDepthChart(raw, season, sourceTeam.id), `https://www.espn.com/nfl/team/depth/_/name/${sourceTeam.abbreviation.toLowerCase()}`);
+  } catch {
+    throw new NflSourceError("ESPN has no matching offensive depth chart for this season. Set depth roles manually in Team Library; no different season was substituted.");
+  }
+}
+
 async function buildPreview(season: number, team: string): Promise<NflImportPreview> {
   const list = await json<{ sports: { leagues: { teams: { team: { id: string; displayName: string; abbreviation: string } }[] }[] }[] }>("teams?limit=32");
   const sourceTeam = list.sports?.[0]?.leagues?.[0]?.teams?.find(t => t.team.displayName === team)?.team;
@@ -194,9 +207,23 @@ async function buildPreview(season: number, team: string): Promise<NflImportPrev
     for (const key of ["sacks", "passesDefended"]) assign(week.teamDefense, key, total(box, "defensive", key));
     weeks.push(week);
   }
+  let depthWarning: string | undefined;
+  try {
+    const depth = await getNflDepthChart(season, team);
+    for (const role of depth.roles) {
+      const player = players.get(`espn:${role.athleteId}`);
+      if (player?.position === role.position) {
+        player.depthRank = role.depthRank;
+        player.depthSource = depth.source;
+      }
+    }
+  } catch {
+    depthWarning = "Depth chart unavailable for the requested season. Saved roles are preserved; set QB/RB/WR/TE ranks manually rather than treating statistics as an official depth chart.";
+  }
   return {
     season, team, fetchedAt, rosterUrl, players: [...players.values()], weeks: weeks.sort((a, b) => a.week - b.week),
     warnings: [
+      ...(depthWarning ? [depthWarning] : []),
       ...(events.length < 3 ? [`Only ${events.length} completed regular-season games are available for ${season}; no older season was substituted.`] : []),
       "Unknown or unpublished fields remain blank. Box scores do not consistently publish OL blocking metrics, snaps or forced fumbles.",
       "Active follows ESPN roster/injury categories. Reserve, practice-squad and unavailable players retain their history but are inactive. Verify availability before simulating.",

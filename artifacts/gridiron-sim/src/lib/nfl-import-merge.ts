@@ -1,4 +1,5 @@
 import type { NflImportPreview, NumericStats, RosterPlayer, TeamWeek } from "@workspace/api-client-react";
+import { resolveDepthRoles } from "./depth-chart";
 
 export type ImportDraft = { players: RosterPlayer[]; weeks: TeamWeek[] };
 const nameKey = (name: string) => name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -22,8 +23,11 @@ export function mergeNflImport(current: ImportDraft, preview: NflImportPreview, 
     } else {
       const differs = player.name !== incoming.name || player.position !== incoming.position || player.side !== incoming.side || player.active !== incoming.active;
       if (differs) rosterChanges++;
+      const manualDepth = player.depthRank !== undefined && !player.depthSource ? player.depthRank : undefined;
       if (options.updateRoster) Object.assign(player, incoming, { id: player.id });
       else Object.assign(player, { source: incoming.source, sourcePosition: incoming.sourcePosition, availability: incoming.availability });
+      if (manualDepth !== undefined) { player.depthRank = manualDepth; player.depthSource = undefined; }
+      else if (incoming.depthRank !== undefined) { player.depthRank = incoming.depthRank; player.depthSource = incoming.depthSource; }
     }
     ids.set(incoming.id, player.id);
   }
@@ -84,5 +88,6 @@ export function mergeNflImport(current: ImportDraft, preview: NflImportPreview, 
     if (index < 0) draft.weeks.push(merged); else draft.weeks[index] = merged;
   }
   draft.weeks.sort((a, b) => a.week - b.week);
+  draft.players = resolveDepthRoles(draft.players);
   return { draft, addedPlayers, statConflicts, rosterChanges, skippedWeeks, changedValues };
 }
