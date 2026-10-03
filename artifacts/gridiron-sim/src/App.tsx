@@ -7,12 +7,18 @@ import TeamLibrary from '@/components/TeamLibrary';
 import HistoryTeamPicker from '@/components/HistoryTeamPicker';
 import { setupFromHistory } from '@/lib/season-model';
 import { simulateEnsemble } from '@/lib/ensemble';
+import { calculateDraftKings, DRAFTKINGS_RULES_URL } from '@/lib/draftkings';
 import './season.css';
 
 type SavedSimulation = { id: string; savedAt: string; awayName: string; homeName: string; result: SimulationResult; setup?: StoredSetup };
 type StoredSetup = { away: TeamSetup; home: TeamSetup; weather: Weather; importance?: SimulationInput['importance'] };
 type PatchTeam = (side: 'away' | 'home', field: keyof TeamSetup, value: TeamSetup[keyof TeamSetup]) => void;
 type ProjectedPlayer = SimPlayer & { estimate?: { mean: number; p10: number; p90: number } };
+const projectionStats = (p: SimPlayer) => ({
+  passYards: p.passYards, passTD: p.passTD, interceptions: p.interceptions,
+  rushYards: p.rushYards, rushTD: p.rushTD, receptions: p.receptions,
+  receivingYards: p.receivingYards, receivingTD: p.receivingTD, fumblesLost: p.fumblesLost,
+});
 
 const NFL_TEAMS = [
   'Arizona Cardinals','Atlanta Falcons','Baltimore Ravens','Buffalo Bills','Carolina Panthers','Chicago Bears','Cincinnati Bengals','Cleveland Browns',
@@ -245,7 +251,7 @@ function App() {
                 <div className="empty-orbit"><SlidersHorizontal size={30} strokeWidth={1.5}/></div>
                 <div className="eyebrow">YOUR LAB IS READY</div>
                 <h3>Build a game scenario</h3>
-                <p>Set each side’s roster, team ratings, and conditions. Your first run will create a drive-by-drive game and a complete Half-PPR projection.</p>
+                <p>Set each side’s roster, team ratings, and conditions. Your first run will create a drive-by-drive game and DraftKings NFL Classic projections.</p>
               </div> : <SimulationResults result={active} awayName={currentAwayName} homeName={currentHomeName} onRun={runSimulation} busy={busy}/>}
             </section>
             <section className="panel saved-panel" aria-labelledby="saved-heading">
@@ -265,7 +271,7 @@ function App() {
                   </div>
                 ))}</div>}
             </section>
-             <div className="footnote"><strong>Method note.</strong> The Team Library is saved in the project database and shared by this app’s users; it is not a private signed-in account. Simulation settings and saved runs remain browser-local. History mode blends season and recent-five averages, with home/away splits when available. Home field, recorded W–L–T, opposing defense, weather, and game importance make bounded adjustments. Each run averages 200 simulated games; its score and drive log show one example. This is experimental and not backtested. Missing stats use baseline assumptions. OL, kicker, and individual-defense stats can be saved, but fantasy points here are QB/RB/WR/TE Half-PPR—not IDP or kicker scoring.</div>
+             <div className="footnote"><strong>Method note.</strong> The Team Library is saved in the project database and shared by this app’s users; it is not a private signed-in account. Simulation settings and saved runs remain browser-local. History mode blends season and recent-five averages, with home/away splits when available. Home field, recorded W–L–T, opposing defense, weather, and game importance make bounded adjustments. Each run averages 200 simulated games; its score and drive log show one example. This is experimental and not backtested. Missing simulation inputs use baseline assumptions. Fantasy points use DraftKings NFL Classic offense scoring for QB/RB/WR/TE, not IDP or kicker scoring. Return TDs, two-point conversions and offensive fumble recovery TDs count in recorded game stats when reported, but are not modeled in simulations.</div>
           </div>
         </div>
         </div>
@@ -389,11 +395,19 @@ function RecentStatsEditor({ team, side, patchTeam }: { team: TeamSetup; side: '
 
 function SimulationResults({ result, awayName, homeName, onRun, busy }: { result:SimulationResult; awayName:string; homeName:string; onRun:()=>void; busy:boolean }) {
   const drives = useMemo(() => [...result.drives].sort((a, b) => a.id - b.id), [result.drives]);
+  const dkEnsemble = !!result.ensemble && result.players.every(p => typeof p.draftKings === 'number');
   const playersByTeam = useMemo(() => {
     const groups = new Map<string, ProjectedPlayer[]>();
-    result.players.forEach((player, index) => groups.set(player.team, [...(groups.get(player.team) || []), { ...player, estimate: result.ensemble?.fantasy[index] }]));
-    return [...groups.entries()];
-  }, [result.players]);
+    result.players.forEach((player, index) => {
+      const played = player.played ?? Object.values(projectionStats(player)).some(n => n !== 0);
+      if (!played) return;
+      groups.set(player.team, [...(groups.get(player.team) || []), {
+        ...player, draftKings: calculateDraftKings(projectionStats(player)),
+        estimate: dkEnsemble ? result.ensemble?.fantasy[index] : undefined,
+      }]);
+    });
+    return [...groups.entries()].map(([name, players]) => [name, players.sort((a, b) => b.draftKings - a.draftKings)] as const);
+  }, [result.players, result.ensemble, dkEnsemble]);
   const winner = result.awayScore === result.homeScore ? 'Even on the board' : result.awayScore > result.homeScore ? awayName : homeName;
   return <>
     <div className="result-topline">
@@ -438,27 +452,29 @@ function SimulationResults({ result, awayName, homeName, onRun, busy }: { result
           </div>
         </section>
         <section className="subsection" aria-labelledby="players-title">
-          <div className="content-heading" id="players-title"><Trophy size={15} className="heading-icon"/> HALF-PPR PROJECTIONS <span className="panel-index">{result.players.length} PLAYERS</span></div>
+          <div className="content-heading" id="players-title"><Trophy size={15} className="heading-icon"/> DRAFTKINGS PLAYER STATS <span className="panel-index">{playersByTeam.reduce((sum, [, players]) => sum + players.length, 0)} PARTICIPANTS</span></div>
           <div className="player-table-wrap">
             <table className="player-table" data-testid="player-projections">
-               <thead><tr><th>Player</th><th>Pass<br/>Yds</th><th>Pass<br/>TD / INT</th><th>Rush<br/>Yds / TD</th><th>Rec<br/>REC / YDS / TD</th><th>FUM<br/>LOST</th><th>{result.ensemble ? 'Mean ½ PPR' : '½ PPR'}</th></tr></thead>
+               <thead><tr><th>Player</th><th>PASS<br/>YDS</th><th>PASS<br/>TD</th><th>INT</th><th>RUSH<br/>YDS</th><th>RUSH<br/>TD</th><th>REC</th><th>REC<br/>YDS</th><th>REC<br/>TD</th><th>FUM<br/>LOST</th><th>DK<br/>PTS</th><th>AVG DK<br/>PROJ.</th></tr></thead>
               <tbody>{playersByTeam.map(([team,players]) => <FragmentGroup key={team} team={team} players={players} side={team === awayName ? 'away' : 'home'}/>)}</tbody>
             </table>
           </div>
-           {result.ensemble && <p className="ensemble-note">Mean Half-PPR across {result.ensemble.runs} runs. The range is the 10th–90th percentile of simulated outcomes, not a calibrated forecast interval. Stat columns show the example game. Backups with no modeled playing time can have zero projections.</p>}
+           <p className="ensemble-note">DK PTS matches the example game's displayed stats, including yardage bonuses and turnover deductions. Only modeled participants are shown; a player who participated can still score zero or negative points. {dkEnsemble ? <>AVG DK PROJ. is the mean across {result.ensemble!.runs} runs; the range is the 10th–90th percentile of simulated outcomes, not a calibrated forecast interval.</> : result.ensemble ? 'This older saved run used a different scoring system. Run again for DraftKings averages and ranges.' : ''}</p>
         </section>
       </div>
-       <div className="footnote"><strong>Scoring.</strong> 0.5/catch, 1/10 rush or receiving yards, 1/25 passing yards, 4/passing TD, 6/rush or receiving TD. Turnovers are shown without point deductions, following your supplied rules. Kicking points are not included.</div>
+       <div className="footnote"><strong>DraftKings NFL Classic.</strong> 1/catch, 0.1/rush or receiving yard, 0.04/passing yard, 4/passing TD, 6/rush or receiving TD, −1/interception or lost fumble. +3 each for 300+ passing, 100+ rushing and 100+ receiving yards, scored per game. <a href={DRAFTKINGS_RULES_URL} target="_blank" rel="noopener noreferrer">Official scoring rules</a>. No individual defender or kicker scoring.</div>
     </div>
   </>;
 }
 function FragmentGroup({ team, players, side }: { team:string; players:ProjectedPlayer[]; side:'away'|'home' }) {
   return <>
-    <tr className={`team-group-row team-${side}`}><td colSpan={7}>{team}</td></tr>
+    <tr className={`team-group-row team-${side}`}><td colSpan={12}>{team}</td></tr>
     {players.map((player,index)=><tr className={`team-${side}`} key={`${team}-${player.name}-${index}`} data-testid={`projection-${team}-${index}`}>
       <td className="player-name">{player.name}<span className="player-pos">{player.position}</span></td>
-      <td>{player.passYards}</td><td>{player.passTD} / {player.interceptions}</td><td>{player.rushYards} / {player.rushTD}</td>
-      <td>{player.receptions} / {player.receivingYards} / {player.receivingTD}</td><td>{player.fumblesLost}</td><td className="fantasy-points">{Number(player.estimate?.mean ?? player.halfPpr).toFixed(1)}{player.estimate && <span className="fantasy-range">{player.estimate.p10.toFixed(1)}–{player.estimate.p90.toFixed(1)}</span>}</td>
+      <td>{player.passYards}</td><td>{player.passTD}</td><td>{player.interceptions}</td><td>{player.rushYards}</td><td>{player.rushTD}</td>
+      <td>{player.receptions}</td><td>{player.receivingYards}</td><td>{player.receivingTD}</td><td>{player.fumblesLost}</td>
+      <td className="fantasy-points" title="DraftKings points from the displayed example-game stats">{player.draftKings.toFixed(2)}</td>
+      <td className="fantasy-points">{player.estimate ? <>{player.estimate.mean.toFixed(2)}<span className="fantasy-range">{player.estimate.p10.toFixed(2)}–{player.estimate.p90.toFixed(2)}</span></> : '—'}</td>
     </tr>)}
   </>;
 }

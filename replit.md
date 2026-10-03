@@ -1,6 +1,6 @@
 # Gridiron Sim
 
-A saved NFL season library and fantasy matchup lab: full rosters, raw weekly player/team statistics, and history-based Half-PPR simulations.
+A saved NFL season library and fantasy matchup lab: full rosters, raw weekly player/team statistics, and history-based DraftKings NFL Classic simulations.
 
 ## Run & Operate
 
@@ -39,7 +39,7 @@ A saved NFL season library and fantasy matchup lab: full rosters, raw weekly pla
 - Team rosters/history are atomic versioned database documents. **Why:** a stale browser must receive a conflict rather than overwrite another session's entered statistics.
 - Free-text injury/context notes are displayed but not automatically interpreted. **Why:** heuristic text parsing could silently misread availability; the user should adjust ratings explicitly.
 - ESPN imports fetch rosters and each team's last three completed regular-season games for the selected season. They never silently substitute another season. Preview → apply to draft → Save team is explicit; default merge preserves entered values. Updating roster activity/details and replacing existing game values are separate opt-ins. Source links and checked timestamps persist inside the roster/week documents. The public endpoint is not a guaranteed live feed; data is cached for five minutes and missing fields stay unknown.
-- Half-PPR follows the user's exact supplied formula, which does not specify interception or fumble deductions. Kicking points are outside that formula.
+- Fantasy points now use DraftKings NFL Classic offense scoring: full PPR, passing/rushing/receiving yardage bonuses, and -1 for interceptions thrown and lost fumbles. Bonuses are scored separately for each game before ensemble averaging. Partial imported totals reflect recorded stats only; unreported scoring plays remain unknown. Classic has no individual-defender or kicker slots, so those players show no individual DK points.
 
 ## Product
 
@@ -48,7 +48,7 @@ A saved NFL season library and fantasy matchup lab: full rosters, raw weekly pla
 - 18 weekly slots for 17 regular-season games plus a bye; player game totals, custom numeric metrics, and team defense totals.
 - Saved-history mode includes all active QB/RB/WR/TE players, with the most-used QB starting, rather than a fixed six-player roster.
 - Records are derived from entered earlier results. Weather, home field, and game importance make small, bounded heuristic adjustments.
-- Every new run summarizes 200 games with mean Half-PPR and 10th–90th percentile model outcomes; score and drive log are one illustrative run.
+- Every new run summarizes 200 games with mean DK points and 10th–90th percentile model outcomes; score and drive log are one illustrative run. Example-game DK points match the displayed raw stats and are separate from ensemble averages. Older saved runs retain their data but cannot display old Half-PPR means as DK averages.
 - Settings and up to 10 runs persist in this browser; reopening a new saved run restores its input setup.
 
 ## User preferences
@@ -57,6 +57,8 @@ The user wants two sections: enter and save all offensive and defensive players 
 
 For internet-sourced 2026 data, the user wants players' team assignments and offensive/defensive statistics from the last three completed games, not a full-season dataset.
 
+The user wants DraftKings-style readable player stats, DraftKings fantasy points calculated from the stats, and no non-participants in game-stat displays. Keep the full roster available for management; game tables use recorded participation, not current activity or positive points. Zero/negative scorers and inactive historical participants still appear.
+
 The app's palette is background #0f1a13, cards #16251b, text #e9e8de, muted text #98a89c, borders #2c4234, away green #7fc08f, home amber #f0b429. Away team panels have green left edges; home panels have amber left edges. Halftime log markers and focus outlines use amber. **Why:** the user chose turf greens and chalk-white text, with green/amber separating the teams.
 
 ## Gotchas
@@ -64,7 +66,7 @@ The app's palette is background #0f1a13, cards #16251b, text #e9e8de, muted text
 - This is an experimental scenario model, not a calibrated or backtested forecasting service.
 - Team Library data is database-backed but shared and unauthenticated, not private per-user accounts. Do not claim it is private or owner-protected.
 - Simulation settings and saved runs remain browser-local. Clearing browser storage removes those, not saved team history.
-- Kicker, OL, and defensive metrics can be recorded, but fantasy projections use the supplied offensive Half-PPR formula. IDP and kicker scoring are not defined.
+- Kicker, OL, and defensive metrics can be recorded, but fantasy projections use DraftKings NFL Classic offense scoring. Do not invent IDP/kicker points or derive DST points allowed from the opponent's final score (offensive turnover scores are excluded by DK).
 
 ## Pointers
 

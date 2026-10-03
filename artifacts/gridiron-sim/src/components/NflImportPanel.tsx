@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Download, RotateCw, X } from 'lucide-react';
 import { usePreviewNflTeam, type NflImportPreview, type RosterPlayer, type TeamWeek } from '@workspace/api-client-react';
 import { mergeNflImport, type ImportDraft } from '@/lib/nfl-import-merge';
+import PlayerStatsTable, { type StatRow } from './PlayerStatsTable';
 import './nfl-import.css';
 
 type Props = {
@@ -127,12 +128,8 @@ export default function NflImportPanel({ season, team, draft, disabled, onApply,
             {games.map(w => (
               <div key={w.week}>
                 <p className="nfl-hint">Week {w.week} team defense: {Object.keys(w.teamDefense).length ? Object.entries(w.teamDefense).map(([k, v]) => `${k} ${v}`).join(', ') : 'unknown'}</p>
-                <table>
-                  <thead><tr><th>Player</th><th>Stats</th></tr></thead>
-                  <tbody>{Object.entries(w.playerStats).map(([id, row]) => (
-                    <tr key={id}><td>{nameOf(id)}</td><td>{Object.keys(row).length ? Object.entries(row).map(([k, v]) => `${k} ${v}`).join(', ') : 'played, no stats'}</td></tr>
-                  ))}</tbody>
-                </table>
+                <PlayerStatsTable label={`Week ${w.week} source player stats`} emptyText="The source reported no players for this game."
+                  rows={Object.keys(w.playerStats).map((id): StatRow => { const p = data?.players.find(x => x.id === id); return { id, name: nameOf(id), position: p?.position ?? 'OTHER', side: p?.side ?? 'offense', stats: w.playerStats[id] }; })} />
               </div>
             ))}
           </div>

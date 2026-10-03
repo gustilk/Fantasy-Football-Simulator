@@ -1,3 +1,5 @@
+import { calculateDraftKings } from "./draftkings";
+
 export type Precipitation = "none" | "light" | "moderate" | "heavy";
 
 export interface WeatherSetup {
@@ -97,7 +99,8 @@ export interface PlayerProjection {
   receivingYards: number;
   receivingTD: number;
   fumblesLost: number;
-  halfPpr: number;
+  draftKings: number;
+  played: boolean;
 }
 
 export interface SimulationResult {
@@ -117,7 +120,7 @@ export interface SimulationResult {
   };
 }
 
-interface PlayerAccumulator extends Omit<PlayerProjection, "halfPpr"> {
+interface PlayerAccumulator extends Omit<PlayerProjection, "draftKings"> {
   attempts: number;
   completions: number;
   recentStats?: PlayerRecentStats;
@@ -186,6 +189,7 @@ function makePlayer(
     receivingYards: 0,
     receivingTD: 0,
     fumblesLost: 0,
+    played: false,
     attempts: 0,
     completions: 0,
   };
@@ -427,6 +431,7 @@ function simulateTeam(
 
     for (let driveSnap = 0; driveSnap < maxSnaps; driveSnap += 1) {
       team.plays += 1;
+      qb.played = true;
       driveSnaps += 1;
       const pass = random() < (yardsToGoal <= 15 ? redZonePassShare : passShare);
       let gain = 0;
@@ -468,6 +473,7 @@ function simulateTeam(
           playText = `${qb.name} sacked for ${Math.abs(gain)} yards`;
         } else {
           const receiver = receiverFor(team, random, yardsToGoal <= 15);
+          receiver.played = true;
           const receiverRecent = recentForPlayer(team, receiver);
           let completionChance = clamp(
             0.645 +
@@ -577,6 +583,7 @@ function simulateTeam(
           0.04,
         );
         runner.rushYards += gain;
+        runner.played = true;
         if (fumbled) {
           runner.fumblesLost += 1;
           turnover = true;
@@ -671,20 +678,6 @@ function simulateTeam(
   }
 
   return team;
-}
-
-function calculateHalfPpr(player: PlayerAccumulator): number {
-  // Follows the supplied scoring rules: no interception or fumble deductions.
-  return Math.round(
-    (player.passYards / 25 +
-      player.passTD * 4 +
-      player.rushYards / 10 +
-      player.rushTD * 6 +
-      player.receivingYards / 10 +
-      player.receivingTD * 6 +
-      player.receptions * 0.5) *
-      10,
-  ) / 10;
 }
 
 function makeOverview(
@@ -811,7 +804,11 @@ export function simulateGame(input: SimulationInput): SimulationResult {
 
   const players = [...away.players, ...home.players].map((player) => {
     const { attempts: _attempts, completions: _completions, recentStats: _recentStats, ...projection } = player;
-    return { ...projection, halfPpr: calculateHalfPpr(player) };
+    return { ...projection, draftKings: calculateDraftKings({
+      passYards: player.passYards, passTD: player.passTD, interceptions: player.interceptions,
+      rushYards: player.rushYards, rushTD: player.rushTD, receptions: player.receptions,
+      receivingYards: player.receivingYards, receivingTD: player.receivingTD, fumblesLost: player.fumblesLost,
+    }) };
   });
 
   return {

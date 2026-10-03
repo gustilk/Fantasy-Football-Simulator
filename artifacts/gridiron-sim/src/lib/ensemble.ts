@@ -3,18 +3,18 @@ import { simulateGame, type SimulationInput, type SimulationResult } from "./sim
 export function simulateEnsemble(input: SimulationInput, runs = 200): SimulationResult {
   if (!Number.isInteger(runs) || runs < 1 || runs > 500) throw new Error("Use between 1 and 500 simulations.");
   const first = simulateGame(input);
-  const values = first.players.map(player => [player.halfPpr]);
+  const values = first.players.map(player => [player.draftKings]);
   let awayWins = Number(first.awayScore > first.homeScore);
   let homeWins = Number(first.homeScore > first.awayScore);
   let ties = Number(first.awayScore === first.homeScore);
   for (let i = 1; i < runs; i++) {
     const result = simulateGame({ ...input, seed: (first.seed + Math.imul(i, 2654435761)) >>> 0 });
-    result.players.forEach((player, index) => values[index]!.push(player.halfPpr));
+    result.players.forEach((player, index) => values[index]!.push(player.draftKings));
     awayWins += Number(result.awayScore > result.homeScore);
     homeWins += Number(result.homeScore > result.awayScore);
     ties += Number(result.awayScore === result.homeScore);
   }
-  const rounded = (value: number) => Math.round(value * 10) / 10;
+  const rounded = (value: number) => Math.round(value * 100) / 100;
   first.ensemble = {
     runs,
     awayWinPct: rounded(awayWins / runs * 100),

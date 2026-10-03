@@ -1,0 +1,36 @@
+.pst { display:grid; gap:10px; }
+.pst-tools { display:flex; flex-wrap:wrap; gap:10px; align-items:end; }
+.pst-tools label { flex:1 1 150px; max-width:240px; }
+.pst-count { font:11px var(--app-font-mono); color:var(--app-muted); padding-bottom:10px; }
+.pst-scroll { overflow:auto; max-width:100%; border:1px solid var(--app-border); border-radius:10px; background:var(--app-card); }
+.pst-table { border-collapse:separate; border-spacing:0; width:100%; font:12px var(--app-font-mono); }
+.pst-table th, .pst-table td { padding:7px 8px; text-align:right; white-space:nowrap; border-bottom:1px solid var(--app-border); }
+.pst-table thead th { position:sticky; top:0; background:var(--app-card); color:var(--app-muted); font-weight:600; font-size:10px; z-index:2; }
+.pst-g th { text-align:center !important; text-transform:uppercase; letter-spacing:.08em; font-size:9px !important; border-left:1px solid var(--app-border); }
+.pst-table .pst-gs { border-left:1px solid var(--app-border); }
+.pst-table .pst-name { text-align:left; position:sticky; left:0; background:var(--app-card); z-index:1; min-width:150px; font:600 13px var(--app-font-display,inherit); color:var(--app-text); }
+.pst-table thead .pst-name { z-index:3; }
+.pst-table td:nth-child(2), .pst-table thead th:nth-child(2) { text-align:center; }
+.pst-pos { padding:2px 6px; border-radius:5px; background:var(--app-bg); border:1px solid var(--app-border); font-size:10px; }
+.pst-dk { background:rgb(127 192 143 / .1) !important; color:var(--app-text); text-align:center !important; min-width:78px; }
+.pst-dk b { font:700 15px var(--app-font-mono); }
+.pst-dk button { all:unset; cursor:pointer; font-weight:700; color:var(--app-text); }
+.pst-dk button:focus-visible, .pst-edit:focus-visible { outline:2px solid var(--app-away); }
+.pst-row:hover td, .pst-row:hover th { background:rgb(127 192 143 / .05); }
+.pst-row.off .pst-name span { opacity:.6; }
+.pst-row i { color:var(--app-muted); font-style:normal; opacity:.5; }
+.pst-name em { display:block; font:10px var(--app-font-mono); color:var(--app-muted); font-style:normal; }
+.pst-edit { all:unset; cursor:pointer; display:flex; align-items:center; gap:5px; min-height:28px; }
+.pst-edit small { font:10px var(--app-font-mono); color:var(--app-away); margin-left:4px; }
+.pst-ed td { text-align:left !important; white-space:normal !important; background:var(--app-bg); padding:12px !important; }
+.pst-bd { margin:0 0 8px; font-size:11px; color:var(--app-muted); }
+.pst-none { text-align:center !important; color:var(--app-muted); padding:20px !important; }
+.pst-foot { margin:0; font-size:11px; color:var(--app-muted); }
+.pst-rules { border:1px solid var(--app-border); border-radius:8px; background:var(--app-card); font-size:12px; }
+.pst-rules summary { cursor:pointer; padding:9px 12px; display:flex; gap:6px; align-items:center; font-weight:600; }
+.pst-rules div { padding:0 12px 12px; display:grid; gap:6px; color:var(--app-muted); line-height:1.5; }
+.pst-rules p { margin:0; } .pst-rules a { color:var(--app-away); }
+.pst-add { border:1px dashed var(--app-border); border-radius:8px; padding:8px 12px; }
+.pst-add summary { cursor:pointer; font-size:12px; font-weight:600; }
+.pst-add .tl-row { margin-top:8px; }
+@media (max-width:520px){ .pst-tools label { max-width:none; } .pst-edit small { display:none; } }

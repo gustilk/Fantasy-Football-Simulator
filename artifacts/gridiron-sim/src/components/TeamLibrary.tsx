@@ -3,6 +3,7 @@ import { AlertTriangle, Plus, RotateCw, Save, Trash2, ClipboardPaste, Database }
 import { useSaveSeasonTeam, type TeamSeasonRecord, type RosterPlayer, type TeamWeek } from '@workspace/api-client-react';
 import { offenseFields, defenseFields, teamDefenseFields, positions, type StatField } from '@/lib/stat-fields';
 import NflImportPanel from './NflImportPanel';
+import PlayerStatsTable, { type StatRow } from './PlayerStatsTable';
 import './team-library.css';
 
 type Position = (typeof positions)[number];
@@ -35,7 +36,7 @@ export default function TeamLibrary({ season, onSeasonChange, teams, loading, er
   const [ctx, setCtx] = useState<{ season: number; team: string } | null>(null);
   const [draft, setDraft] = useState<Draft>({ players: [], weeks: normalize(undefined).weeks });
   const [base, setBase] = useState<{ version: number; snap: string }>({ version: 0, snap: snap(normalize(undefined)) });
-  const [view, setView] = useState<'roster' | 'weeks'>('roster');
+  const [view, setView] = useState<'roster' | 'weeks'>('weeks');
   const [weekNo, setWeekNo] = useState(1);
   const [status, setStatus] = useState<{ kind: 'ok' | 'err' | 'conflict'; text: string } | null>(null);
   const [pendingAdopt, setPendingAdopt] = useState(false);
@@ -48,6 +49,7 @@ export default function TeamLibrary({ season, onSeasonChange, teams, loading, er
 
   const adopt = (rec: TeamSeasonRecord | undefined) => {
     const d = normalize(rec);
+    setWeekNo(d.weeks.filter(w => w.status === 'played').at(-1)?.week ?? 1);
     setDraft(d); setBase({ version: rec?.version ?? 0, snap: snap(d) }); setCtx({ season, team });
   };
   const adoptRef = useRef(adopt); adoptRef.current = adopt;
@@ -175,7 +177,7 @@ export default function TeamLibrary({ season, onSeasonChange, teams, loading, er
         </div>
         {view === 'roster'
           ? <Roster players={draft.players} patch={patchPlayers} setDraft={setDraft} />
-          : <Weeks draft={draft} weekNo={weekNo} setWeekNo={setWeekNo} patchWeek={patchWeek} />}
+          : <Weeks key={`${season}:${team}`} draft={draft} weekNo={weekNo} setWeekNo={setWeekNo} patchWeek={patchWeek} />}
       </fieldset>}
     </section>
   );
@@ -290,7 +292,12 @@ function Weeks({ draft, weekNo, setWeekNo, patchWeek }: { draft: Draft; weekNo: 
     if (v === undefined) delete row[k]; else row[k] = v;
     return { ...w, playerStats: { ...w.playerStats, [id]: row } };
   });
-  const list = draft.players.filter(p => p.active || wk.playerStats[p.id]);
+  const byId = new Map(draft.players.map(p => [p.id, p]));
+  const ids = Object.keys(wk.playerStats);
+  const rows: StatRow[] = ids.map(id => { const p = byId.get(id); return { id, name: p?.name ?? `Unknown player (${id})`, position: p?.position ?? 'OTHER', side: p?.side ?? 'offense', stats: wk.playerStats[id], inactive: p ? !p.active : false }; });
+  const absent = draft.players.filter(p => !(p.id in wk.playerStats));
+  const [addId, setAddId] = useState('');
+  useEffect(() => setAddId(''), [weekNo]);
   const chip = (w: Week) => (w.status === 'bye' ? 'BYE' : w.status === 'played' ? (w.result === 'none' ? 'PLAYED' : w.result) : '');
 
   return (
@@ -325,26 +332,33 @@ function Weeks({ draft, weekNo, setWeekNo, patchWeek }: { draft: Draft; weekNo: 
           <div className="tl-stats">{teamDefenseFields.map(f => <NumInput key={f.key} id={`td-${f.key}`} field={f} value={wk.teamDefense[f.key]} onChange={v => setDef(f.key, v)} />)}</div>
           <p className="tl-hint">Blank means unknown. A typed 0 is a real zero.</p>
         </div>
-        <h3 className="tl-sub">Players ({list.length})</h3>
-        {list.length === 0 && <div className="tl-empty"><strong>No players on the roster</strong><span>Add players in the Roster tab first.</span></div>}
-        {list.map(p => {
-          const row = wk.playerStats[p.id]; const fields = p.side === 'offense' ? offenseFields : defenseFields;
-          const count = row ? Object.keys(row).length : 0;
-          return (
-            <div className={`tl-player${row ? ' on' : ''}`} key={p.id} data-testid={`card-week-player-${p.id}`}>
-              <div className="tl-ph">
-                <label className="tl-check"><input type="checkbox" checked={!!row} onChange={e => setPlayed(p.id, e.target.checked)} data-testid={`check-played-${p.id}`} /> Played</label>
-                <strong>{p.name || 'Unnamed'}</strong><span className="tl-pos">{p.position} / {p.side}</span>
-                {!p.active && <span className="tl-pos">inactive</span>}
-                <span className="tl-count">{row ? (count ? `${count} stat${count === 1 ? '' : 's'}` : 'played, no stats') : 'DNP / unknown'}</span>
+        <h3 className="tl-sub">Players who played ({rows.length})</h3>
+        <PlayerStatsTable key={`${wk.week}:${rows.length}`} rows={rows} label={`Week ${wk.week} player stats`} testId="table-week-stats" emptyText="Mark roster players as participants below, or import a game from the NFL source above."
+          renderEditor={r => {
+            const p = byId.get(r.id); const row = wk.playerStats[r.id] ?? {}; const fields = (p?.side ?? r.side) === 'offense' ? offenseFields : defenseFields; const count = Object.keys(row).length;
+            return (
+              <div className="tl-player on" data-testid={`card-week-player-${r.id}`}>
+                <div className="tl-ph">
+                  <label className="tl-check"><input type="checkbox" checked onChange={e => setPlayed(r.id, e.target.checked)} data-testid={`check-played-${r.id}`} /> Played</label>
+                  <span className="tl-count">{count ? `${count} stat${count === 1 ? '' : 's'}` : 'played, no stats'}</span>
+                </div>
+                <div className="tl-stats">{fields.map(f => <NumInput key={f.key} id={`ps-${r.id}-${f.key}`} field={f} value={row[f.key]} onChange={v => setStat(r.id, f.key, v)} />)}
+                  {Object.keys(row).filter(k => !fields.some(f => f.key === k)).map(k => <NumInput key={k} id={`ps-${r.id}-${k}`} field={{ key: k, label: `${k} (custom)`, signed: /yards/i.test(k) }} value={row[k]} onChange={v => setStat(r.id, k, v)} />)}
+                </div>
+                <CustomStat count={count} onAdd={(k, v) => setStat(r.id, k, v)} existing={row} pid={r.id} />
               </div>
-              {row && <div className="tl-stats">{fields.map(f => <NumInput key={f.key} id={`ps-${p.id}-${f.key}`} field={f} value={row[f.key]} onChange={v => setStat(p.id, f.key, v)} />)}
-                {Object.keys(row).filter(k => !fields.some(f => f.key === k)).map(k => <NumInput key={k} id={`ps-${p.id}-${k}`} field={{ key: k, label: `${k} (custom)`, signed: /yards/i.test(k) }} value={row[k]} onChange={v => setStat(p.id, k, v)} />)}
-              </div>}
-              {row && <CustomStat count={count} onAdd={(k, v) => setStat(p.id, k, v)} existing={row} pid={p.id} />}
-            </div>
-          );
-        })}
+            );
+          }} />
+        <details className="pst-add">
+          <summary>Add game participant</summary>
+          <p className="tl-hint">Mark a roster player who took part but is not listed above. Players who did not play are never listed.</p>
+          <div className="tl-row">
+            <select aria-label="Roster player to mark as played" value={addId} onChange={e => setAddId(e.target.value)} data-testid="select-add-participant">
+              <option value="">Choose roster player</option>{absent.map(p => <option key={p.id} value={p.id}>{p.name || 'Unnamed'} ({p.position}){p.active ? '' : ' - inactive'}</option>)}
+            </select>
+            <button type="button" className="btn-secondary" disabled={!addId} onClick={() => { setPlayed(addId, true); setAddId(''); }} data-testid="button-add-participant"><Plus size={14} /> Mark played</button>
+          </div>
+        </details>
       </>}
     </div>
   );
