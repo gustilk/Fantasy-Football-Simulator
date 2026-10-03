@@ -1,2 +1,3 @@
 - [ESPN season handling](espn-season-handling.md) — public schedule responses can ignore the requested year; validate roster and schedule seasons independently.
 - [Calibration evidence](calibration-evidence.md) — require pregame eligibility and observed scoring targets; untreated games cannot establish a head-to-head effect.
+- [Personal-use scope](personal-use-scope.md) — the user stated that this app is for personal use only.
