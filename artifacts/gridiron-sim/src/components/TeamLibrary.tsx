@@ -177,7 +177,7 @@ export default function TeamLibrary({ season, onSeasonChange, teams, loading, er
         </div>
         {view === 'roster'
           ? <Roster players={draft.players} patch={patchPlayers} setDraft={setDraft} />
-          : <Weeks key={`${season}:${team}`} draft={draft} weekNo={weekNo} setWeekNo={setWeekNo} patchWeek={patchWeek} />}
+          : <Weeks key={`${season}:${team}`} draft={draft} weekNo={weekNo} setWeekNo={setWeekNo} patchWeek={patchWeek} teamNames={teamNames} team={team} />}
       </fieldset>}
     </section>
   );
@@ -270,7 +270,7 @@ function NumInput({ field, value, onChange, id }: { field: StatField; value: num
   );
 }
 
-function Weeks({ draft, weekNo, setWeekNo, patchWeek }: { draft: Draft; weekNo: number; setWeekNo: (n: number) => void; patchWeek: (n: number, fn: (w: Week) => Week) => void }) {
+function Weeks({ draft, weekNo, setWeekNo, patchWeek, teamNames, team }: { draft: Draft; weekNo: number; setWeekNo: (n: number) => void; patchWeek: (n: number, fn: (w: Week) => Week) => void; teamNames: string[]; team: string }) {
   const wk = draft.weeks.find(w => w.week === weekNo)!;
   const set = (ch: Partial<Week>) => patchWeek(weekNo, w => ({ ...w, ...ch }));
   const hasData = wk.result !== 'none' || wk.teamScore !== null || wk.opponentScore !== null || Object.keys(wk.teamDefense).length > 0 || Object.keys(wk.playerStats).length > 0;
@@ -315,7 +315,11 @@ function Weeks({ draft, weekNo, setWeekNo, patchWeek }: { draft: Draft; weekNo: 
         <div className="tl-grid">
           <label>Status<select value={wk.status} onChange={e => changeStatus(e.target.value as Week['status'])} data-testid="select-week-status"><option value="upcoming">Upcoming</option><option value="played">Played</option><option value="bye">Bye</option></select></label>
           {wk.status !== 'bye' && <>
-            <label>Opponent<input maxLength={100} value={wk.opponent} onChange={e => set({ opponent: e.target.value })} data-testid="input-week-opponent" /></label>
+            <label>Opponent<select value={wk.opponent} onChange={e => set({ opponent: e.target.value })} data-testid="select-week-opponent">
+              <option value="">Select opponent</option>
+              {wk.opponent && (!teamNames.includes(wk.opponent) || wk.opponent === team) && <option value={wk.opponent}>{wk.opponent} (saved value)</option>}
+              {teamNames.filter(name => name !== team).map(name => <option key={name} value={name}>{name}</option>)}
+            </select></label>
             <label>Venue<select value={wk.venue} onChange={e => set({ venue: e.target.value as Week['venue'] })}><option value="home">Home</option><option value="away">Away</option></select></label>
             {wk.status === 'played' && <><label>Result<select value={wk.result} onChange={e => set({ result: e.target.value as Week['result'] })}><option value="none">None</option><option value="W">Win</option><option value="L">Loss</option><option value="T">Tie</option></select></label>
             <label>Team score<input type="number" min={0} max={100} value={wk.teamScore ?? ''} onChange={e => set({ teamScore: score(e.target.value) })} /></label>
