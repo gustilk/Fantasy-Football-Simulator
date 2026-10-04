@@ -74,9 +74,9 @@ export default function DraftKingsBoard({ season }: { season: number }) {
       <h1>DraftKings points</h1>
       <p>Players ranked by projected fantasy points, {season}.</p>
     </div>
-    <p className="dk-short" data-testid="dk-storage-note">Saved in this browser only. <span>* means a partial estimate.</span> Sunday games are Central Time, not a contest slate. Neutral weather assumed.
+    <p className="dk-short" data-testid="dk-storage-note">Saved in this browser only. <span>* means a partial estimate.</span> Sunday daytime games only; Sunday night excluded. Neutral weather assumed.
       {' '}<button className="text-button" onClick={() => setDetail(!detail)} aria-expanded={detail}>{detail ? 'Hide details' : 'Details'}</button></p>
-    {detail && <div className="dk-note"><strong>How to read this.</strong> Saved data lives in this browser and device only; export it to keep a copy. “All Sunday games” means Sunday in Central Time, morning to evening, not a DraftKings contest slate. Batch runs assume neutral weather: 68 F, 5 mph wind, no precipitation. Each game runs 200 simulations and shows the mean with a 10th–90th range; runs are never added together. Projections are estimates, no winnings are guaranteed, and this is not a salary or lineup optimizer. Actual stats, not projections, power the model.</div>}
+    {detail && <div className="dk-note"><strong>How to read this.</strong> Saved data lives in this browser and device only; export it to keep a copy. This batch includes Sunday kickoffs before 6 PM Central and excludes Sunday night. Your contest salary CSV remains the authority for Classic eligibility; daytime games can still belong to different contests. Night forecasts in older saves are hidden from this board but retained in archive exports. Batch runs assume neutral weather: 68 F, 5 mph wind, no precipitation. Each game runs 200 simulations and shows the mean with a 10th–90th range; runs are never added together. Projections are estimates, no winnings are guaranteed, and this is not a salary or lineup optimizer. Actual stats, not projections, power the model.</div>}
     {c.storageError && <div className="dk-err" role="alert">{c.storageError} <button className="btn-secondary" onClick={c.reloadArchive}>Retry</button></div>}
     {c.error && <div className="dk-err" role="alert" data-testid="dk-error">{c.error}</div>}
     {c.notice && <div className="dk-note" role="status">{c.notice}</div>}
@@ -85,7 +85,7 @@ export default function DraftKingsBoard({ season }: { season: number }) {
     {!loading && !loadError && <div className="panel dk-panel">
       {c.sundays.length === 0 ? <p className="dk-muted">No upcoming Sundays in the {season} schedule.</p> : <>
         <div className="dk-row">
-          <div className="field dk-date-field"><label htmlFor="dk-sunday">Sunday · NFL week (Central)</label>
+          <div className="field dk-date-field"><label htmlFor="dk-sunday">Sunday daytime · NFL week (Central)</label>
             <select id="dk-sunday" disabled={c.busy} value={c.sunday} onChange={e => c.setSunday(e.target.value)} data-testid="select-dk-sunday">{c.sundayOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>
           <button className="btn-primary" disabled={c.busy || !c.games.length} onClick={() => { void c.runSlate(); }} data-testid="button-dk-run">
             {c.busy ? <><RotateCw size={15} className="spin-icon" /> Simulating</> : <><Play size={15} /> Run and save {c.games.length} games</>}</button>

@@ -103,12 +103,26 @@ export function centralDay(timestamp: string) {
 export function isSunday(day: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(day) && new Date(`${day}T12:00:00Z`).getUTCDay() === 0;
 }
+const centralHour = new Intl.DateTimeFormat('en-US', { timeZone: DK_TIMEZONE, hour: '2-digit', hourCycle: 'h23' });
+/** Sunday daytime batch, not a substitute for the contest's salary-file game set. */
+export function isDaytimeSundayKickoff(timestamp: string) {
+  return isSunday(centralDay(timestamp)) && Number(centralHour.format(new Date(timestamp))) < 18;
+}
 export function sundayGames(games: NflScheduledGame[], sunday: string, now = Date.now()) {
   if (!isSunday(sunday)) throw new Error('Choose a Sunday date.');
-  return games.filter(game => Date.parse(game.date) > now && centralDay(game.date) === sunday);
+  return games.filter(game => Date.parse(game.date) > now && centralDay(game.date) === sunday && isDaytimeSundayKickoff(game.date));
 }
 export function availableSundays(games: NflScheduledGame[]) {
-  return [...new Set(games.map(game => centralDay(game.date)).filter(isSunday))].sort();
+  return [...new Set(games.filter(game => isDaytimeSundayKickoff(game.date)).map(game => centralDay(game.date)))].sort();
+}
+
+/** Read-only view of old saves: hide night games without deleting their frozen inputs. */
+export function daytimeSundaySlate(slate: DKSlate, schedule: NflScheduledGame[] = []): DKSlate {
+  const excluded = new Set(schedule.filter(game => !isDaytimeSundayKickoff(game.date)).map(game => game.id));
+  return { ...slate,
+    forecasts: slate.forecasts.filter(forecast => isDaytimeSundayKickoff(forecast.kickoff)),
+    failures: slate.failures.filter(failure => !excluded.has(failure.gameId)),
+  };
 }
 
 /** Game numbers are source NFL weeks, not a team's count of games played. */
@@ -116,7 +130,7 @@ export function availableSundayOptions(games: NflScheduledGame[]) {
   const byDay = new Map<string, Map<string, { week: number; playoff: boolean }>>();
   for (const game of games) {
     const day = centralDay(game.date);
-    if (!isSunday(day)) continue;
+    if (!isDaytimeSundayKickoff(game.date)) continue;
     const weeks = byDay.get(day) ?? new Map();
     const playoff = game.seasonType === 'postseason';
     weeks.set(`${playoff}:${game.week}`, { week: game.week, playoff });

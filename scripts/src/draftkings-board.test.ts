@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import type { TeamSeasonRecord, NflScheduledGame } from '../../lib/api-client-react/src/generated/api.schemas';
 import {
-  availableSundays, availableSundayOptions, centralDay, dkHistory, gameForecast, groupDKPlayers, slateBoard, sundayGames,
+  availableSundays, availableSundayOptions, centralDay, daytimeSundaySlate, isDaytimeSundayKickoff, dkHistory, gameForecast, groupDKPlayers, slateBoard, sundayGames,
   validateOfficialScore, type DKOfficialScore, type DKSlate,
 } from '../../artifacts/gridiron-sim/src/lib/draftkings-board';
 import {
@@ -36,13 +36,13 @@ const games = [
 ];
 const now = Date.parse('2026-10-03T19:00:00Z');
 assert.equal(centralDay(games[2].date), '2026-10-04', 'Sunday evening must not become Monday due to UTC');
-assert.deepEqual(sundayGames(games, '2026-10-04', now).map(game => game.id), ['morning', 'afternoon', 'sunday-night']);
-assert.equal(sundayGames(games, '2026-10-04', Date.parse('2026-10-04T18:00:00Z')).length, 1, 'Exclude kickoffs that have passed');
+assert.deepEqual(sundayGames(games, '2026-10-04', now).map(game => game.id), ['morning', 'afternoon']);
+assert.equal(sundayGames(games, '2026-10-04', Date.parse('2026-10-04T18:00:00Z')).length, 0, 'Exclude passed daytime kickoffs and Sunday night');
 assert.deepEqual(availableSundays(games), ['2026-10-04', '2026-10-11']);
 assert.deepEqual(availableSundayOptions(games), [
   { value: '2026-10-04', label: 'October 4, 2026 · Game #4' },
   { value: '2026-10-11', label: 'October 11, 2026 · Game #4' },
-], 'Use actual source weeks, not dropdown order; include Sunday night and deduplicate matchups');
+], 'Use actual source weeks, not dropdown order; exclude Sunday night and deduplicate matchups');
 assert.deepEqual(availableSundayOptions([game('not-sunday', '2026-09-04T17:00:00Z')]), [],
   'September 4, 2026 is Friday, not Sunday');
 assert.equal(availableSundayOptions([{ ...game('later-week', '2026-10-11T17:00:00Z'), week: 5 }])[0].label,
@@ -50,6 +50,11 @@ assert.equal(availableSundayOptions([{ ...game('later-week', '2026-10-11T17:00:0
 assert.equal(availableSundayOptions([{ ...game('playoff', '2027-01-10T18:00:00Z'), week: 1, seasonType: 'postseason' }])[0].label,
   'January 10, 2027 · Playoff game #1', 'NFL season can continue into the next calendar year');
 assert.throws(() => sundayGames(games, '2026-10-05', now), /Sunday/);
+assert.equal(isDaytimeSundayKickoff('2026-10-05T00:20:00Z'), false, 'Sunday night in Central even when UTC is Monday');
+assert.equal(isDaytimeSundayKickoff('2026-11-02T01:20:00Z'), false, 'Exclude Sunday night after daylight saving ends');
+assert.equal(isDaytimeSundayKickoff('2026-11-01T21:25:00Z'), true, 'Keep the late afternoon window after daylight saving ends');
+assert.deepEqual(availableSundays([games[2]!]), [], 'A night-only Sunday is not an available daytime batch');
+assert.deepEqual(availableSundayOptions([games[2]!]), []);
 const teams = [makeTeam('Detroit Lions'), makeTeam('San Francisco 49ers')];
 const before = JSON.stringify(teams);
 const actual = dkHistory(teams, 2026);
@@ -95,6 +100,15 @@ assert.ok(rows.every((row, index) => index === 0 || rows[index - 1].mean >= row.
 assert.equal(rows[0].difference, null, 'Upcoming weeks have no fabricated actual score');
 assert.deepEqual(groupDKPlayers(rows).map(group => group.position), ['QB', 'RB', 'WR', 'TE']);
 assert.throws(() => slateBoard({ ...slate, forecasts: [forecast, forecast] }, actual), /twice/);
+const archivedWithNight: DKSlate = { ...slate,
+  forecasts: [forecast, { ...forecast, gameId: 'sunday-night', kickoff: games[2]!.date }],
+  failures: [{ gameId: 'sunday-night', matchup: 'Night game', reason: 'Unavailable' }],
+};
+const originalArchive = JSON.stringify(archivedWithNight);
+const daytimeView = daytimeSundaySlate(archivedWithNight, games);
+assert.equal(daytimeView.forecasts.length, 1, 'Older night forecasts do not enter daytime projections');
+assert.equal(daytimeView.failures.length, 0, 'Excluded night games are not counted as daytime failures');
+assert.equal(JSON.stringify(archivedWithNight), originalArchive, 'Preserve original archive and frozen night inputs');
 const comparedSlate = { ...slate, forecasts: [{ ...forecast, week: 2 }] };
 assert.equal(slateBoard(comparedSlate, actual).find(row => row.playerId === 'qb')!.difference, null, 'A partial subtotal must not become a full accuracy error');
 const compared = slateBoard(comparedSlate, dkHistory(teams, 2026, [official])).find(row => row.team === official.team && row.playerId === official.playerId)!;

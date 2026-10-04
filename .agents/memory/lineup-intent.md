@@ -14,3 +14,9 @@ Salary imports must not depend on a forecast already existing. Forecast pairing 
 **Why:** The user reported that the lineup salary upload would not let them proceed and kept waiting; requiring a saved forecast blocked the independent salary-import step.
 
 **How to apply:** Allow CSV-first workflows and explicitly confirm the matching forecast before generating. Retain successfully imported salaries while forecasts are prepared.
+
+The user does not need Sunday night games in the DraftKings workflow because they are not part of their DraftKings Classic contest.
+
+**Why:** The user said, “I don't need the Sunday night game because that's not part of Draftkings classic.”
+
+**How to apply:** Exclude Sunday night from the DraftKings Sunday batch and displayed forecasts. Keep the selected-week Game Simulator scope unchanged, preserve archived inputs, and continue using the uploaded contest salary file as the authority for actual lineup eligibility.

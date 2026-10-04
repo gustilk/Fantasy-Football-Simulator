@@ -4,7 +4,7 @@ import { withDepthChart } from '@/lib/depth-chart';
 import { setupFromHistory } from '@/lib/season-model';
 import { simulateEnsemble } from '@/lib/ensemble';
 import {
-  availableSundayOptions, dkHistory, gameForecast, slateBoard, sundayGames, validateOfficialScore,
+  availableSundayOptions, daytimeSundaySlate, dkHistory, gameForecast, slateBoard, sundayGames, validateOfficialScore,
   type DKMarketDraft, type DKOfficialScore, type DKSlate,
 } from '@/lib/draftkings-board';
 import {
@@ -36,10 +36,11 @@ export function useDraftKingsBoard(season: number) {
   const sunday = selectedSunday || sundays[0] || '';
   const games = useMemo(() => sunday ? sundayGames(schedule.data?.games ?? [], sunday) : [], [schedule.data, sunday]);
   const slates = stored.archive.slates.filter(slate => slate.season === season);
-  const activeSlate = slates.find(slate => slate.id === selectedSlateId) ?? slates[0] ?? null;
+  const savedSlate = slates.find(slate => slate.id === selectedSlateId) ?? slates[0] ?? null;
+  const activeSlate = useMemo(() => savedSlate ? daytimeSundaySlate(savedSlate, schedule.data?.games ?? []) : null, [savedSlate, schedule.data]);
   const actualHistory = useMemo(() => dkHistory(teams, season, stored.archive.official), [teams, season, stored.archive.official]);
   const projections = useMemo(() => activeSlate ? slateBoard(activeSlate, actualHistory) : [], [activeSlate, actualHistory]);
-  const accuracy = useMemo(() => draftKingsAccuracy(stored.archive.slates, teams, stored.archive.official, season), [stored.archive, teams, season]);
+  const accuracy = useMemo(() => draftKingsAccuracy(stored.archive.slates.map(slate => daytimeSundaySlate(slate, schedule.data?.games ?? [])), teams, stored.archive.official, season), [stored.archive, teams, season, schedule.data]);
 
   const reloadArchive = () => setStored(initialArchive());
   useEffect(() => {
