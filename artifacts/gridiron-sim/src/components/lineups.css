@@ -1,0 +1,34 @@
+.lu{max-width:760px}
+.lu-h{font:600 15px var(--app-font-display);letter-spacing:.04em;margin:0 0 12px}
+.lu-panel{display:grid;gap:12px}
+.lu-panel .lu-h{margin:0}
+.lu-warn{border-left-color:var(--app-away)}
+.lu-file{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--app-border);border-radius:8px;background:var(--app-bg);font-size:13px}
+.lu-file>div{display:grid;gap:3px;min-width:0;word-break:break-word}
+.lu-actions{display:flex;gap:8px;flex-wrap:wrap}
+.lu-mono{font:12px var(--app-font-mono)}
+.lu-gap{margin:0}
+.lu-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.lu-stats>div{padding:10px 12px;border:1px solid var(--app-border);border-radius:8px;background:var(--app-bg)}
+.lu-stats span,.lu-card-stats span{display:block;color:var(--app-muted);font-size:11px}
+.lu-stats strong{font-size:20px}
+.lu-issues{max-height:320px;overflow:auto}
+.lu-mismatch{align-items:center}
+.lu-card{padding:0;overflow:hidden;animation:lu-in .25s ease both}
+.lu-card-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-end;padding:14px 16px;border-bottom:1px solid var(--app-border)}
+.lu-card-head h3{margin:0;font:600 18px var(--app-font-display)}
+.lu-card-stats{display:flex;gap:18px;flex-wrap:wrap}
+.lu-card-stats strong{font:600 15px var(--app-font-mono)}
+.lu-card-stats .lu-pts{color:var(--app-away);font-size:20px}
+.lu-card .player-table-wrap{border:0;border-radius:0}
+.lu-slot{font:600 12px var(--app-font-mono);color:var(--app-home);width:56px}
+.lu-proj{font-size:15px}
+.lu-indeterminate{width:35%!important;animation:lu-slide 1.1s ease-in-out infinite alternate}
+@keyframes lu-slide{from{transform:translateX(0)}to{transform:translateX(185%)}}
+@keyframes lu-in{from{opacity:0;transform:translateY(6px)}}
+@media(max-width:560px){
+  .lu-stats{grid-template-columns:1fr}
+  .lu-card-stats{gap:12px;width:100%;justify-content:space-between}
+  .lu .player-table td,.lu .player-table th{padding:10px 6px}
+}
+@media(prefers-reduced-motion:reduce){.lu-card,.lu-indeterminate{animation:none}}

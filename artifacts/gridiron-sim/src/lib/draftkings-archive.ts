@@ -17,6 +17,7 @@ const forecastSchema = z.object({
     eliteTier: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]).optional(),
   })),
   warnings: z.array(z.string()),
+  defenses: z.array(z.object({ team: z.string(), mean: z.number().finite(), p10: z.number().finite(), p90: z.number().finite() })).optional(),
 }).passthrough();
 const archiveSchema = z.object({
   version: z.literal(1), official: z.array(scoreSchema),

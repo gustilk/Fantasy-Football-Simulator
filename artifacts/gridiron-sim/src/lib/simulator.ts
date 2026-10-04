@@ -135,12 +135,14 @@ export interface SimulationResult {
   overview: string[];
   drives: SimulatedDrive[];
   players: PlayerProjection[];
+  defenses?: { team: string; sacks: number; interceptions: number; fumblesRecovered: number; pointsAllowed: number }[];
   ensemble?: {
     runs: number;
     awayWinPct: number;
     homeWinPct: number;
     tiePct: number;
     fantasy: { mean: number; p10: number; p90: number }[];
+    defenseFantasy?: { team: string; mean: number; p10: number; p90: number }[];
     market?: MarketEvidence;
   };
 }
@@ -157,6 +159,7 @@ interface TeamSimulation {
   setup: TeamSetup;
   score: number;
   plays: number;
+  sacksAllowed: number;
   players: PlayerAccumulator[];
   drives: Omit<SimulatedDrive, "id" | "quarter">[];
 }
@@ -233,6 +236,7 @@ function makeTeamSimulation(setup: TeamSetup): TeamSimulation {
     setup,
     score: 0,
     plays: 0,
+    sacksAllowed: 0,
     players: setup.roster ? setup.roster.map(player => {
       ranks[player.position] = (ranks[player.position] ?? 0) + 1;
       return {
@@ -535,6 +539,7 @@ function simulateTeam(
           turnover = true;
           playText = `${qb.name} intercepted — possession changes hands`;
         } else if (random() < sackChance) {
+          team.sacksAllowed += 1;
           gain = -integerBetween(random, 3, 9);
           playText = `${qb.name} sacked for ${Math.abs(gain)} yards`;
         } else {
@@ -900,5 +905,9 @@ export function simulateGame(input: SimulationInput): SimulationResult {
     overview: makeOverview(input, away, home),
     drives: mergedDrives,
     players,
+    defenses: [
+      { team: away.setup.name, sacks: home.sacksAllowed, interceptions: home.players.reduce((n, p) => n + p.interceptions, 0), fumblesRecovered: home.players.reduce((n, p) => n + p.fumblesLost, 0), pointsAllowed: home.score },
+      { team: home.setup.name, sacks: away.sacksAllowed, interceptions: away.players.reduce((n, p) => n + p.interceptions, 0), fumblesRecovered: away.players.reduce((n, p) => n + p.fumblesLost, 0), pointsAllowed: away.score },
+    ],
   };
 }

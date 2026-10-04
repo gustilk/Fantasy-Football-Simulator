@@ -36,6 +36,7 @@ export interface DKGameForecast {
   seed: number;
   runs: number;
   players: DKProjection[];
+  defenses?: { team: string; mean: number; p10: number; p90: number }[];
   input: SimulationInput;
   market?: NonNullable<SimulationResult['ensemble']>['market'];
   warnings: string[];
@@ -154,6 +155,7 @@ export function gameForecast(game: NflScheduledGame, input: SimulationInput, res
   return {
     gameId: game.id, week: game.week, kickoff: game.date, awayTeam: game.awayTeam, homeTeam: game.homeTeam,
     seed: result.seed, runs: ensemble.runs, players, input: structuredClone(input), market: ensemble.market,
+    defenses: ensemble.defenseFantasy,
     warnings: [...(input.away.modelEvidence?.warnings ?? []), ...(input.home.modelEvidence?.warnings ?? []), ...(ensemble.market?.warnings ?? [])],
   };
 }

@@ -1,5 +1,6 @@
 import { simulateGame, type SimulationInput, type SimulationResult } from "./simulator";
 import { validateMarketOdds, marketOutcomeWeights, weightedFantasySummary } from "./market-odds";
+import { calculateDefenseDraftKings } from "./draftkings-defense";
 
 export function simulateEnsemble(input: SimulationInput, runs = 200): SimulationResult {
   if (!Number.isInteger(runs) || runs < 1 || runs > 500) throw new Error("Use between 1 and 500 simulations.");
@@ -8,6 +9,7 @@ export function simulateEnsemble(input: SimulationInput, runs = 200): Simulation
   const first = simulateGame(input);
   const scores = [{ away: first.awayScore, home: first.homeScore }];
   const values = first.players.map(player => [player.draftKings]);
+  const defenseValues = first.defenses!.map(defense => [calculateDefenseDraftKings(defense)]);
   let awayWins = Number(first.awayScore > first.homeScore);
   let homeWins = Number(first.homeScore > first.awayScore);
   let ties = Number(first.awayScore === first.homeScore);
@@ -15,6 +17,7 @@ export function simulateEnsemble(input: SimulationInput, runs = 200): Simulation
     const result = simulateGame({ ...input, seed: (first.seed + Math.imul(i, 2654435761)) >>> 0 });
     scores.push({ away: result.awayScore, home: result.homeScore });
     result.players.forEach((player, index) => values[index]!.push(player.draftKings));
+    result.defenses!.forEach((defense, index) => defenseValues[index]!.push(calculateDefenseDraftKings(defense)));
     awayWins += Number(result.awayScore > result.homeScore);
     homeWins += Number(result.homeScore > result.awayScore);
     ties += Number(result.awayScore === result.homeScore);
@@ -30,6 +33,7 @@ export function simulateEnsemble(input: SimulationInput, runs = 200): Simulation
       homeWinPct: probability(score => score.home > score.away),
       tiePct: probability(score => score.away === score.home),
       fantasy: values.map(points => weightedFantasySummary(points, weights)),
+      defenseFantasy: defenseValues.map((points, index) => ({ team: first.defenses![index]!.team, ...weightedFantasySummary(points, weights) })),
     };
     first.overview.push(`Optional market weighting: home spread ${evidence.homeSpread > 0 ? '+' : ''}${evidence.homeSpread}, total ${evidence.total}. Market-implied scores: away ${evidence.implied.away}, home ${evidence.implied.home}. Ensemble summaries mix 65% original outcomes with 35% market-compatible outcomes; the displayed game is an unweighted example. This heuristic has not been accuracy-validated.`);
     evidence.warnings.forEach(warning => first.overview.push(`Market caution: ${warning}`));
@@ -48,6 +52,7 @@ export function simulateEnsemble(input: SimulationInput, runs = 200): Simulation
         p90: points[Math.floor((runs - 1) * 0.9)]!,
       };
     }),
+    defenseFantasy: defenseValues.map((points, index) => ({ team: first.defenses![index]!.team, ...weightedFantasySummary(points, points.map(() => 1 / runs)) })),
   };
   return first;
 }
