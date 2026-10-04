@@ -5,6 +5,7 @@ import type { AvailabilityCheck } from "./availability";
 import type { historyStrength, playerUsage } from "./history-signals";
 import type { MarketOdds, MarketEvidence } from "./market-odds";
 import { getEliteTier, eliteOpportunityWeight, type EliteTier } from "./elite-players";
+import { backfieldOpportunityWeight, backfieldReceivingPrior, backfieldEfficiency, type BackfieldEvidence } from "./backfield-workload";
 
 export type Precipitation = "none" | "light" | "moderate" | "heavy";
 
@@ -51,9 +52,12 @@ export interface SimulationRosterPlayer {
   elite1x?: boolean;
   eliteTier?: EliteTier;
   usage?: ReturnType<typeof playerUsage>;
+  backfieldEvidence?: BackfieldEvidence;
 }
 
 export interface TeamSetup {
+  /** Absent on older frozen forecasts: retain their original workload behavior. */
+  backfieldModel?: "usage-v1";
   name: string;
   qb: string;
   rb: string;
@@ -151,6 +155,7 @@ export interface SimulationResult {
 }
 
 interface PlayerAccumulator extends Omit<PlayerProjection, "draftKings"> {
+  backfieldEvidence?: BackfieldEvidence;
   historyObservations?: number;
   usage?: ReturnType<typeof playerUsage>;
   attempts: number;
@@ -247,7 +252,7 @@ function makeTeamSimulation(setup: TeamSetup): TeamSimulation {
         id: player.id,
         elite1x: getEliteTier(player) > 0,
         eliteTier: getEliteTier(player),
-        recentStats: player.recentStats, historyObservations: player.historyObservations, usage: player.usage,
+        recentStats: player.recentStats, historyObservations: player.historyObservations, usage: player.usage, backfieldEvidence: player.backfieldEvidence,
       };
     }) : [
       makePlayer(setup.qb, "QB", teamName),
@@ -271,12 +276,15 @@ function receiverFor(
   redZone: boolean,
 ): PlayerAccumulator {
   const receivers = team.players.filter(player => ["RB", "WR", "TE"].includes(player.position));
-  const fallback = receivers.map(player => receivingRoleWeight(player.position, player.depthRank ?? 1));
+  const fallback = receivers.map(player => team.setup.backfieldModel === "usage-v1" && player.position === "RB"
+    ? backfieldReceivingPrior(player.depthRank ?? 1) : receivingRoleWeight(player.position, player.depthRank ?? 1));
   const weighted = receivers.map((player, index) => {
     const playerStats = recentForPlayer(team, player);
     const targetWeight = supplied(player.usage?.targetShare) ? player.usage.targetShare * 34 : playerStats?.targets;
     const usageReliability = supplied(player.usage?.targetShare) ? clamp((player.usage.targetGames + 1) / 6, 0.2, 1) : playerReliability(team.setup, player);
-    const recentTargetWeight = supplied(targetWeight)
+    const recentTargetWeight = team.setup.backfieldModel === "usage-v1" && player.position === "RB"
+      ? backfieldOpportunityWeight(fallback[index]!, playerStats?.targets, player.usage?.targetGames ?? 0)
+      : supplied(targetWeight)
       ? roleGuidedWeight(fallback[index]!, targetWeight, usageReliability)
       : fallback[index]!;
     const redZoneBoost =
@@ -338,6 +346,9 @@ function runningBackFor(team: TeamSimulation, random: Random): PlayerAccumulator
     const runners = team.players.filter((player, index) => index === 0 || (player.position !== "QB" && (player.position === "RB" || (player.recentStats?.rushAttempts ?? 0) > 0)));
     const defaults = runners.map(player => player.position === "QB" ? 3 : player.position === "RB" ? rushingRoleWeight(player.depthRank ?? 1) : 1);
     let weights = runners.map((player, index) => {
+      if (team.setup.backfieldModel === "usage-v1" && player.position === "RB") {
+        return backfieldOpportunityWeight(defaults[index]!, player.recentStats?.rushAttempts, player.usage?.carryGames ?? 0);
+      }
       const carries = supplied(player.usage?.carryShare) ? player.usage.carryShare * 28 : player.recentStats?.rushAttempts;
       const reliability = supplied(player.usage?.carryShare) ? clamp((player.usage.carryGames + 1) / 6, 0.2, 1) : playerReliability(team.setup, player);
       return carries === undefined ? defaults[index]! : roleGuidedWeight(defaults[index]!, carries, reliability);
@@ -594,7 +605,8 @@ function simulateTeam(
           if (random() >= completionChance) {
             playText = `${qb.name} pass incomplete`;
           } else {
-            const receiverEfficiency =
+            const receiverEfficiency = setup.backfieldModel === "usage-v1" && receiver.position === "RB"
+              ? backfieldEfficiency(receiver.backfieldEvidence, true) :
               supplied(receiverRecent?.receivingYards) &&
               supplied(receiverRecent?.receptions) &&
               receiverRecent.receptions > 0
@@ -633,7 +645,8 @@ function simulateTeam(
       } else {
         const runner = runningBackFor(team, random);
         const runnerRecent = recentForPlayer(team, runner);
-        const runnerEfficiency =
+        const runnerEfficiency = setup.backfieldModel === "usage-v1" && runner.position === "RB"
+          ? backfieldEfficiency(runner.backfieldEvidence, false) :
           supplied(runnerRecent?.rushYards) &&
           supplied(runnerRecent?.rushAttempts) &&
           runnerRecent.rushAttempts > 0
@@ -911,7 +924,7 @@ export function simulateGame(input: SimulationInput): SimulationResult {
   }
 
   const players = [...away.players, ...home.players].map((player) => {
-    const { attempts: _attempts, completions: _completions, recentStats: _recentStats, ...projection } = player;
+    const { attempts: _attempts, completions: _completions, recentStats: _recentStats, backfieldEvidence: _backfieldEvidence, ...projection } = player;
     return { ...projection, draftKings: calculateDraftKings({
       passYards: player.passYards, passTD: player.passTD, interceptions: player.interceptions,
       rushYards: player.rushYards, rushTD: player.rushTD, receptions: player.receptions,

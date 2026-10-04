@@ -79,6 +79,16 @@ export function setupFromHistory(team: TeamSeasonRecord, week: number, venue: "h
       historyObservations: rows.filter(row => ["passAttempts", "rushAttempts", "targets", "receptions", "receivingYards"].some(key => Number.isFinite(row.stats[key]))).length,
       recentStats: blendedStats(rows, venue, matchupOpponent) as PlayerRecentStats,
       usage: playerUsage(games, player.id),
+      backfieldEvidence: player.position === "RB" ? (() => {
+        const pairedRush = rows.filter(r => Number.isFinite(r.stats.rushAttempts) && r.stats.rushAttempts! > 0 && Number.isFinite(r.stats.rushYards));
+        const pairedReceiving = rows.filter(r => Number.isFinite(r.stats.receptions) && r.stats.receptions! > 0 && Number.isFinite(r.stats.receivingYards));
+        return {
+          rushAttempts: pairedRush.reduce((n, r) => n + r.stats.rushAttempts!, 0),
+          rushYards: pairedRush.reduce((n, r) => n + r.stats.rushYards!, 0),
+          receivingCatches: pairedReceiving.reduce((n, r) => n + r.stats.receptions!, 0),
+          receivingYards: pairedReceiving.reduce((n, r) => n + r.stats.receivingYards!, 0),
+        };
+      })() : undefined,
     };
   });
   const order = { QB: 0, RB: 1, WR: 2, TE: 3 };
@@ -109,6 +119,7 @@ export function setupFromHistory(team: TeamSeasonRecord, week: number, venue: "h
   const names = (position: string) => roster.filter(player => player.position === position);
   const strength = historyStrength(team, games);
   return {
+    backfieldModel: "usage-v1",
     name: team.team,
     qb: names("QB")[0]?.name ?? "",
     rb: names("RB")[0]?.name ?? "",
@@ -129,7 +140,10 @@ export function setupFromHistory(team: TeamSeasonRecord, week: number, venue: "h
     record: teamRecord(team, week),
     historyGames: games.length,
     availabilityChecks,
-    modelEvidence: { strength: strength.evidence, warnings: [...historyWarnings(games, strength.evidence), ...availabilityWarnings(availabilityChecks)] },
+    modelEvidence: { strength: strength.evidence, warnings: [
+      ...historyWarnings(games, strength.evidence), ...availabilityWarnings(availabilityChecks),
+      "Backfield workload uses observed carries/targets with one role-prior game and no fixed RB1 minimum. RB1/RB2 start with equal receiving priority. Paired rushing efficiency shrinks toward 4.5 yards/carry (12 prior carries); receiving efficiency toward 8 yards/catch (10 prior catches). These are uncalibrated heuristics, not verified snap shares or touchdown guarantees.",
+    ] },
     depthChartSource: team.players.find(p => p.depthSource)?.depthSource,
     headToHead: matchupOpponent ? { opponent: matchupOpponent, games: meetings.length, usableGames: usable.length, maxWeight: headToHeadWeight(usable.length) } : undefined,
     defenseRecent: blendedStats(defenseRows, venue, matchupOpponent),
