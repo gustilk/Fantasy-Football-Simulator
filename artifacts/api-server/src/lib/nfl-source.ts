@@ -146,12 +146,19 @@ export async function getNflDepthChart(season: number, team: string): Promise<Nf
   const list = await json<{ sports: { leagues: { teams: { team: { id: string; displayName: string; abbreviation: string } }[] }[] }[] }>("teams?limit=32");
   const sourceTeam = list.sports?.[0]?.leagues?.[0]?.teams?.find(t => t.team.displayName === team)?.team;
   if (!sourceTeam) throw new NflSourceError("Choose one of the 32 NFL teams.", 400);
-  const raw = await json<SourceDepthChart>(`teams/${sourceTeam.id}/depthcharts?season=${season}`);
-  try {
-    return depthSource(season, team, parseDepthChart(raw, season, sourceTeam.id), `https://www.espn.com/nfl/team/depth/_/name/${sourceTeam.abbreviation.toLowerCase()}`);
-  } catch {
-    throw new NflSourceError("ESPN has no matching offensive depth chart for this season. Set depth roles manually in Team Library; no different season was substituted.");
+  const path = `teams/${sourceTeam.id}/depthcharts?season=${season}`;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const raw = await json<SourceDepthChart>(path);
+    try {
+      return depthSource(season, team, parseDepthChart(raw, season, sourceTeam.id), `https://www.espn.com/nfl/team/depth/_/name/${sourceTeam.abbreviation.toLowerCase()}`);
+    } catch {
+      // HTTP 200 can still contain a mismatched season or a temporarily missing
+      // offense. Never retain that rejected payload as a five-minute success.
+      // Retry the exact requested season once; never substitute or infer roles.
+      sourceCache.delete(path);
+    }
   }
+  throw new NflSourceError("ESPN has no matching offensive depth chart for this season after a fresh retry. Set depth roles manually in Team Library; no different season was substituted.");
 }
 
 export function reportedAvailability(injury?: string): NonNullable<RosterPlayer["availabilityReport"]>["status"] {
