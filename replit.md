@@ -12,6 +12,12 @@ A saved NFL season library and fantasy matchup lab: full rosters, raw weekly pla
 - `PORT=8080 BASE_PATH=/ pnpm --filter @workspace/gridiron-sim run build` — standalone frontend build check; managed artifact workflows supply these routing variables automatically.
 - The simulator runs in the browser. Optional roster/stat imports use ESPN public site data and need no user API keys.
 
+## Weekly NFL advanced-stat source
+
+- Use **nflverse** as the saved source for advanced NFL reference stats throughout the season. Refresh after the week's final game has finished and the source files include it; include all completed games, not Sunday-only games.
+- Source links, year-specific download templates, and the weekly refresh procedure are saved in [docs/nfl-data-sources.md](docs/nfl-data-sources.md).
+- Current fetching is on demand through Team Library's advanced-stats panel, with a ten-minute server cache; it is not an unattended weekly scheduled job. Reading these reports does not overwrite saved team history or forecasts.
+
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
