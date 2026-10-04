@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './getNflScheduleParams';
+export * from './getNflScheduleScope';
 export * from './healthStatus';
 export * from './listSeasonTeamsParams';
 export * from './nflDataSource';

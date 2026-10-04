@@ -27,10 +27,11 @@ const API = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/";
 const sourceCache = new Map<string, { expires: number; value: Promise<unknown> }>();
 const previewCache = new Map<string, { expires: number; value: Promise<NflImportPreview> }>();
 const TTL = 5 * 60_000;
-const scheduleCache = new Map<number, { expires: number; value: Promise<NflSchedule> }>();
+const scheduleCache = new Map<string, { expires: number; value: Promise<NflSchedule> }>();
 
-export async function getNflSchedule(season: number): Promise<NflSchedule> {
-  const cached = scheduleCache.get(season);
+export async function getNflSchedule(season: number, scope: 'upcoming' | 'all' = 'upcoming'): Promise<NflSchedule> {
+  const cacheKey = `${season}:${scope}`;
+  const cached = scheduleCache.get(cacheKey);
   if (cached && cached.expires > Date.now()) return cached.value;
   const value = (async (): Promise<NflSchedule> => {
     // Calendar-year requests avoid ESPN's unsupported long date ranges.
@@ -51,10 +52,10 @@ export async function getNflSchedule(season: number): Promise<NflSchedule> {
     return {
       season, fetchedAt: new Date().toISOString(),
       sourceUrl: "https://www.espn.com/nfl/schedule",
-      ...parseUpcomingSchedule(events, season, new Map(teams.map(({ team }) => [team.id, team.displayName]))),
+      ...parseUpcomingSchedule(events, season, new Map(teams.map(({ team }) => [team.id, team.displayName])), Date.now(), scope),
     };
-  })().catch(error => { scheduleCache.delete(season); throw error; });
-  scheduleCache.set(season, { expires: Date.now() + TTL, value });
+  })().catch(error => { scheduleCache.delete(cacheKey); throw error; });
+  scheduleCache.set(cacheKey, { expires: Date.now() + TTL, value });
   return value;
 }
 let pendingPreviews = 0;

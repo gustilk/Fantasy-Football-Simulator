@@ -1,21 +1,25 @@
 import { useState } from 'react';
 import { useGetNflSchedule, getGetNflScheduleQueryKey, type NflScheduledGame } from '@workspace/api-client-react';
 import { RotateCw } from 'lucide-react';
+import { gamesForWeek, type WeeklyProgress } from '@/lib/weekly-simulations';
 
-export default function UpcomingGames({ season, enabled, busy, teams, selectedMatchup, onSelect }: {
+export default function UpcomingGames({ season, enabled, busy, teams, selectedMatchup, onSelect, onRunWeek, progress }: {
   season: number; enabled: boolean; busy: boolean; teams: string[];
   selectedMatchup: { away: string; home: string; week: number } | null;
   onSelect: (game: NflScheduledGame, fetchedAt: string) => void;
+  onRunWeek: (week: number, games: NflScheduledGame[], fetchedAt: string) => void;
+  progress: WeeklyProgress | null;
 }) {
-  const schedule = useGetNflSchedule(season, {
-    query: { queryKey: getGetNflScheduleQueryKey(season), enabled, staleTime: 60_000, refetchInterval: 300_000, retry: false },
+  const schedule = useGetNflSchedule(season, { scope: 'all' }, {
+    query: { queryKey: getGetNflScheduleQueryKey(season, { scope: 'all' }), enabled, staleTime: 60_000, refetchInterval: 300_000, retry: false },
   });
   const [week, setWeek] = useState('');
   const games = schedule.data?.games ?? [];
   const weeks = [...new Set(games.map(game => game.week))].sort((a, b) => a - b);
   const selectedWeek = weeks.includes(Number(week)) ? Number(week)
-    : selectedMatchup && weeks.includes(selectedMatchup.week) ? selectedMatchup.week : weeks[0];
-  const visible = games.filter(game => game.week === selectedWeek);
+    : selectedMatchup && weeks.includes(selectedMatchup.week) ? selectedMatchup.week
+    : games.find(game => Date.parse(game.date) > Date.now())?.week ?? weeks.at(-1);
+  const visible = selectedWeek === undefined ? [] : gamesForWeek(games, selectedWeek);
   const selected = visible.find(game => selectedMatchup?.away === game.awayTeam &&
     selectedMatchup?.home === game.homeTeam && selectedMatchup?.week === game.week);
   const missing = selected ? [selected.awayTeam, selected.homeTeam].filter(team => !teams.includes(team)) : [];
@@ -34,6 +38,18 @@ export default function UpcomingGames({ season, enabled, busy, teams, selectedMa
             {weeks.map(value => <option key={value} value={value}>{weekLabel(value)}</option>)}
           </select>
         </label>
+        <button className="btn-primary" style={{ width: '100%', marginBottom: 8 }} disabled={busy || !visible.length || schedule.isFetching}
+          data-testid="button-run-week" onClick={() => {
+            if (selectedWeek !== undefined) onRunWeek(selectedWeek, visible, schedule.data!.fetchedAt);
+          }}>
+          {progress && busy ? <><RotateCw size={15} className="spin-icon" /> {progress.completed} / {progress.total} games</>
+            : <>Run all {visible.length} games · {selectedWeek === undefined ? '' : weekLabel(selectedWeek)}</>}
+        </button>
+        <p className="sim-caption">Includes every announced matchup, Thursday through Monday, even games already played. Uses saved history before this week, neutral weather and no odds adjustment.</p>
+        {progress && busy && <div role="status" aria-live="polite">
+          <progress value={progress.completed} max={progress.total} style={{ width: '100%' }} aria-label="Weekly simulation progress" />
+          <p className="sim-caption">{progress.matchup || 'Preparing weekly simulations…'}</p>
+        </div>}
         <label className="schedule-filter" htmlFor="schedule-matchup">Game
           <select id="schedule-matchup" value={selected?.id ?? ''} disabled={busy} onChange={event => {
             const game = visible.find(game => game.id === event.target.value);
@@ -49,7 +65,7 @@ export default function UpcomingGames({ season, enabled, busy, teams, selectedMa
           ? new Date(selected.date).toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit', timeZoneName:'short' })
           : 'Kickoff time TBD'}</p>}
         {missing.length > 0 && <p className="history-warning" role="status">Save roster and history in Team Library for: {missing.join(', ')}.</p>}
-      </> : <p className="stats-help" role="status">No upcoming announced matchups are available for this season.</p>}
+      </> : <p className="stats-help" role="status">No announced matchups are available for this season.</p>}
     </>}
   </section>;
 }

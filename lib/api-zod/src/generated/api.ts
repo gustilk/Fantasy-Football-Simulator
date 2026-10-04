@@ -20,6 +20,10 @@ export const GetNflScheduleParams = zod.object({
   "season": zod.coerce.number().int().min(getNflSchedulePathSeasonMin).max(getNflSchedulePathSeasonMax)
 })
 
+export const GetNflScheduleQueryParams = zod.object({
+  "scope": zod.enum(['upcoming', 'all']).optional().describe('Upcoming games by default; all includes started and completed games for weekly simulations.')
+})
+
 export const getNflScheduleResponseGamesItemWeekMax = 22;
 
 

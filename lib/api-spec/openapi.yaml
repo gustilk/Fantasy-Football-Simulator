@@ -20,6 +20,10 @@ paths:
           name: season
           required: true
           schema: { type: integer, minimum: 2000, maximum: 2100 }
+        - in: query
+          name: scope
+          description: Upcoming games by default; all includes started and completed games for weekly simulations.
+          schema: { type: string, enum: [upcoming, all] }
       responses:
         "200":
           description: Public schedule with confirmed home and away teams

@@ -1,7 +1,7 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Activity, ArrowRight, ChevronDown, CloudRain, Crosshair, RotateCw, SlidersHorizontal, Trash2, Wind } from 'lucide-react';
 import { type WeatherSetup as Weather, type TeamSetup, type SimulationInput, type SimulationResult, type PlayerRecentStats, type DefenseRecentStats } from '@/lib/simulator';
-import { useListSeasonTeams, useGetNflDepthChart, getGetNflDepthChartQueryKey, getListSeasonTeamsQueryKey, type TeamSeasonRecord, type NflScheduledGame } from '@workspace/api-client-react';
+import { useListSeasonTeams, useGetNflDepthChart, getNflDepthChart, getGetNflDepthChartQueryKey, getListSeasonTeamsQueryKey, type TeamSeasonRecord, type NflScheduledGame } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import TeamLibrary from '@/components/TeamLibrary';
 import HistoryTeamPicker from '@/components/HistoryTeamPicker';
@@ -18,9 +18,9 @@ import LineupsSection from '@/components/LineupsSection';
 import './season.css';
 import './components/game-simulator.css';
 import { getEliteTier, ELITE_TIER_OPTIONS, type EliteTier } from '@/lib/elite-players';
+import { readSavedSimulations, saveSimulation, deleteSavedSimulation, type SavedSimulation, type StoredSetup } from '@/lib/saved-simulations';
+import { runWeeklySimulations, type WeeklyProgress, type WeeklyRun } from '@/lib/weekly-simulations';
 
-type SavedSimulation = { id: string; savedAt: string; awayName: string; homeName: string; result: SimulationResult; setup?: StoredSetup };
-type StoredSetup = { away: TeamSetup; home: TeamSetup; weather: Weather; importance?: SimulationInput['importance']; market?: SimulationInput['market'] };
 type PatchTeam = (side: 'away' | 'home', field: keyof TeamSetup, value: TeamSetup[keyof TeamSetup]) => void;
 
 const NFL_TEAMS = NFL_TEAM_NAMES;
@@ -36,7 +36,6 @@ const DEFAULT_SETUP: StoredSetup = {
   away: defaultAway, home: defaultHome, weather: { temperatureF:68, windMph:7, precipitation:'none' },
 };
 const setupStorageKey = 'gridiron-sim-setup-v1';
-const resultsStorageKey = 'gridiron-sim-results-v1';
 const matchupStorageKey = 'gridiron-sim-matchup-chosen-v1';
 
 function normalizeSetup(setup: StoredSetup): StoredSetup {
@@ -54,10 +53,7 @@ function readSetup(): StoredSetup {
   } catch { return DEFAULT_SETUP; }
 }
 function readSaved(): SavedSimulation[] {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(resultsStorageKey) || '[]');
-    return Array.isArray(parsed) ? parsed.slice(0, 10) : [];
-  } catch { return []; }
+  try { return readSavedSimulations(localStorage); } catch { return []; }
 }
 function initials(team: string) {
   const words = team.replace('Los Angeles', 'LA').replace('New York', 'NY').replace('New England', 'NE').split(/\s+/);
@@ -88,6 +84,9 @@ function App() {
   const [active, setActive] = useState<SimulationResult | null>(null);
   const [activeNames, setActiveNames] = useState<{ away:string; home:string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const running = useRef(false);
+  const [weeklyProgress, setWeeklyProgress] = useState<WeeklyProgress | null>(null);
+  const [weeklyRun, setWeeklyRun] = useState<WeeklyRun | null>(null);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const awayDepth = useGetNflDepthChart(season, setup.away.name, { query: { queryKey: getGetNflDepthChartQueryKey(season, setup.away.name), enabled: matchupChosen && source === 'library' && tab === 'simulator', staleTime: 300_000, retry: false } });
@@ -100,9 +99,6 @@ function App() {
   useEffect(() => {
     try { localStorage.setItem(matchupStorageKey, String(matchupChosen)); } catch { setNotice('Browser storage is unavailable; matchup selection will not persist.'); }
   }, [matchupChosen]);
-  useEffect(() => {
-    try { localStorage.setItem(resultsStorageKey, JSON.stringify(saved.slice(0, 10))); } catch { setNotice('Browser storage is unavailable; saved simulations may not persist.'); }
-  }, [saved]);
   useEffect(() => {
     if (!notice) return;
     const timer = window.setTimeout(() => setNotice(''), 3000);
@@ -145,7 +141,10 @@ function App() {
     setNotice(`${game.awayTeam} at ${game.homeTeam} selected. Saved roster and history will be used.`);
   };
   const runSimulation = () => {
+    if (running.current) return;
     if (!matchupChosen) { setError('Choose a game first.'); return; }
+    running.current = true;
+    setWeeklyProgress(null);
     setBusy(true);
     setError('');
     window.setTimeout(() => {
@@ -187,14 +186,51 @@ function App() {
           result,
           setup: structuredClone({ ...setup, away, home }),
         };
-        setSaved(current => [entry, ...current.filter(item => item.id !== entry.id)].slice(0, 10));
+        setSaved(saveSimulation(localStorage, entry));
         setNotice('DraftKings projections ready and saved on this device.');
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : 'The simulation could not be completed. Check your setup and try again.');
-      } finally { setBusy(false); }
+      } finally { running.current = false; setBusy(false); }
     }, 180);
   };
+  const runWeek = async (selectedWeek: number, games: NflScheduledGame[], fetchedAt: string) => {
+    if (running.current) return;
+    setError('');
+    if (history.isLoading || history.isError) {
+      setError('Load Team Library successfully before running the week.'); return;
+    }
+    running.current = true;
+    setBusy(true);
+    setWeeklyRun(null);
+    setWeeklyProgress({ completed: 0, total: games.length, matchup: '' });
+    try {
+      const report = await runWeeklySimulations({
+        season, week: selectedWeek, games, teams: storedTeams, fetchedAt,
+        loadDepth: (year, name) => queryClient.fetchQuery({
+          queryKey: getGetNflDepthChartQueryKey(year, name),
+          queryFn: () => getNflDepthChart(year, name), staleTime: 300_000, retry: false,
+        }),
+        save: entry => setSaved(saveSimulation(localStorage, entry)),
+        onProgress: setWeeklyProgress,
+        yieldUI: () => new Promise(resolve => window.setTimeout(resolve, 0)),
+      });
+      setWeeklyRun(report);
+      const first = report.saved[0];
+      if (first) {
+        setActive(first.result);
+        setActiveNames({ away: first.awayName, home: first.homeName });
+        setSetup(normalizeSetup(first.setup!));
+        setWeek(selectedWeek);
+        setSource('snapshot');
+        setMatchupChosen(true);
+      }
+      setNotice(`Week ${selectedWeek}: ${report.saved.length} of ${report.total} games simulated and saved.`);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'The weekly simulations could not be completed.');
+    } finally { running.current = false; setBusy(false); }
+  };
   const openSaved = (item: SavedSimulation) => {
+    if (running.current) return;
     setMatchupChosen(true);
     setActive(item.result);
     setActiveNames({ away: item.awayName, home: item.homeName });
@@ -208,8 +244,12 @@ function App() {
     setNotice('Saved result reopened.');
   };
   const removeSaved = (id: string) => {
-    setSaved(items => items.filter(item => item.id !== id));
-    setNotice('Saved simulation removed.');
+    if (running.current) return;
+    try {
+      setSaved(deleteSavedSimulation(localStorage, id));
+      setWeeklyRun(current => current ? { ...current, saved: current.saved.filter(item => item.id !== id) } : null);
+      setNotice('Saved simulation removed.');
+    } catch { setError('Could not delete this saved projection. Browser storage is unavailable.'); }
   };
   const currentAwayName = activeNames?.away || setup.away.name;
   const currentHomeName = activeNames?.home || setup.home.name;
@@ -237,10 +277,10 @@ function App() {
       </header>
       <main className="workspace">
         <nav className="section-tabs" aria-label="App sections">
-          <button className={tab === 'draftkings' ? 'selected' : ''} onClick={() => setTab('draftkings')} data-testid="tab-draftkings">DraftKings</button>
-          <button className={tab === 'lineups' ? 'selected' : ''} onClick={() => setTab('lineups')} data-testid="tab-lineups">Lineups</button>
-          <button className={tab === 'library' ? 'selected' : ''} onClick={() => setTab('library')} data-testid="tab-library">Team Library</button>
-          <button className={tab === 'simulator' ? 'selected' : ''} onClick={() => setTab('simulator')} data-testid="tab-simulator">Game Simulator</button>
+          <button disabled={busy} className={tab === 'draftkings' ? 'selected' : ''} onClick={() => setTab('draftkings')} data-testid="tab-draftkings">DraftKings</button>
+          <button disabled={busy} className={tab === 'lineups' ? 'selected' : ''} onClick={() => setTab('lineups')} data-testid="tab-lineups">Lineups</button>
+          <button disabled={busy} className={tab === 'library' ? 'selected' : ''} onClick={() => setTab('library')} data-testid="tab-library">Team Library</button>
+          <button disabled={busy} className={tab === 'simulator' ? 'selected' : ''} onClick={() => setTab('simulator')} data-testid="tab-simulator">Game Simulator</button>
         </nav>
         <div style={{ display: tab === 'library' ? undefined : 'none' }}>
           <TeamLibrary season={season} onSeasonChange={changeSeason} teams={storedTeams} loading={history.isLoading}
@@ -261,7 +301,8 @@ function App() {
             <div className="panel-top">
               <div className="panel-title" id="setup-title">Choose your matchup</div>
             </div>
-            <UpcomingGames season={season} enabled={tab === 'simulator'} busy={busy} teams={storedTeams.map(team => team.team)} selectedMatchup={matchupChosen && source === 'library' ? { away: setup.away.name, home: setup.home.name, week } : null} onSelect={selectScheduledGame} />
+             <UpcomingGames season={season} enabled={tab === 'simulator'} busy={busy} teams={storedTeams.map(team => team.team)} selectedMatchup={matchupChosen ? { away: setup.away.name, home: setup.home.name, week } : null} onSelect={selectScheduledGame}
+               onRunWeek={(selectedWeek, games, fetchedAt) => void runWeek(selectedWeek, games, fetchedAt)} progress={weeklyProgress} />
             {matchupChosen && <div className="sim-matchup">
               <strong>{setup.away.name} at {setup.home.name}</strong>
               <span>{season} · Week {week} · {source === 'library' ? 'Saved Team Library' : source === 'snapshot' ? 'Saved input snapshot' : 'Manual inputs'}</span>
@@ -326,13 +367,28 @@ function App() {
                 <p>Choose a matchup and run it to see average DraftKings points for both teams.</p>
               </div> : <GameProjections result={active} awayName={currentAwayName} homeName={currentHomeName} onRun={runSimulation} busy={busy}/>}
             </section>
+            {weeklyRun && <section className="panel saved-panel" aria-labelledby="weekly-results-title" data-testid="weekly-results">
+              <div className="panel-top"><h3 id="weekly-results-title">{weeklyRun.season} · Week {weeklyRun.week} results</h3></div>
+              <div style={{ padding: 16 }}>
+                <p role="status">{weeklyRun.saved.length} / {weeklyRun.total} games simulated and saved{weeklyRun.failures.length > 0 ? ` · ${weeklyRun.failures.length} failed` : ''}.</p>
+                <div className="saved-list">{weeklyRun.saved.map(item => <button key={item.id} className="saved-open"
+                  style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 0' }} disabled={busy}
+                  onClick={() => openSaved(item)} data-testid={`weekly-game-${item.setup?.market?.gameId}`}>
+                  <strong>{item.awayName} at {item.homeName}</strong><span> · View projections</span>
+                </button>)}</div>
+                {weeklyRun.failures.length > 0 && <div role="alert">
+                  <p>These games were not saved. Correct the issues in <button className="text-button" onClick={() => setTab('library')}>Team Library</button> and run the week again.</p>
+                  <ul>{weeklyRun.failures.map(failure => <li key={failure.gameId}><strong>{failure.matchup}:</strong> {failure.reason}</li>)}</ul>
+                </div>}
+              </div>
+            </section>}
             <details className="panel saved-panel sim-disclosure">
               <summary>Saved projections ({saved.length})</summary>
               {saved.length === 0 ? <div className="saved-empty">Your saved simulations will collect here on this device.</div> :
                 <div className="saved-list">{saved.map(item => (
                   <div className="saved-item" key={item.id} data-testid={`saved-run-${item.id}`}>
                     <button className="saved-open" onClick={() => openSaved(item)} data-testid={`button-open-saved-${item.id}`}>
-                      <span style={{minWidth:0,display:'flex',flexDirection:'column',gap:2}}><strong>{item.awayName} at {item.homeName}</strong><span>{formatSavedDate(item.savedAt)}</span></span>
+                      <span style={{minWidth:0,display:'flex',flexDirection:'column',gap:2}}><strong>{item.awayName} at {item.homeName}</strong><span>{item.setup?.market?.week ? `Week ${item.setup.market.week} · ` : ''}{formatSavedDate(item.savedAt)}</span></span>
                     </button>
                     <button className="saved-remove" aria-label={`Delete saved result ${item.awayName} at ${item.homeName}`} title="Delete saved result" onClick={() => removeSaved(item.id)} data-testid={`button-delete-saved-${item.id}`}><Trash2 size={14}/></button>
                   </div>

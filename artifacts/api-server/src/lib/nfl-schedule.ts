@@ -22,7 +22,7 @@ export type ScheduleEvent = {
 };
 
 export function parseUpcomingSchedule(
-  events: ScheduleEvent[], season: number, teamNames: Map<string, string>, now = Date.now(),
+  events: ScheduleEvent[], season: number, teamNames: Map<string, string>, now = Date.now(), scope: 'upcoming' | 'all' = 'upcoming',
 ): Pick<NflSchedule, 'games' | 'unannouncedGames'> {
   const games = new Map<string, NflScheduledGame>();
   const unannounced = new Set<string>();
@@ -30,9 +30,10 @@ export function parseUpcomingSchedule(
     if (event.season?.year !== season || ![2, 3].includes(event.season.type)) continue;
     const competition = event.competitions?.[0];
     const status = competition?.status?.type ?? event.status?.type;
-    if (status?.state !== 'pre' || ['STATUS_CANCELED', 'STATUS_CANCELLED'].includes(status.name ?? '')) continue;
+    if (!['pre', 'in', 'post'].includes(status?.state ?? '') || ['STATUS_CANCELED', 'STATUS_CANCELLED'].includes(status?.name ?? '')) continue;
+    if (scope === 'upcoming' && status?.state !== 'pre') continue;
     const timestamp = Date.parse(event.date);
-    if (!Number.isFinite(timestamp) || timestamp <= now) continue;
+    if (!Number.isFinite(timestamp) || (scope === 'upcoming' && timestamp <= now)) continue;
     const rawWeek = event.week?.number;
     if (!rawWeek || !Number.isInteger(rawWeek) || rawWeek < 1 || rawWeek > (event.season.type === 2 ? 18 : 4)) continue;
     const away = competition?.competitors?.find(team => team.homeAway === 'away')?.team;

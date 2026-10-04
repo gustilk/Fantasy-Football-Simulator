@@ -331,6 +331,21 @@ export interface NflImportPreview {
   warnings: string[];
 }
 
+export type GetNflScheduleParams = {
+/**
+ * Upcoming games by default; all includes started and completed games for weekly simulations.
+ */
+scope?: GetNflScheduleScope;
+};
+
+export type GetNflScheduleScope = typeof GetNflScheduleScope[keyof typeof GetNflScheduleScope];
+
+
+export const GetNflScheduleScope = {
+  upcoming: 'upcoming',
+  all: 'all',
+} as const;
+
 export type ListSeasonTeamsParams = {
 /**
  * @minimum 2000

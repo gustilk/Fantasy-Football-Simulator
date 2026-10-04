@@ -19,7 +19,7 @@ function initialArchive(): { archive: DKArchive; storageError: string } {
   catch (error) { return { archive: emptyDKArchive(), storageError: message(error) }; }
 }
 export function useDraftKingsBoard(season: number) {
-  const schedule = useGetNflSchedule(season, { query: { queryKey: getGetNflScheduleQueryKey(season), staleTime: 300_000, retry: false } });
+  const schedule = useGetNflSchedule(season, undefined, { query: { queryKey: getGetNflScheduleQueryKey(season), staleTime: 300_000, retry: false } });
   const historyQuery = useListSeasonTeams({ season }, { query: { queryKey: getListSeasonTeamsQueryKey({ season }), staleTime: 60_000, retry: false } });
   const [stored, setStored] = useState(initialArchive);
   const [error, setError] = useState('');
