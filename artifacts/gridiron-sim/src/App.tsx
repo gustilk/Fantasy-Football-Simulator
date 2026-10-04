@@ -67,19 +67,10 @@ function App() {
   const [tab, setTab] = useState<'library' | 'simulator' | 'draftkings' | 'lineups'>(() => { const v = new URLSearchParams(window.location.search).get('view'); return v === 'library' || v === 'simulator' || v === 'lineups' ? v : 'draftkings'; });
   const [season, setSeason] = useState(() => readSetup().market?.season ?? new Date().getFullYear());
   const [week, setWeek] = useState(() => readSetup().market?.week ?? 2);
-  const [source, setSource] = useState<'library' | 'manual' | 'snapshot'>('library');
   const queryClient = useQueryClient();
   const history = useListSeasonTeams({ season });
   const storedTeams = history.data ?? [];
   const [setup, setSetup] = useState<StoredSetup>(readSetup);
-  const [matchupChosen, setMatchupChosen] = useState(() => {
-    try {
-      const stored = localStorage.getItem(matchupStorageKey);
-      if (stored !== null) return stored === 'true';
-    } catch { /* Selection remains available for this session. */ }
-    return !!setup.market?.gameId || !!setup.away.roster || !!setup.home.roster ||
-      setup.away.name !== defaultAway.name || setup.home.name !== defaultHome.name;
-  });
   const [saved, setSaved] = useState<SavedSimulation[]>(readSaved);
   const [active, setActive] = useState<SimulationResult | null>(null);
   const [activeNames, setActiveNames] = useState<{ away:string; home:string } | null>(null);
@@ -89,109 +80,19 @@ function App() {
   const [weeklyRun, setWeeklyRun] = useState<WeeklyRun | null>(null);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
-  const awayDepth = useGetNflDepthChart(season, setup.away.name, { query: { queryKey: getGetNflDepthChartQueryKey(season, setup.away.name), enabled: matchupChosen && source === 'library' && tab === 'simulator', staleTime: 300_000, retry: false } });
-  const homeDepth = useGetNflDepthChart(season, setup.home.name, { query: { queryKey: getGetNflDepthChartQueryKey(season, setup.home.name), enabled: matchupChosen && source === 'library' && tab === 'simulator', staleTime: 300_000, retry: false } });
-  const teams = storedTeams.map(team => withDepthChart(team, team.team === setup.away.name ? awayDepth.data : team.team === setup.home.name ? homeDepth.data : undefined));
 
   useEffect(() => {
     try { localStorage.setItem(setupStorageKey, JSON.stringify(setup)); } catch { setNotice('Browser storage is unavailable; this setup will not persist.'); }
   }, [setup]);
-  useEffect(() => {
-    try { localStorage.setItem(matchupStorageKey, String(matchupChosen)); } catch { setNotice('Browser storage is unavailable; matchup selection will not persist.'); }
-  }, [matchupChosen]);
   useEffect(() => {
     if (!notice) return;
     const timer = window.setTimeout(() => setNotice(''), 3000);
     return () => window.clearTimeout(timer);
   }, [notice]);
 
-  const patchTeam: PatchTeam = (side, field, value) => {
-    setMatchupChosen(true);
-    setSetup(current => ({ ...current, [side]: { ...current[side], [field]: value }, market: field === 'name' && value !== current[side].name ? undefined : current.market }));
-  };
   const changeSeason = (value: number) => {
     setSeason(value);
     if (value !== season) setSetup(current => ({ ...current, market: undefined }));
-  };
-  const changeWeek = (value: number) => {
-    setMatchupChosen(true);
-    setWeek(value);
-    if (value !== week) setSetup(current => ({ ...current, market: undefined }));
-  };
-  const selectScheduledGame = (game: NflScheduledGame, fetchedAt: string) => {
-    setMatchupChosen(true);
-    setSource('library');
-    setWeek(game.week);
-    setSetup(current => ({
-      ...current,
-      away: { ...current.away, name: game.awayTeam },
-      home: { ...current.home, name: game.homeTeam },
-      importance: game.seasonType === 'postseason' ? 'playoff' : 'regular',
-      market: current.market?.source === 'manual' && current.market.gameId === game.id &&
-        current.market.season === season && current.market.week === game.week &&
-        current.market.awayTeam === game.awayTeam && current.market.homeTeam === game.homeTeam &&
-        (current.market.homeSpread !== undefined || current.market.total !== undefined) ? current.market : {
-        enabled: false, source: game.odds ? 'ESPN' : 'manual',
-        awayTeam: game.awayTeam, homeTeam: game.homeTeam, season, week: game.week,
-        gameId: game.id, kickoff: game.timeConfirmed ? game.date : undefined,
-        ...game.odds, recordedAt: game.odds ? fetchedAt : undefined,
-      },
-    }));
-    setError('');
-    setNotice(`${game.awayTeam} at ${game.homeTeam} selected. Saved roster and history will be used.`);
-  };
-  const runSimulation = () => {
-    if (running.current) return;
-    if (!matchupChosen) { setError('Choose a game first.'); return; }
-    running.current = true;
-    setWeeklyProgress(null);
-    setBusy(true);
-    setError('');
-    window.setTimeout(() => {
-      try {
-        if (setup.market?.enabled && (setup.market.season !== season || setup.market.week !== week)) {
-          throw new Error('These odds belong to another season or week. Clear them and enter lines for this matchup.');
-        }
-        let away = setup.away, home = setup.home;
-        if (source === 'library') {
-          if (history.isError || history.isLoading) throw new Error('Team history is not available yet. Retry loading the library.');
-          const awayTeam = teams.find(team => team.team === setup.away.name);
-          const homeTeam = teams.find(team => team.team === setup.home.name);
-          if (!awayTeam || !homeTeam) throw new Error('Save both teams in Team Library before running from saved history.');
-          if (awayDepth.isLoading || homeDepth.isLoading) throw new Error('Offensive depth charts are loading. Wait briefly before running.');
-          for (const [team, depth] of [[awayTeam, awayDepth], [homeTeam, homeDepth]] as const) {
-            if (depth.isError && !['QB', 'RB', 'WR', 'TE'].every(position => team.players.some(p => p.active && p.position === position && p.depthRank !== undefined))) {
-              throw new Error(`${team.team}: live depth chart unavailable. Set saved QB/RB/WR/TE ranks in Team Library before simulating; official roles will not be guessed.`);
-            }
-          }
-          for (const team of [awayTeam, homeTeam]) {
-            if (team.weeks.find(game => game.week === week)?.status === 'bye') throw new Error(`${team.team} has a bye in week ${week}. Choose a game week.`);
-          }
-          away = setupFromHistory(awayTeam, week, 'away', homeTeam.team);
-          home = setupFromHistory(homeTeam, week, 'home', awayTeam.team);
-        }
-        const input: SimulationInput = {
-          ...setup,
-          away, home,
-          seed: Math.floor(Math.random() * 2_000_000_000) + 1,
-        };
-        const result = simulateEnsemble(input, 200);
-        setActive(result);
-        setActiveNames({ away: setup.away.name, home: setup.home.name });
-        const entry: SavedSimulation = {
-          id: `${Date.now()}-${result.seed}`,
-          savedAt: new Date().toISOString(),
-          awayName: setup.away.name,
-          homeName: setup.home.name,
-          result,
-          setup: structuredClone({ ...setup, away, home }),
-        };
-        setSaved(saveSimulation(localStorage, entry));
-        setNotice('DraftKings projections ready and saved on this device.');
-      } catch (cause) {
-        setError(cause instanceof Error ? cause.message : 'The simulation could not be completed. Check your setup and try again.');
-      } finally { running.current = false; setBusy(false); }
-    }, 180);
   };
   const runWeek = async (selectedWeek: number, games: NflScheduledGame[], fetchedAt: string) => {
     if (running.current) return;
@@ -221,8 +122,6 @@ function App() {
         setActiveNames({ away: first.awayName, home: first.homeName });
         setSetup(normalizeSetup(first.setup!));
         setWeek(selectedWeek);
-        setSource('snapshot');
-        setMatchupChosen(true);
       }
       setNotice(`Week ${selectedWeek}: ${report.saved.length} of ${report.total} games simulated and saved.`);
     } catch (cause) {
@@ -231,14 +130,12 @@ function App() {
   };
   const openSaved = (item: SavedSimulation) => {
     if (running.current) return;
-    setMatchupChosen(true);
     setActive(item.result);
     setActiveNames({ away: item.awayName, home: item.homeName });
     if (item.setup) {
       setSetup(normalizeSetup(item.setup));
       if (item.setup.market?.season !== undefined) setSeason(item.setup.market.season);
       if (item.setup.market?.week !== undefined) setWeek(item.setup.market.week);
-      setSource(item.setup.away.roster ? 'snapshot' : 'manual');
     }
     setError('');
     setNotice('Saved result reopened.');
@@ -257,14 +154,6 @@ function App() {
     queryClient.setQueryData<TeamSeasonRecord[]>(getListSeasonTeamsQueryKey({ season }), current =>
       [...(current ?? []).filter(team => team.team !== savedTeam.team), savedTeam].sort((a, b) => a.team.localeCompare(b.team)));
     void history.refetch();
-  };
-  const changeSource = (value: typeof source) => {
-    setMatchupChosen(true);
-    setSource(value);
-    if (value === 'manual') setSetup(current => {
-      const clearHistory = (team: TeamSetup): TeamSetup => ({ ...team, roster: undefined, record: undefined, historyGames: undefined, priorSeasonBaseline: undefined, headToHead: undefined, depthChartSource: undefined, availabilityChecks: undefined, modelEvidence: undefined });
-      return { ...current, away: clearHistory(current.away), home: clearHistory(current.home) };
-    });
   };
 
   return (
@@ -294,70 +183,24 @@ function App() {
         <div className="page-heading">
           <div>
             <h1>Game Simulator</h1>
-            <p>Choose a game. Compare projected fantasy points.</p>
+             <p>Choose a week. Generate projected fantasy points for every game.</p>
           </div>
         </div>
 
         <div className="main-grid">
           <section className="panel setup-panel" aria-labelledby="setup-title">
             <div className="panel-top">
-              <div className="panel-title" id="setup-title">Choose your matchup</div>
+               <div className="panel-title" id="setup-title">Choose your week</div>
             </div>
-             <UpcomingGames season={season} enabled={tab === 'simulator'} busy={busy} teams={storedTeams.map(team => team.team)} selectedMatchup={matchupChosen ? { away: setup.away.name, home: setup.home.name, week } : null} onSelect={selectScheduledGame}
+              <UpcomingGames key={season} season={season} enabled={tab === 'simulator'} busy={busy} teams={storedTeams.map(team => team.team)}
                onRunWeek={(selectedWeek, games, fetchedAt) => void runWeek(selectedWeek, games, fetchedAt)} progress={weeklyProgress} />
-            {matchupChosen && <div className="sim-matchup">
-              <strong>{setup.away.name} at {setup.home.name}</strong>
-              <span>{season} · Week {week} · {source === 'library' ? 'Saved Team Library' : source === 'snapshot' ? 'Saved input snapshot' : 'Manual inputs'}</span>
-              {source === 'library' && (awayDepth.isLoading || homeDepth.isLoading) && <span role="status">Loading depth charts…</span>}
-              {source === 'library' && (awayDepth.isError || homeDepth.isError) && <p className="history-warning" role="status">Depth chart unavailable. Check saved roles in Team Library.</p>}
+             {active && <div className="sim-matchup">
+               <strong>Viewing: {currentAwayName} at {currentHomeName}</strong>
+               <span>{season} · Week {week} · Saved result</span>
             </div>}
-            <details className="sim-disclosure">
-            <summary>Advanced settings</summary>
-            <div className="team-block">
-              <Field label="Player data source" htmlFor="data-source"><select id="data-source" value={source} onChange={e => changeSource(e.target.value as typeof source)}>
-                <option value="library">Saved Team Library</option><option value="manual">Manual one-game setup</option>
-                {source === 'snapshot' && <option value="snapshot">Reopened saved input snapshot</option>}
-              </select></Field>
-              {source === 'library' && <>
-                <p className="stats-help"><button className="text-button" onClick={() => setTab('library')}>Change season or roster in Team Library</button>. Uses history before the matchup week.</p>
-                <Field label="Matchup week" htmlFor="matchup-week"><select id="matchup-week" value={week} onChange={e => changeWeek(Number(e.target.value))}>
-                  {Array.from({length:22}, (_, i) => <option key={i} value={i+1}>{i < 18 ? `Week ${i+1}` : ['Wild Card', 'Divisional', 'Conference Championships', 'Super Bowl'][i-18]}</option>)}
-                </select></Field>
-              </>}
-              {source === 'snapshot' && <p className="stats-help">Uses the original saved inputs, not newer weekly entries. Choose Saved Team Library to use updated history.</p>}
-            </div>
-            {source === 'manual' ? <>
-              <TeamEditor team={setup.away} side="away" patchTeam={patchTeam} />
-              <TeamEditor team={setup.home} side="home" patchTeam={patchTeam} />
-            </> : (['away', 'home'] as const).map(side => <HistoryTeamPicker key={side} name={setup[side].name} opponent={setup[side === 'away' ? 'home' : 'away'].name} teams={teams} week={week} venue={side}
-              onChange={name => patchTeam(side, 'name', name)} onLibrary={() => setTab('library')} snapshot={source === 'snapshot' ? setup[side] : undefined} />)}
-            <DivisionMatchup team={setup.away.name} opponent={setup.home.name} />
             <div className="config-bottom">
-              <h3 className="section-mini-title">GAME CONDITIONS</h3>
-              <Field label="Game importance" htmlFor="importance"><select id="importance" value={setup.importance ?? 'regular'} onChange={e => setSetup(s => ({...s, importance:e.target.value as SimulationInput['importance']}))}>
-                <option value="regular">Regular season</option><option value="must-win">Must-win / playoff race</option><option value="playoff">Playoff-level stakes</option>
-              </select></Field>
-              <div className="weather-grid">
-                 <Field label="Temperature · °F" htmlFor="temperature"><input id="temperature" type="number" min="-30" max="120" value={setup.weather.temperatureF} onChange={e => setSetup(s => ({ ...s, weather:{ ...s.weather, temperatureF:Number(e.target.value) } }))} data-testid="input-temperature" /></Field>
-                <Field label="Wind · mph" htmlFor="wind"><input id="wind" type="number" min="0" max="80" value={setup.weather.windMph} onChange={e => setSetup(s => ({ ...s, weather:{ ...s.weather, windMph:Number(e.target.value) } }))} data-testid="input-wind" /></Field>
-                <Field label="Precipitation" htmlFor="precipitation">
-                  <select id="precipitation" value={setup.weather.precipitation} onChange={e => setSetup(s => ({ ...s, weather:{ ...s.weather, precipitation:e.target.value as Weather['precipitation'] } }))} data-testid="select-precipitation">
-                    <option value="none">None</option><option value="light">Light</option><option value="moderate">Moderate</option><option value="heavy">Heavy</option>
-                  </select>
-                </Field>
-                <div className="field"><label>Conditions</label><div style={{height:37,display:'flex',alignItems:'center',gap:7,color:'var(--app-muted)',fontSize:11}}>{setup.weather.precipitation === 'none' ? <Wind size={14}/> : <CloudRain size={14}/>} {setup.weather.windMph} mph · {setup.weather.temperatureF}°F</div></div>
-              </div>
-              <MarketOddsInputs market={setup.market} away={setup.away.name} home={setup.home.name} season={season} week={week} busy={busy}
-                onChange={market => setSetup(current => ({ ...current, market }))} />
-            </div>
-            </details>
-            <div className="config-bottom">
-              <div className="setup-actions">
-                <button className="btn-primary" onClick={runSimulation} disabled={busy || !matchupChosen} data-testid="button-run-simulation">
-                  {busy ? <><RotateCw size={15} className="spin-icon" /> Running model…</> : <><Crosshair size={16} /> Run simulation <ArrowRight size={15} /></>}
-                </button>
-              </div>
-              {error && <div role="alert" style={{marginTop:11,color:'var(--app-danger)',fontSize:12}}>{error} <button className="text-button" onClick={runSimulation}>Retry</button></div>}
+               <p className="stats-help"><button className="text-button" onClick={() => setTab('library')}>Manage season, rosters and history in Team Library</button>. After running the week, open any game from the weekly results below.</p>
+               {error && <div role="alert" style={{marginTop:11,color:'var(--app-danger)',fontSize:12}}>{error} Select the week and use Run all games to retry.</div>}
             </div>
           </section>
 
@@ -366,8 +209,8 @@ function App() {
               {!active ? <div className="empty-result">
                 <div className="empty-orbit"><SlidersHorizontal size={30} strokeWidth={1.5}/></div>
                 <h3 id="results-title">Your projections appear here</h3>
-                <p>Choose a matchup and run it to see average DraftKings points for both teams.</p>
-              </div> : <GameProjections result={active} awayName={currentAwayName} homeName={currentHomeName} onRun={runSimulation} busy={busy}/>}
+                 <p>Run all games for your selected week, then open a game's results to see its average DraftKings points.</p>
+               </div> : <GameProjections result={active} awayName={currentAwayName} homeName={currentHomeName}/>}
             </section>
             {weeklyRun && <section className="panel saved-panel" aria-labelledby="weekly-results-title" data-testid="weekly-results">
               <div className="panel-top"><h3 id="weekly-results-title">{weeklyRun.season} · Week {weeklyRun.week} results</h3></div>

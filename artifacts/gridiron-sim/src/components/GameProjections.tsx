@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { RotateCw } from 'lucide-react';
 import type { SimulationResult } from '@/lib/simulator';
 import { gameProjections } from '@/lib/game-projections';
 import EliteBadge from './EliteBadge';
 
-export default function GameProjections({ result, awayName, homeName, onRun, busy }: {
-  result: SimulationResult; awayName: string; homeName: string; onRun: () => void; busy: boolean;
+export default function GameProjections({ result, awayName, homeName }: {
+  result: SimulationResult; awayName: string; homeName: string;
 }) {
   const [position, setPosition] = useState('QB');
   const [expanded, setExpanded] = useState(false);
@@ -17,10 +16,9 @@ export default function GameProjections({ result, awayName, homeName, onRun, bus
         <h2 id="results-title">Projected fantasy points</h2>
         <p className="sim-caption">{awayName} at {homeName}</p>
       </div>
-      <button className="icon-button" aria-label="Run again" onClick={onRun} disabled={busy} data-testid="button-rerun"><RotateCw size={16} /></button>
     </div>
     <div className="sim-projections">
-      {!projections ? <p className="history-warning" role="status">This older saved run has no compatible DraftKings averages. Run again to generate projections.</p> : <>
+      {!projections ? <p className="history-warning" role="status">This older saved run has no compatible DraftKings averages. Run its week again to generate new projections.</p> : <>
         <p className="sim-caption">Average of {result.ensemble!.runs} simulations{result.ensemble!.market ? ' · odds-adjusted' : ''}. Estimates, not guaranteed points.</p>
         <div className="sim-position-tabs" role="group" aria-label="Player position">
           {['QB', 'RB', 'WR', 'TE'].map(value => <button key={value} className={position === value ? 'on' : ''} aria-pressed={position === value} onClick={() => { setPosition(value); setExpanded(false); }}>{value}</button>)}
