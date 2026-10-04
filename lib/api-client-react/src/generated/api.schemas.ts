@@ -87,6 +87,18 @@ export const RosterPlayerEliteTier = {
   NUMBER_3: 3,
 } as const;
 
+/**
+ * Defensive event priority for defense-side DL/EDGE/LB/CB/S players. 0 disables, 1 adds 20%, 2 adds 40% to role-appropriate opportunity weights. Omitted uses approved defender defaults. Never overrides availability or multiplies fantasy points.
+ */
+export type RosterPlayerDefensiveTier = typeof RosterPlayerDefensiveTier[keyof typeof RosterPlayerDefensiveTier];
+
+
+export const RosterPlayerDefensiveTier = {
+  NUMBER_0: 0,
+  NUMBER_1: 1,
+  NUMBER_2: 2,
+} as const;
+
 export type NflDataSourceProvider = typeof NflDataSourceProvider[keyof typeof NflDataSourceProvider];
 
 
@@ -159,6 +171,8 @@ export interface RosterPlayer {
   elite1x?: boolean;
   /** Optional manual opportunity tier. 0 disables, 1 gives 20%, 2 gives 40%, and 3 gives 60% higher target/carry priority. QB rushing only. Omitted uses legacy preferences or approved name-and-position defaults. */
   eliteTier?: RosterPlayerEliteTier;
+  /** Defensive event priority for defense-side DL/EDGE/LB/CB/S players. 0 disables, 1 adds 20%, 2 adds 40% to role-appropriate opportunity weights. Omitted uses approved defender defaults. Never overrides availability or multiplies fantasy points. */
+  defensiveTier?: RosterPlayerDefensiveTier;
   source?: NflDataSource;
   sourcePosition?: string;
   availability?: string;
@@ -256,19 +270,49 @@ export interface TeamWeek {
   source?: NflDataSource;
 }
 
+/**
+ * Team defensive priority. 0 disables, 1 adds 20%; null uses approved team defaults. An omitted update preserves the saved preference.
+ * @nullable
+ */
+export type TeamSeasonInputDefenseTier = typeof TeamSeasonInputDefenseTier[keyof typeof TeamSeasonInputDefenseTier] | null;
+
+
+export const TeamSeasonInputDefenseTier = {
+  NUMBER_0: 0,
+  NUMBER_1: 1,
+} as const;
+
 export interface TeamSeasonInput {
   /** @minimum 0 */
   expectedVersion: number;
+  /**
+     * Team defensive priority. 0 disables, 1 adds 20%; null uses approved team defaults. An omitted update preserves the saved preference.
+     * @nullable
+     */
+  defenseTier?: TeamSeasonInputDefenseTier;
   /** @maxItems 200 */
   players: RosterPlayer[];
   /** @maxItems 18 */
   weeks: TeamWeek[];
 }
 
+/**
+ * @nullable
+ */
+export type TeamSeasonRecordDefenseTier = typeof TeamSeasonRecordDefenseTier[keyof typeof TeamSeasonRecordDefenseTier] | null;
+
+
+export const TeamSeasonRecordDefenseTier = {
+  NUMBER_0: 0,
+  NUMBER_1: 1,
+} as const;
+
 export interface TeamSeasonRecord {
   season: number;
   team: string;
   version: number;
+  /** @nullable */
+  defenseTier?: TeamSeasonRecordDefenseTier;
   players: RosterPlayer[];
   weeks: TeamWeek[];
 }

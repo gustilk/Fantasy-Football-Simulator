@@ -6,6 +6,7 @@ export const seasonTeamsTable = pgTable("season_teams", {
   season: integer("season").notNull(),
   team: text("team").notNull(),
   version: integer("version").notNull().default(1),
+  defenseTier: integer("defense_tier"),
   players: jsonb("players").notNull(),
   weeks: jsonb("weeks").notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

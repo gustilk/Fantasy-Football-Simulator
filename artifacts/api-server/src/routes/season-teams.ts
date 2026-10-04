@@ -19,13 +19,17 @@ router.put("/season-teams/:season/:team", async (req, res): Promise<void> => {
     res.status(400).json({ error: "Invalid team data. Check names, season, weeks, and numeric stats." }); return;
   }
   const { season, team } = params.data;
-  const { players, weeks, expectedVersion } = body.data;
+  const { players, weeks, expectedVersion, defenseTier } = body.data;
+  const defensePreference = defenseTier === undefined ? {} : { defenseTier };
   const fail = (message: string) => { res.status(400).json({ error: message }); };
   if (!team.trim() || players.some(p => !p.name.trim())) { fail("Team and player names cannot be blank."); return; }
   const ids = new Set(players.map(p => p.id));
   if (ids.size !== players.length) { fail("Each roster player must have a unique ID."); return; }
   const roles = new Set<string>();
   for (const player of players) {
+    if ((player.defensiveTier ?? 0) > 0 && (player.side !== "defense" || !["DL", "EDGE", "LB", "CB", "S"].includes(player.position))) {
+      fail("Defensive tiers apply to defense-side DL/EDGE/LB/CB/S players only."); return;
+    }
     if ((player.elite1x === true || (player.eliteTier ?? 0) > 0) && (player.side !== "offense" || !["QB", "RB", "WR", "TE"].includes(player.position))) {
       fail("Elite tiers apply to offensive QB/RB/WR/TE players only."); return;
     }
@@ -61,10 +65,10 @@ router.put("/season-teams/:season/:team", async (req, res): Promise<void> => {
     }
   }
   const [saved] = await db.insert(seasonTeamsTable).values({
-    season, team: team.trim(), players, weeks, version: 1,
+    season, team: team.trim(), players, weeks, version: 1, ...defensePreference,
   }).onConflictDoUpdate({
     target: [seasonTeamsTable.season, seasonTeamsTable.team],
-    set: { players, weeks, version: sql`${seasonTeamsTable.version} + 1`, updatedAt: new Date() },
+    set: { players, weeks, ...defensePreference, version: sql`${seasonTeamsTable.version} + 1`, updatedAt: new Date() },
     setWhere: eq(seasonTeamsTable.version, expectedVersion),
   }).returning();
   if (!saved) { res.status(409).json({ error: "This team changed in another session. Reload the saved version before trying again; your unsaved draft has not been submitted." }); return; }

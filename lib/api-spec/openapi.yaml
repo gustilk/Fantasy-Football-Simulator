@@ -232,6 +232,10 @@ components:
           type: integer
           enum: [0, 1, 2, 3]
           description: Optional manual opportunity tier. 0 disables, 1 gives 20%, 2 gives 40%, and 3 gives 60% higher target/carry priority. QB rushing only. Omitted uses legacy preferences or approved name-and-position defaults.
+        defensiveTier:
+          type: integer
+          enum: [0, 1, 2]
+          description: Defensive event priority for defense-side DL/EDGE/LB/CB/S players. 0 disables, 1 adds 20%, 2 adds 40% to role-appropriate opportunity weights. Omitted uses approved defender defaults. Never overrides availability or multiplies fantasy points.
         source: { $ref: "#/components/schemas/NflDataSource" }
         sourcePosition: { type: string }
         availability: { type: string }
@@ -291,6 +295,10 @@ components:
       required: [expectedVersion, players, weeks]
       properties:
         expectedVersion: { type: integer, minimum: 0 }
+        defenseTier:
+          type: [integer, "null"]
+          enum: [0, 1, null]
+          description: Team defensive priority. 0 disables, 1 adds 20%; null uses approved team defaults. An omitted update preserves the saved preference.
         players:
           type: array
           maxItems: 200
@@ -306,6 +314,9 @@ components:
         season: { type: integer }
         team: { type: string }
         version: { type: integer }
+        defenseTier:
+          type: [integer, "null"]
+          enum: [0, 1, null]
         players:
           type: array
           items: { $ref: "#/components/schemas/RosterPlayer" }

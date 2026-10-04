@@ -7,6 +7,7 @@ import DivisionMatchup from './DivisionMatchup';
 import { getDivision } from '@/lib/nfl-divisions';
 import { rolesForRoster } from '@/lib/depth-chart';
 import { getEliteTier, ELITE_TIER_OPTIONS, type EliteTier } from '@/lib/elite-players';
+import { getDefenderTier, getTeamDefenseTier, isDefensivePosition, DEFENDER_TIER_OPTIONS, type DefenderTier, type TeamDefenseTier } from '@/lib/defensive-tiers';
 import PlayerStatsTable, { type StatRow } from './PlayerStatsTable';
 import PlayerAvailabilityEditor from './PlayerAvailabilityEditor';
 import './team-library.css';
@@ -15,7 +16,7 @@ type Position = (typeof positions)[number];
 type Side = 'offense' | 'defense';
 type Player = RosterPlayer;
 type Week = TeamWeek;
-type Draft = { players: Player[]; weeks: Week[] };
+type Draft = { players: Player[]; weeks: Week[]; defenseTier?: TeamDefenseTier | null };
 type Props = {
   season: number; onSeasonChange: (n: number) => void; teams: TeamSeasonRecord[]; loading: boolean; error: string;
   onReload: () => void; onSaved: (team: TeamSeasonRecord) => void; teamNames: string[];
@@ -32,14 +33,14 @@ function normalize(rec: TeamSeasonRecord | undefined): Draft {
     const found = rec?.weeks.find(x => x.week === w);
     weeks.push(found ? structuredClone(found) as Week : blankWeek(w));
   }
-  return { players: rec ? (structuredClone(rec.players) as Player[]) : [], weeks };
+  return { players: rec ? (structuredClone(rec.players) as Player[]) : [], weeks, defenseTier: rec?.defenseTier ?? null };
 }
 const snap = (d: Draft) => JSON.stringify(d);
 
 export default function TeamLibrary({ season, onSeasonChange, teams, loading, error, onReload, onSaved, teamNames }: Props) {
   const [team, setTeam] = useState(teamNames[0] ?? '');
   const [ctx, setCtx] = useState<{ season: number; team: string } | null>(null);
-  const [draft, setDraft] = useState<Draft>({ players: [], weeks: normalize(undefined).weeks });
+  const [draft, setDraft] = useState<Draft>(() => normalize(undefined));
   const [base, setBase] = useState<{ version: number; snap: string }>({ version: 0, snap: snap(normalize(undefined)) });
   const [view, setView] = useState<'roster' | 'weeks'>(() =>
     new URLSearchParams(window.location.search).get('section') === 'roster' ? 'roster' : 'weeks');
@@ -96,7 +97,7 @@ export default function TeamLibrary({ season, onSeasonChange, teams, loading, er
     try {
       const res = await save.mutateAsync({
         season: ctx.season, team: encodeURIComponent(ctx.team),
-        data: { expectedVersion: base.version || 0, players: draft.players.map(p => ({ ...p, name: p.name.trim() })), weeks: draft.weeks },
+        data: { expectedVersion: base.version || 0, players: draft.players.map(p => ({ ...p, name: p.name.trim() })), weeks: draft.weeks, defenseTier: draft.defenseTier },
       });
       const d = normalize(res);
       setDraft(d); setBase({ version: res.version, snap: snap(d) });
@@ -160,11 +161,19 @@ export default function TeamLibrary({ season, onSeasonChange, teams, loading, er
           </button>
         </div>
       </div>
+      <div className="field">
+        <label htmlFor="team-defense-tier">Team defensive priority</label>
+        <select id="team-defense-tier" data-testid="team-defense-tier" value={getTeamDefenseTier({ team, defenseTier: draft.defenseTier })}
+          disabled={!ctx || importBusy} onChange={e => setDraft(d => ({ ...d, defenseTier: Number(e.target.value) as TeamDefenseTier }))}>
+          <option value={0}>None</option><option value={1}>1x · +20%</option>
+        </select>
+        <p className="tl-hint">Team and active-player bonuses add to role-weighted defensive tendencies, not fantasy points. Defensive players have separate None / 1x / 2x tags in the roster. Unknown event histories use role priors. Save team, then rerun and save forecasts; existing forecasts are unchanged.</p>
+      </div>
       <NflImportPanel season={season} team={team} draft={draft}
         disabled={save.isPending || loading || !ctx || !!ctxMismatch}
         onBusyChange={setImportBusy}
         onApply={next => {
-          setDraft(next); setStatus({ kind: 'ok', text: 'Imported data is in your draft. Press Save team to store it and use it in the simulator.' });
+          setDraft(d => ({ ...d, ...next })); setStatus({ kind: 'ok', text: 'Imported data is in your draft. Press Save team to store it and use it in the simulator.' });
         }} />
       {invalid && dirty && <div className="tl-banner warn" role="status">Every player needs a name before saving.</div>}
       {status && (
@@ -222,7 +231,7 @@ function Roster({ players, patch, setDraft, depth, nextWeek }: { players: Player
   };
   const remove = (pl: Player) => {
     if (!window.confirm(`Delete ${pl.name}? Their saved stats in every week are removed too. Mark inactive instead to keep history.`)) return;
-    setDraft(d => ({ players: d.players.filter(x => x.id !== pl.id), weeks: d.weeks.map(w => { const { [pl.id]: _gone, ...rest } = w.playerStats; return { ...w, playerStats: rest }; }) }));
+    setDraft(d => ({ ...d, players: d.players.filter(x => x.id !== pl.id), weeks: d.weeks.map(w => { const { [pl.id]: _gone, ...rest } = w.playerStats; return { ...w, playerStats: rest }; }) }));
   };
   const upd = (id: string, ch: Partial<Player>) => patch(ps => ps.map(p => (p.id === id ? { ...p, ...ch } : p)));
   const shown = players.filter(p => filter === 'all' || p.side === filter);
@@ -275,17 +284,19 @@ function Roster({ players, patch, setDraft, depth, nextWeek }: { players: Player
             return (
             <div className={`tl-tr${p.active ? '' : ' off'}`} role="row" key={p.id} data-testid={`row-player-${p.id}`}>
               <input aria-label="Name" value={p.name} title={p.source ? `ESPN: ${p.sourcePosition || p.position} · ${p.availability || 'availability unknown'}` : undefined} onChange={e => upd(p.id, { name: e.target.value })} />
-               <div className="tl-role-cell"><select aria-label="Position" value={p.position} onChange={e => upd(p.id, { position: e.target.value as Position, depthRank: undefined, depthSource: undefined, elite1x: ['QB', 'RB', 'WR', 'TE'].includes(e.target.value) ? p.elite1x : false, eliteTier: ['QB', 'RB', 'WR', 'TE'].includes(e.target.value) ? p.eliteTier : 0 })}>{positions.map(x => <option key={x}>{x}</option>)}</select>
+               <div className="tl-role-cell"><select aria-label="Position" value={p.position} onChange={e => upd(p.id, { position: e.target.value as Position, depthRank: undefined, depthSource: undefined, elite1x: ['QB', 'RB', 'WR', 'TE'].includes(e.target.value) ? p.elite1x : false, eliteTier: ['QB', 'RB', 'WR', 'TE'].includes(e.target.value) ? p.eliteTier : 0, defensiveTier: isDefensivePosition(e.target.value) ? p.defensiveTier : 0 })}>{positions.map(x => <option key={x}>{x}</option>)}</select>
                  {p.side === 'offense' && ['QB', 'RB', 'WR', 'TE'].includes(p.position) && <select aria-label={`Depth role for ${p.name}`} data-testid={`depth-role-${p.id}`} value={p.depthSource ? '' : p.depthRank ?? ''} onChange={e => upd(p.id, { depthRank: e.target.value ? Number(e.target.value) : undefined, depthSource: undefined })}>
                    <option value="">Auto{automatic ? ` · ${p.position}${automatic}` : ' · unranked'}</option>
                    {Array.from({ length: 50 }, (_, i) => <option key={i + 1} value={i + 1}>{p.position}{i + 1}</option>)}
                  </select>}
                  {p.side === 'offense' && ['QB', 'RB', 'WR', 'TE'].includes(p.position) && <select aria-label={`Elite priority for ${p.name}`} data-testid={`elite-tier-${p.id}`} title="Target/carry priority only. QB: rushing only. Does not override availability. Save team to keep changes."
                    value={getEliteTier(p)} onChange={e => upd(p.id, { eliteTier: Number(e.target.value) as EliteTier, elite1x: Number(e.target.value) > 0 })}>{ELITE_TIER_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select>}
+                 {p.side === 'defense' && isDefensivePosition(p.position) && <select aria-label={`Defensive priority for ${p.name}`} data-testid={`defensive-tier-${p.id}`} title="Role-weighted defensive event priority, never a points multiplier. Does not override availability. Save team to keep changes."
+                   value={getDefenderTier(p)} onChange={e => upd(p.id, { defensiveTier: Number(e.target.value) as DefenderTier })}>{DEFENDER_TIER_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select>}
                </div>
-               <select aria-label="Side" value={p.side} onChange={e => upd(p.id, { side: e.target.value as Side, depthRank: undefined, depthSource: undefined, elite1x: e.target.value === 'offense' ? p.elite1x : false, eliteTier: e.target.value === 'offense' ? p.eliteTier : 0 })}><option value="offense">Offense</option><option value="defense">Defense</option></select>
+               <select aria-label="Side" value={p.side} onChange={e => upd(p.id, { side: e.target.value as Side, depthRank: undefined, depthSource: undefined, elite1x: e.target.value === 'offense' ? p.elite1x : false, eliteTier: e.target.value === 'offense' ? p.eliteTier : 0, defensiveTier: e.target.value === 'defense' ? p.defensiveTier : 0 })}><option value="offense">Offense</option><option value="defense">Defense</option></select>
               <div className="tl-availability-cell"><label className="tl-check"><input type="checkbox" checked={p.active} onChange={e => upd(p.id, { active: e.target.checked })} /> {p.active ? 'Active' : 'Inactive'}</label>
-                {p.side === 'offense' && ['QB', 'RB', 'WR', 'TE'].includes(p.position) && <PlayerAvailabilityEditor player={p} week={availabilityWeek} onChange={ch => upd(p.id, ch)} />}
+                {(p.side === 'offense' && ['QB', 'RB', 'WR', 'TE'].includes(p.position) || p.side === 'defense' && isDefensivePosition(p.position)) && <PlayerAvailabilityEditor player={p} week={availabilityWeek} onChange={ch => upd(p.id, ch)} />}
               </div>
               <button className="saved-remove" aria-label={`Delete ${p.name || 'player'}`} onClick={() => remove(p)}><Trash2 size={14} /></button>
             </div>

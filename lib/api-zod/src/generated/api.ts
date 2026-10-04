@@ -97,6 +97,7 @@ export const ListSeasonTeamsResponseItem = zod.object({
   "season": zod.number().int(),
   "team": zod.string(),
   "version": zod.number().int(),
+  "defenseTier": zod.union([zod.literal(0),zod.literal(1),zod.literal(null)]).nullish(),
   "players": zod.array(zod.object({
   "id": zod.string().min(1).max(listSeasonTeamsResponsePlayersItemIdMax),
   "name": zod.string().min(1).max(listSeasonTeamsResponsePlayersItemNameMax),
@@ -105,6 +106,7 @@ export const ListSeasonTeamsResponseItem = zod.object({
   "active": zod.boolean(),
   "elite1x": zod.boolean().optional().describe('Legacy elite preference. Used only when eliteTier is omitted; false disables defaults and true enables the approved default tier or 1x.'),
   "eliteTier": zod.union([zod.literal(0),zod.literal(1),zod.literal(2),zod.literal(3)]).optional().describe('Optional manual opportunity tier. 0 disables, 1 gives 20%, 2 gives 40%, and 3 gives 60% higher target/carry priority. QB rushing only. Omitted uses legacy preferences or approved name-and-position defaults.'),
+  "defensiveTier": zod.union([zod.literal(0),zod.literal(1),zod.literal(2)]).optional().describe('Defensive event priority for defense-side DL/EDGE/LB/CB/S players. 0 disables, 1 adds 20%, 2 adds 40% to role-appropriate opportunity weights. Omitted uses approved defender defaults. Never overrides availability or multiplies fantasy points.'),
   "source": zod.object({
   "provider": zod.enum(['ESPN']),
   "url": zod.string().url(),
@@ -210,6 +212,7 @@ export const saveSeasonTeamBodyWeeksMax = 18;
 
 export const SaveSeasonTeamBody = zod.object({
   "expectedVersion": zod.number().int().min(saveSeasonTeamBodyExpectedVersionMin),
+  "defenseTier": zod.union([zod.literal(0),zod.literal(1),zod.literal(null)]).nullish().describe('Team defensive priority. 0 disables, 1 adds 20%; null uses approved team defaults. An omitted update preserves the saved preference.'),
   "players": zod.array(zod.object({
   "id": zod.string().min(1).max(saveSeasonTeamBodyPlayersItemIdMax),
   "name": zod.string().min(1).max(saveSeasonTeamBodyPlayersItemNameMax),
@@ -218,6 +221,7 @@ export const SaveSeasonTeamBody = zod.object({
   "active": zod.boolean(),
   "elite1x": zod.boolean().optional().describe('Legacy elite preference. Used only when eliteTier is omitted; false disables defaults and true enables the approved default tier or 1x.'),
   "eliteTier": zod.union([zod.literal(0),zod.literal(1),zod.literal(2),zod.literal(3)]).optional().describe('Optional manual opportunity tier. 0 disables, 1 gives 20%, 2 gives 40%, and 3 gives 60% higher target/carry priority. QB rushing only. Omitted uses legacy preferences or approved name-and-position defaults.'),
+  "defensiveTier": zod.union([zod.literal(0),zod.literal(1),zod.literal(2)]).optional().describe('Defensive event priority for defense-side DL/EDGE/LB/CB/S players. 0 disables, 1 adds 20%, 2 adds 40% to role-appropriate opportunity weights. Omitted uses approved defender defaults. Never overrides availability or multiplies fantasy points.'),
   "source": zod.object({
   "provider": zod.enum(['ESPN']),
   "url": zod.string().url(),
@@ -302,6 +306,7 @@ export const SaveSeasonTeamResponse = zod.object({
   "season": zod.number().int(),
   "team": zod.string(),
   "version": zod.number().int(),
+  "defenseTier": zod.union([zod.literal(0),zod.literal(1),zod.literal(null)]).nullish(),
   "players": zod.array(zod.object({
   "id": zod.string().min(1).max(saveSeasonTeamResponsePlayersItemIdMax),
   "name": zod.string().min(1).max(saveSeasonTeamResponsePlayersItemNameMax),
@@ -310,6 +315,7 @@ export const SaveSeasonTeamResponse = zod.object({
   "active": zod.boolean(),
   "elite1x": zod.boolean().optional().describe('Legacy elite preference. Used only when eliteTier is omitted; false disables defaults and true enables the approved default tier or 1x.'),
   "eliteTier": zod.union([zod.literal(0),zod.literal(1),zod.literal(2),zod.literal(3)]).optional().describe('Optional manual opportunity tier. 0 disables, 1 gives 20%, 2 gives 40%, and 3 gives 60% higher target/carry priority. QB rushing only. Omitted uses legacy preferences or approved name-and-position defaults.'),
+  "defensiveTier": zod.union([zod.literal(0),zod.literal(1),zod.literal(2)]).optional().describe('Defensive event priority for defense-side DL/EDGE/LB/CB/S players. 0 disables, 1 adds 20%, 2 adds 40% to role-appropriate opportunity weights. Omitted uses approved defender defaults. Never overrides availability or multiplies fantasy points.'),
   "source": zod.object({
   "provider": zod.enum(['ESPN']),
   "url": zod.string().url(),
@@ -428,6 +434,7 @@ export const PreviewNflTeamResponse = zod.object({
   "active": zod.boolean(),
   "elite1x": zod.boolean().optional().describe('Legacy elite preference. Used only when eliteTier is omitted; false disables defaults and true enables the approved default tier or 1x.'),
   "eliteTier": zod.union([zod.literal(0),zod.literal(1),zod.literal(2),zod.literal(3)]).optional().describe('Optional manual opportunity tier. 0 disables, 1 gives 20%, 2 gives 40%, and 3 gives 60% higher target/carry priority. QB rushing only. Omitted uses legacy preferences or approved name-and-position defaults.'),
+  "defensiveTier": zod.union([zod.literal(0),zod.literal(1),zod.literal(2)]).optional().describe('Defensive event priority for defense-side DL/EDGE/LB/CB/S players. 0 disables, 1 adds 20%, 2 adds 40% to role-appropriate opportunity weights. Omitted uses approved defender defaults. Never overrides availability or multiplies fantasy points.'),
   "source": zod.object({
   "provider": zod.enum(['ESPN']),
   "url": zod.string().url(),

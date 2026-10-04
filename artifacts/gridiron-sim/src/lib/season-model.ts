@@ -3,6 +3,7 @@ import type { PlayerRecentStats, SimulationRosterPlayer, TeamSetup } from "./sim
 import { availabilityForWeek, availabilityWarnings } from "./availability";
 import { historyStrength, historyWarnings, playerUsage } from "./history-signals";
 import { getEliteTier } from "./elite-players";
+import { getDefenderTier, getTeamDefenseTier, isDefensivePosition } from "./defensive-tiers";
 
 const average = (rows: NumericStats[], key: string): number | undefined => {
   const values = rows.map(row => row[key]).filter((value): value is number => typeof value === "number" && Number.isFinite(value));
@@ -118,6 +119,13 @@ export function setupFromHistory(team: TeamSeasonRecord, week: number, venue: "h
     kicker: team.players.find(player => availabilityForWeek(player, week).included && player.side === "offense" && player.position === "K")?.name ?? "Kicker",
     passRating: strength.passRating, rushRating: strength.rushRating, defenseRating: strength.defenseRating,
     roster,
+    defenseTier: getTeamDefenseTier(team),
+    defenders: team.players.filter(p => p.side === "defense" && isDefensivePosition(p.position) && availabilityForWeek(p, week).included)
+      .map(p => ({
+        id: p.id, name: p.name, position: p.position as import("./defensive-tiers").DefensivePosition,
+        defensiveTier: getDefenderTier(p),
+        recentStats: blendedStats(games.map(g => ({ stats: g.playerStats[p.id] ?? {}, venue: g.venue, opponent: g.opponent })), venue, matchupOpponent),
+      })),
     record: teamRecord(team, week),
     historyGames: games.length,
     availabilityChecks,

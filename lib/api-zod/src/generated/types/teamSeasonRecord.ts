@@ -6,12 +6,15 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { RosterPlayer } from './rosterPlayer';
+import type { TeamSeasonRecordDefenseTier } from './teamSeasonRecordDefenseTier';
 import type { TeamWeek } from './teamWeek';
 
 export interface TeamSeasonRecord {
   season: number;
   team: string;
   version: number;
+  /** @nullable */
+  defenseTier?: TeamSeasonRecordDefenseTier;
   players: RosterPlayer[];
   weeks: TeamWeek[];
 }

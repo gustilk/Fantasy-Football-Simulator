@@ -6,11 +6,17 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { RosterPlayer } from './rosterPlayer';
+import type { TeamSeasonInputDefenseTier } from './teamSeasonInputDefenseTier';
 import type { TeamWeek } from './teamWeek';
 
 export interface TeamSeasonInput {
   /** @minimum 0 */
   expectedVersion: number;
+  /**
+     * Team defensive priority. 0 disables, 1 adds 20%; null uses approved team defaults. An omitted update preserves the saved preference.
+     * @nullable
+     */
+  defenseTier?: TeamSeasonInputDefenseTier;
   /** @maxItems 200 */
   players: RosterPlayer[];
   /** @maxItems 18 */

@@ -5,3 +5,4 @@
 - [Elite-tier intent](elite-player-intent.md) — 1x/2x/3x mean +20%/+40%/+60% opportunity priority, not point multipliers; include rushing quarterbacks.
 - [Projection display intent](projection-display-intent.md) — 20 refers to player count, not a 20-point eligibility threshold.
 - [Lineup intent](lineup-intent.md) — NFL Classic optimizer with weekly contest salary CSVs and a $50,000 cap; all-Sunday forecasts are not contest slates.
+- [Defensive tier intent](defensive-tier-intent.md) — additive, role-weighted event bonuses; missing tags in frozen forecasts must stay neutral during DST replay.

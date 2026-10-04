@@ -8,6 +8,7 @@
 import type { NflDataSource } from './nflDataSource';
 import type { PlayerAvailabilityOverride } from './playerAvailabilityOverride';
 import type { PlayerAvailabilityReport } from './playerAvailabilityReport';
+import type { RosterPlayerDefensiveTier } from './rosterPlayerDefensiveTier';
 import type { RosterPlayerEliteTier } from './rosterPlayerEliteTier';
 import type { RosterPlayerPosition } from './rosterPlayerPosition';
 import type { RosterPlayerSide } from './rosterPlayerSide';
@@ -30,6 +31,8 @@ export interface RosterPlayer {
   elite1x?: boolean;
   /** Optional manual opportunity tier. 0 disables, 1 gives 20%, 2 gives 40%, and 3 gives 60% higher target/carry priority. QB rushing only. Omitted uses legacy preferences or approved name-and-position defaults. */
   eliteTier?: RosterPlayerEliteTier;
+  /** Defensive event priority for defense-side DL/EDGE/LB/CB/S players. 0 disables, 1 adds 20%, 2 adds 40% to role-appropriate opportunity weights. Omitted uses approved defender defaults. Never overrides availability or multiplies fantasy points. */
+  defensiveTier?: RosterPlayerDefensiveTier;
   source?: NflDataSource;
   sourcePosition?: string;
   availability?: string;

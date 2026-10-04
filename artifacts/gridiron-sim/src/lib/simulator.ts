@@ -1,4 +1,5 @@
 import { calculateDraftKings } from "./draftkings";
+import { defensiveEventPriorities, DEFENSE_TIER_WARNING, type TeamDefenseTier, type SimulationDefender } from "./defensive-tiers";
 import { getDivision, isDivisionGame } from "./nfl-divisions";
 import type { AvailabilityCheck } from "./availability";
 import type { historyStrength, playerUsage } from "./history-signals";
@@ -76,6 +77,8 @@ export interface TeamSetup {
     te?: PlayerRecentStats;
   };
   defenseRecent?: DefenseRecentStats;
+  defenseTier?: TeamDefenseTier;
+  defenders?: SimulationDefender[];
   roster?: SimulationRosterPlayer[];
   record?: { wins: number; losses: number; ties: number };
   historyGames?: number;
@@ -418,6 +421,7 @@ function simulateTeam(
   const reliability = playerReliability(setup, qb);
   const defenseReliability = historyReliability(defense);
   const defenseRecent = defense.defenseRecent;
+  const defensePriority = defensiveEventPriorities(defense);
   const recentCarries = setup.roster
     ? setup.roster.filter(player => player.position === "RB").reduce((sum, player) => sum + (player.recentStats?.rushAttempts ?? 0), 0) || undefined
     : setup.recentStats?.rb?.rushAttempts;
@@ -519,7 +523,7 @@ function simulateTeam(
           qbRecent.passAttempts > 0
             ? qbRecent.interceptions / qbRecent.passAttempts
             : undefined;
-        const interceptionChance = clamp(
+        const unboostedInterceptionChance = clamp(
           (recentInterceptionChance === undefined
             ? baselineInterceptionChance
             : blend(baselineInterceptionChance, recentInterceptionChance, 0.4 * reliability)) +
@@ -530,9 +534,11 @@ function simulateTeam(
           0.075,
         );
         const baseSackChance = 0.047 + (defense.defenseRating - setup.passRating) * 0.001;
-        const sackChance = clamp(supplied(defenseRecent?.sacks)
+        const interceptionChance = clamp(unboostedInterceptionChance * defensePriority.interceptions, 0.006, 0.075);
+        const unboostedSackChance = clamp(supplied(defenseRecent?.sacks)
           ? blend(baseSackChance, defenseRecent.sacks / 35, 0.4 * defenseReliability)
           : baseSackChance, 0.015, 0.13);
+        const sackChance = clamp(unboostedSackChance * defensePriority.sacks, 0.015, 0.13);
 
         if (random() < interceptionChance) {
           qb.interceptions += 1;
@@ -582,6 +588,9 @@ function simulateTeam(
           if (yardsToGoal <= 15 && supplied(defenseRecent?.passTDAllowed)) {
             completionChance += (defenseRecent.passTDAllowed - 1.4) * 0.025;
           }
+          if (defensePriority.passesDefended > 1) {
+            completionChance = clamp(1 - (1 - completionChance) * defensePriority.passesDefended, 0.25, 0.9);
+          }
           if (random() >= completionChance) {
             playText = `${qb.name} pass incomplete`;
           } else {
@@ -600,10 +609,10 @@ function simulateTeam(
               Math.max(1, Math.round(weightedPassYards(random) * passEfficiencyFactor * passDefenseFactor * receiverEfficiency)),
             );
             const fumbled = random() < clamp(
-              0.009 + precipitation * 0.035 +
+              (0.009 + precipitation * 0.035 +
                 (supplied(defenseRecent?.fumblesForced)
                   ? (defenseRecent.fumblesForced - 0.7) * 0.004
-                  : 0),
+                  : 0)) * defensePriority.fumblesForced,
               0.002,
               0.035,
             );
@@ -645,11 +654,14 @@ function simulateTeam(
               runnerEfficiency * rushDefenseFactor * goalLineDefense,
           ),
         );
+        if (defensePriority.runStops > 1) {
+          gain = Math.round(gain >= 0 ? gain / defensePriority.runStops : gain * defensePriority.runStops);
+        }
         const fumbled = random() < clamp(
-          0.012 + precipitation * 0.045 +
+          (0.012 + precipitation * 0.045 +
             (supplied(defenseRecent?.fumblesForced)
               ? (defenseRecent.fumblesForced - 0.7) * 0.004
-              : 0),
+              : 0)) * defensePriority.fumblesForced,
           0.003,
           0.04,
         );
@@ -797,6 +809,16 @@ function makeOverview(
       ? `${team.name}: ${evidence.games} earlier head-to-head game(s) against ${opponent.name}, ${evidence.usableGames} with usable model statistics. Opponent-specific averages contribute up to ${Math.round(evidence.maxWeight * 100)}% per reported field; changes are bounded and can raise or lower projections. This is an uncalibrated heuristic, not a guaranteed rivalry effect.`
       : `${team.name}: no usable earlier head-to-head statistics loaded against ${opponent.name}. No opponent-specific history adjustment is applied.`);
   }
+  let defensiveTagsApplied = false;
+  for (const setup of [input.away, input.home]) {
+    const priorities = defensiveEventPriorities(setup);
+    if (Object.values(priorities).some(value => value > 1)) {
+      defensiveTagsApplied = true;
+      const names = (setup.defenders ?? []).filter(p => p.active !== false && p.defensiveTier > 0).map(p => `${p.name} ${p.defensiveTier}x`);
+      overview.push(`${setup.name}: defensive team priority ${setup.defenseTier ?? 0}x; included defender tags ${names.join(', ') || 'none'}. Event priority: sacks ${priorities.sacks.toFixed(2)}, interceptions ${priorities.interceptions.toFixed(2)}, forced fumbles ${priorities.fumblesForced.toFixed(2)}, pass breakups ${priorities.passesDefended.toFixed(2)}, run stops ${priorities.runStops.toFixed(2)}.`);
+    }
+  }
+  if (defensiveTagsApplied) overview.push(DEFENSE_TIER_WARNING);
   if (input.importance && input.importance !== "regular") overview.push(`Game importance: ${input.importance}. A small passing-aggression adjustment is applied; motivation cannot be measured reliably from this label.`);
   return overview;
 }
