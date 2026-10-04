@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import * as React from 'react';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { draftKingsAccuracy } from '../artifacts/gridiron-sim/src/lib/draftkings-accuracy';
@@ -25,7 +26,11 @@ const now = Date.parse('2026-10-05T12:00:00Z');
 const evaluate = (s: DKSlate[] = [slate], t: TeamSeasonRecord[] = [team], scores: DKOfficialScore[] = official) => draftKingsAccuracy(s, t, scores, 2026, now);
 const before = JSON.stringify({ slate, team, official });
 const report = evaluate();
-assert.deepEqual(report.overall, { count: 4, games: 1, meanAbsoluteError: 3.75, bias: 2.25 });
+assert.deepEqual(report.overall, { count: 4, games: 1, meanAbsoluteError: 3.75, bias: 2.25, meanProjected: 12.5, meanActual: 10.25, intervalCount: 4, intervalCoveragePct: 75 });
+const brokenRange = structuredClone(slate);
+brokenRange.forecasts[0]!.players[0]!.p10 = 40;
+assert.equal(evaluate([brokenRange]).overall.intervalCount, 3, 'Do not treat inverted ranges as valid uncertainty evidence');
+assert.equal(evaluate([]).overall.intervalCoveragePct, null, 'No matched results means no invented coverage percentage');
 assert.deepEqual(report.positions.map(p => [p.position, p.count, p.bias]), [['QB', 1, 6], ['RB', 1, -3], ['WR', 1, 0], ['TE', 1, 6]]);
 assert.equal(JSON.stringify({ slate, team, official }), before, 'Reporting must not mutate saved forecasts/history');
 const latest = structuredClone(slate);
@@ -79,9 +84,11 @@ const legacy = structuredClone(slate); delete legacy.savedAt; delete legacy.fore
 writeDKArchive(storage, { ...archive, slates: [legacy] });
 assert.equal(readDKArchive(storage).slates.length, 1, 'Legacy archives still load; no migration or deletion');
 Object.defineProperty(globalThis, 'window', { value: { location: { search: '?section=accuracy' } }, configurable: true });
+// The standalone TSX runner uses classic JSX; Vite supplies the automatic runtime.
+Object.assign(globalThis, { React });
 const render = (r: typeof report) => renderToStaticMarkup(createElement(DraftKingsAccuracy, { report: r, season: 2026, loading: false, failed: false, refresh: () => {} }));
 const html = render(report);
 assert.ok(html.includes('3.75') && html.includes('High by 2.25') && html.includes('Low by 3.00'));
-assert.ok(render(evaluate([], [], [])).includes('No complete comparisons yet'));
+assert.ok(render(evaluate([], [], [])).includes('data-testid="dk-accuracy-empty"'));
 assert.ok(!render(evaluate([], [], [])).includes('NaN'));
 console.log('Accuracy metrics, bias signs, timing guards, repeat-run selection, all positions, unknown/partial/zero scores, matchup identity, archive reload, legacy preservation and report rendering passed.');

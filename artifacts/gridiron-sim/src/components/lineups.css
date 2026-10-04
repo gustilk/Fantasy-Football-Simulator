@@ -32,3 +32,15 @@
   .lu .player-table td,.lu .player-table th{padding:10px 6px}
 }
 @media(prefers-reduced-motion:reduce){.lu-card,.lu-indeterminate{animation:none}}
+.lu-mode{display:grid;grid-template-columns:1fr 1fr;gap:8px;border:0;padding:0;margin:0}
+.lu-mode legend{font-size:12px;color:var(--app-muted);margin-bottom:6px;padding:0}
+.lu-mode-opt{display:grid;gap:3px;padding:10px 12px;border:1px solid var(--app-border);border-radius:8px;background:var(--app-bg);cursor:pointer;font-size:12px}
+.lu-mode-opt.on{border-color:var(--app-away)}
+.lu-mode-opt input{position:absolute;opacity:0;pointer-events:none}
+.lu-mode-opt:focus-within{outline:2px solid var(--app-home)}
+.lu-mode-opt span{color:var(--app-muted)}
+.lu-tour{display:flex;flex-wrap:wrap;gap:8px 18px;padding:10px 16px;border-bottom:1px solid var(--app-border);font-size:12px}
+.lu-tour span{display:block;color:var(--app-muted);font-size:11px}
+.lu-tour strong{font:600 14px var(--app-font-mono)}
+.lu-tour p{flex-basis:100%;margin:0;color:var(--app-muted)}
+@media(max-width:560px){.lu-mode{grid-template-columns:1fr}}

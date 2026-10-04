@@ -5,6 +5,7 @@ import {
   buildLineupPool, exportLineups, lineupSlots, parseSalaryCsv,
   type Lineup, type LineupPlayer, type SalaryPlayer,
 } from '@/lib/lineups';
+import DraftKingsAccuracy from './DraftKingsAccuracy';
 import './lineups.css';
 import './draftkings.css';
 import { readSalaryFile } from '@/lib/salary-file';
@@ -43,6 +44,7 @@ export default function LineupsSection({ season }: { season: number }) {
   const [importing, setImporting] = useState(false);
   const importAttempt = useRef(0);
   const [count, setCount] = useState(3);
+  const [mode, setMode] = useState<'tournament' | 'average'>('tournament');
   const [running, setRunning] = useState(false);
   const [genError, setGenError] = useState('');
   const [result, setResult] = useState<{ key: string; lineups: Lineup[] } | null>(null);
@@ -70,7 +72,7 @@ export default function LineupsSection({ season }: { season: number }) {
     try { return { ...buildLineupPool(salaryRows, slate, c.historyQuery.data, clock), error: '' }; }
     catch (e) { return { players: [] as LineupPlayer[], issues: [] as { player: SalaryPlayer; reason: string }[], warnings: [] as string[], error: msg(e) }; }
   }, [record, salaryRows, slate, linked, c.historyQuery.data, clock]);
-  const key = record && slate ? `${record.importedAt}|${slate.id}|${count}|${c.historyQuery.data?.map(t => `${t.team}:${t.version}`).join(',')}|${slate.forecasts.map(f => Date.parse(f.kickoff) <= clock).join(',')}` : '';
+  const key = record && slate ? `${record.importedAt}|${slate.id}|${count}|${mode}|${c.historyQuery.data?.map(t => `${t.team}:${t.version}`).join(',')}|${slate.forecasts.map(f => Date.parse(f.kickoff) <= clock).join(',')}` : '';
 
   const stop = () => { worker.current?.terminate(); worker.current = null; setRunning(false); };
   useEffect(() => { stop(); setResult(null); setGenError(''); }, [key]);
@@ -127,7 +129,7 @@ export default function LineupsSection({ season }: { season: number }) {
       if (worker.current !== w) return;
       w.terminate(); worker.current = null; setRunning(false); setGenError(`Optimizer failed: ${e.message || 'worker error'}`);
     };
-    w.postMessage({ players: fresh.players, count });
+    w.postMessage(mode === 'tournament' ? { players: fresh.players, count, mode, slate: slate! } : { players: fresh.players, count, mode });
   };
 
   const download = (lineups: Lineup[]) => {
@@ -146,7 +148,7 @@ export default function LineupsSection({ season }: { season: number }) {
     {c.historyQuery.isError && <div className="dk-err" role="alert">Current saved roster availability could not be checked. <button className="btn-secondary" onClick={c.refresh}>Retry roster check</button></div>}
     <div className="dk-head">
       <h1>Lineups</h1>
-      <p>Highest projected DraftKings Classic lineups, {season}.</p>
+      <p>DraftKings Classic lineups, {season}.</p>
     </div>
     <div className="dk-note lu-warn" role="note"><strong>Import salaries for every contest slate.</strong> Upload the official DraftKings NFL Classic CSV for the exact weekly contest you are entering, then pair it with the forecast for the same games. Showdown files are rejected.</div>
     {c.storageError && <div className="dk-err" role="alert">{c.storageError} <button className="btn-secondary" onClick={c.reloadArchive}>Retry</button></div>}
@@ -215,20 +217,36 @@ export default function LineupsSection({ season }: { season: number }) {
           : <button className="btn-secondary" onClick={stop} data-testid="lineups-cancel"><Square size={14} /> Cancel</button>}
         {shown && shown.length > 0 && <button className="btn-secondary" onClick={() => download(shown)}><Download size={14} /> DK upload CSV</button>}
       </div>
-      <p className="dk-muted lu-gap">Exact optimum under {money(CAP)}: QB, 2 RB, 3 WR, TE, FLEX, DST, players from at least 2 games.</p>
-      {running && <div role="status"><span className="dk-muted"><RotateCw size={12} className="spin-icon" /> Searching all legal lineups</span><div className="dk-bar"><i className="lu-indeterminate" /></div></div>}
+      <fieldset className="lu-mode" disabled={running}><legend>Strategy</legend>
+        {([['tournament', 'Tournament upside', 'Looks for QB and receiver pairings with the best simulated high-end outcomes.'], ['average', 'Highest average', 'Maximizes the sum of saved mean projections.']] as const).map(([v, t, d]) =>
+          <label key={v} className={`lu-mode-opt${mode === v ? ' on' : ''}`}><input type="radio" name="lu-mode" checked={mode === v} onChange={() => setMode(v)} /><strong>{t}</strong><span>{d}</span></label>)}
+      </fieldset>
+      <p className="dk-muted lu-gap">{money(CAP)} Classic rules: QB, 2 RB, 3 WR, TE, FLEX, DST, players from at least 2 games. Salaries and eligibility come only from your salary file.</p>
+      <div className="dk-note lu-gap" role="note">{mode === 'tournament'
+        ? <>Tournament mode searches for QB and receiver combinations with jointly simulated upside. Returned lineups differ by at least two players. It is a bounded candidate search, not a guaranteed global optimum. There is no ownership data and no guarantee of winning. Rare defense and special teams events are not fully modeled.</>
+        : <>Highest average finds the best total of saved mean projections under the cap. It does not consider upside or correlation.</>}</div>
+      {running && <div role="status"><span className="dk-muted"><RotateCw size={12} className="spin-icon" /> {mode === 'tournament' ? 'Simulating candidate lineups' : 'Searching all legal lineups'}</span><div className="dk-bar"><i className="lu-indeterminate" /></div></div>}
       {genError && <div className="dk-err" role="alert">{genError} <button className="btn-secondary" onClick={generate}>Retry</button></div>}
     </div>
 
+    <DraftKingsAccuracy report={c.accuracy} season={season} loading={c.historyQuery.isLoading} failed={c.historyQuery.isError || !!c.storageError} refresh={c.storageError ? c.reloadArchive : c.refresh} />
+
+    {shown && mode === 'tournament' && shown.length < count && <div className="dk-note">Found {shown.length} lineup(s) with the required two-player variation. The search did not find {count}; it will not fill the list with near-duplicates.</div>}
     {shown && shown.map((l, i) => <article className="panel lu-card" key={i} data-testid={`lineup-${i + 1}`}>
       <header className="lu-card-head">
         <h3>Lineup {i + 1}</h3>
         <div className="lu-card-stats">
-          <div><span>Projected</span><strong className="lu-pts">{l.points.toFixed(2)}</strong></div>
+          <div><span>Mean projected total</span><strong className="lu-pts">{l.points.toFixed(2)}</strong></div>
           <div><span>Salary</span><strong>{money(l.salary)}</strong></div>
           <div><span>Remaining</span><strong>{money(CAP - l.salary)}</strong></div>
         </div>
       </header>
+      {l.tournament && <div className="lu-tour" data-testid={`lineup-${i + 1}-upside`}>
+        <div><span>High-end modeled score</span><strong>{l.tournament.p90.toFixed(1)}</strong></div>
+        <div><span>Simulated 220+ frequency</span><strong>{l.tournament.chance220.toFixed(1)}%</strong></div>
+        <div><span>Simulated mean</span><strong>{l.tournament.simulatedMean.toFixed(1)}</strong></div>
+        <p>High-end score means the upper end of simulated outcomes, not the average or a guarantee. Modeled range {l.tournament.p10.toFixed(1)} to {l.tournament.p90.toFixed(1)}. {l.tournament.stackNames.length > 0 && <>Stack: {l.tournament.stackNames.join(', ')}. </>}{l.tournament.scenarios.toLocaleString('en-US')} scenarios, {l.tournament.candidates.toLocaleString('en-US')} candidates. Frequency from the model, not a chance of winning.</p>
+      </div>}
       <div className="player-table-wrap"><table className="player-table"><thead><tr><th>Slot</th><th>Player</th><th>Salary</th><th>Proj</th></tr></thead><tbody>
         {lineupSlots(l).map(({ slot, player }) => <tr key={`${slot}-${player.id}`}>
           <td className="lu-slot">{slot}</td>

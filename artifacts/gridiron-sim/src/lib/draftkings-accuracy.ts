@@ -8,6 +8,8 @@ export interface AccuracySample {
   position: DKPosition;
   projected: number;
   actual: number;
+  p10?: number;
+  p90?: number;
 }
 export interface AccuracyMetrics {
   count: number;
@@ -15,13 +17,22 @@ export interface AccuracyMetrics {
   meanAbsoluteError: number | null;
   /** Positive means projections run high, unlike the board's actual-minus-projected Diff. */
   bias: number | null;
+  meanProjected: number | null;
+  meanActual: number | null;
+  intervalCount: number;
+  intervalCoveragePct: number | null;
 }
 function metrics(samples: AccuracySample[]): AccuracyMetrics {
+  const ranges = samples.filter(s => Number.isFinite(s.p10) && Number.isFinite(s.p90) && s.p10! <= s.p90!);
   return {
     count: samples.length,
     games: new Set(samples.map(s => s.gameId)).size,
     meanAbsoluteError: samples.length ? samples.reduce((sum, s) => sum + Math.abs(s.projected - s.actual), 0) / samples.length : null,
     bias: samples.length ? samples.reduce((sum, s) => sum + s.projected - s.actual, 0) / samples.length : null,
+    meanProjected: samples.length ? samples.reduce((sum, s) => sum + s.projected, 0) / samples.length : null,
+    meanActual: samples.length ? samples.reduce((sum, s) => sum + s.actual, 0) / samples.length : null,
+    intervalCount: ranges.length,
+    intervalCoveragePct: ranges.length ? ranges.filter(s => s.actual >= s.p10! && s.actual <= s.p90!).length / ranges.length * 100 : null,
   };
 }
 
@@ -92,7 +103,7 @@ export function draftKingsAccuracy(slates: DKSlate[], teams: TeamSeasonRecord[],
         skipped.mismatch++;
         continue;
       }
-      samples.push({ gameId: forecast.gameId, team: player.team, playerId: player.playerId, position: player.position, projected: player.mean, actual: actual.points });
+      samples.push({ gameId: forecast.gameId, team: player.team, playerId: player.playerId, position: player.position, projected: player.mean, actual: actual.points, p10: player.p10, p90: player.p90 });
     }
   }
   return {

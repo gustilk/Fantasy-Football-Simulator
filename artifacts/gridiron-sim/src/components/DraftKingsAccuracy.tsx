@@ -3,6 +3,8 @@ import type { DraftKingsAccuracyReport } from '@/lib/draftkings-accuracy';
 const points = (n: number | null) => n === null ? '—' : n.toFixed(2);
 const direction = (n: number | null) => n === null ? '—' : Math.abs(n) < 0.005 ? 'Balanced' : `${n > 0 ? 'High' : 'Low'} by ${Math.abs(n).toFixed(2)}`;
 
+const biasText = (n: number | null) => n === null ? '' : Math.abs(n) < 0.005 ? 'On average, projections matched actual scores.' : `On average, projections ran ${n > 0 ? 'higher' : 'lower'} than actual scores by ${Math.abs(n).toFixed(2)} DK points per player-game.`;
+
 export default function DraftKingsAccuracy({ report, season, loading, failed, refresh }: {
   report: DraftKingsAccuracyReport; season: number; loading: boolean; failed: boolean; refresh: () => void;
 }) {
@@ -10,13 +12,15 @@ export default function DraftKingsAccuracy({ report, season, loading, failed, re
   return <details className="panel dk-accuracy" data-testid="dk-accuracy-report" open={new URLSearchParams(window.location.search).get('section') === 'accuracy' || undefined}>
     <summary>Accuracy report <span className="dk-muted">{!loading && !failed ? `· ${overall.count} matched player-games` : ''}</span></summary>
     {loading ? <p role="status">Loading actual results…</p> : failed ? <p role="alert">Could not load actual results. <button className="text-button" onClick={refresh}>Retry</button></p> : <>
-      <p className="dk-short">{season} · All saved slates in this browser. Uses the last forecast saved before kickoff for each game, so repeat runs do not count twice.</p>
-      {overall.count === 0 ? <p className="dk-note" data-testid="dk-accuracy-empty">No complete comparisons yet. Save new Sunday projections before kickoff. After games finish, import and save their actual history in Team Library, then enter official DK points under Actual → tap a player. Partial results and missing scores never count as zero.</p> : <>
+      <p className="dk-short">Offensive positions only (QB, RB, WR, TE). Defense/special teams are not evaluated here. {season} · All saved slates in this browser. Uses the last forecast saved before kickoff for each game, so repeat runs do not count twice.</p>
+      {overall.count === 0 ? <p className="dk-note" data-testid="dk-accuracy-empty">No completed comparisons yet, so no accuracy figure is shown. Nothing is estimated in its place. Save new Sunday projections before kickoff. After games finish, import and save their actual history in Team Library, then enter official DK points under Actual → tap a player. Partial results and missing scores never count as zero.</p> : <>
         <div className="dk-accuracy-stats">
           <div><span>Matched games</span><strong>{overall.games}</strong></div>
           <div><span>Average miss · DK pts</span><strong>{points(overall.meanAbsoluteError)}</strong></div>
           <div><span>Prediction direction</span><strong>{direction(overall.bias)}</strong></div>
         </div>
+        <p className="dk-short" data-testid="dk-accuracy-bias">{biasText(overall.bias)}{overall.count < 30 && ` Only ${overall.count} completed player-games so far; treat this as a rough hint, not a reliable measure.`}</p>
+        {overall.intervalCoveragePct !== null && <p className="dk-short">{overall.intervalCoveragePct.toFixed(1)}% of {overall.intervalCount} results with valid saved ranges landed inside that range. This checks uncertainty ranges—not an overall accuracy percentage.</p>}
         <div className="player-table-wrap"><table className="player-table" aria-label="DraftKings prediction accuracy by position">
           <thead><tr><th>Position</th><th>Player-games</th><th>Avg miss</th><th>Direction</th></tr></thead>
           <tbody>{positions.map(p => <tr key={p.position} data-testid={`dk-accuracy-${p.position}`}><td>{p.position}</td><td>{p.count}</td><td>{points(p.meanAbsoluteError)}</td><td>{direction(p.bias)}</td></tr>)}</tbody>

@@ -7,7 +7,10 @@ import { DST_MODEL_WARNING } from './draftkings-defense';
 export type LineupPosition = 'QB' | 'RB' | 'WR' | 'TE' | 'DST';
 export interface SalaryPlayer { id: string; name: string; position: LineupPosition; team: string; salary: number; gameInfo: string; rosterPosition: string }
 export interface LineupPlayer extends SalaryPlayer { mean: number; gameId: string; kickoff: string; projectionSource: string }
-export interface Lineup { players: LineupPlayer[]; salary: number; points: number }
+export interface Lineup {
+  players: LineupPlayer[]; salary: number; points: number;
+  tournament?: { p10: number; p90: number; simulatedMean: number; chance220: number; scenarios: number; candidates: number; stackNames: string[] };
+}
 const POSITIONS: LineupPosition[] = ['QB', 'RB', 'WR', 'TE', 'DST'];
 export const TEAM_CODES: Record<string, string> = {
   ARI: 'Arizona Cardinals', ATL: 'Atlanta Falcons', BAL: 'Baltimore Ravens', BUF: 'Buffalo Bills',
