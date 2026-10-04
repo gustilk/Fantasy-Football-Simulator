@@ -5,6 +5,116 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type NflAdvancedSourceKind = typeof NflAdvancedSourceKind[keyof typeof NflAdvancedSourceKind];
+
+
+export const NflAdvancedSourceKind = {
+  'play-by-play': 'play-by-play',
+  'snap-counts': 'snap-counts',
+  'player-identities': 'player-identities',
+} as const;
+
+export type NflAdvancedSourceStatus = typeof NflAdvancedSourceStatus[keyof typeof NflAdvancedSourceStatus];
+
+
+export const NflAdvancedSourceStatus = {
+  available: 'available',
+  unavailable: 'unavailable',
+} as const;
+
+export interface NflAdvancedSource {
+  kind: NflAdvancedSourceKind;
+  url: string;
+  status: NflAdvancedSourceStatus;
+  /** @nullable */
+  fetchedAt: string | null;
+  /** @nullable */
+  updatedAt: string | null;
+  error?: string;
+}
+
+export type NflAdvancedPlayerPosition = typeof NflAdvancedPlayerPosition[keyof typeof NflAdvancedPlayerPosition];
+
+
+export const NflAdvancedPlayerPosition = {
+  QB: 'QB',
+  RB: 'RB',
+  WR: 'WR',
+  TE: 'TE',
+  unknown: 'unknown',
+} as const;
+
+export interface NflAdvancedPlayer {
+  /** @nullable */
+  playerId: string | null;
+  sourcePlayerId: string;
+  name: string;
+  position: NflAdvancedPlayerPosition;
+  games: number;
+  snapGames: number;
+  opportunityGames: number;
+  /** @nullable */
+  offenseSnaps: number | null;
+  /** @nullable */
+  snapShare: number | null;
+  /** @nullable */
+  targets: number | null;
+  /** @nullable */
+  targetShare: number | null;
+  /** @nullable */
+  carries: number | null;
+  /** @nullable */
+  carryShare: number | null;
+  /** @nullable */
+  airYards: number | null;
+  /** @nullable */
+  airYardsPerTarget: number | null;
+  airYardTargets: number;
+}
+
+export interface NflAdvancedDefense {
+  passPlays: number;
+  rushPlays: number;
+  passEpaPlays: number;
+  rushEpaPlays: number;
+  /** @nullable */
+  passEpaAllowed: number | null;
+  /** @nullable */
+  rushEpaAllowed: number | null;
+  sackHitPlays: number;
+  /** @nullable */
+  sackHitRate: number | null;
+  /** @nullable */
+  pressureRate: number | null;
+  /** @nullable */
+  offensePlaysPerGame: number | null;
+}
+
+export type NflAdvancedReportStatus = typeof NflAdvancedReportStatus[keyof typeof NflAdvancedReportStatus];
+
+
+export const NflAdvancedReportStatus = {
+  available: 'available',
+  partial: 'partial',
+  unavailable: 'unavailable',
+} as const;
+
+export interface NflAdvancedReport {
+  season: number;
+  team: string;
+  beforeWeek: number;
+  fetchedAt: string;
+  status: NflAdvancedReportStatus;
+  games: number;
+  /** @nullable */
+  dataThroughWeek: number | null;
+  unmatchedPlayers: number;
+  sources: NflAdvancedSource[];
+  warnings: string[];
+  players: NflAdvancedPlayer[];
+  defense: NflAdvancedDefense;
+}
+
 export type NflScheduledGameSeasonType = typeof NflScheduledGameSeasonType[keyof typeof NflScheduledGameSeasonType];
 
 

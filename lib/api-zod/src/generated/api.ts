@@ -9,6 +9,75 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Verified completed-game advanced NFL reference stats, never forecast multipliers
+ */
+export const getNflAdvancedStatsPathSeasonMin = 2000;
+export const getNflAdvancedStatsPathSeasonMax = 2100;
+
+export const getNflAdvancedStatsPathTeamMax = 100;
+
+export const getNflAdvancedStatsPathBeforeWeekMax = 19;
+
+
+
+export const GetNflAdvancedStatsParams = zod.object({
+  "season": zod.coerce.number().int().min(getNflAdvancedStatsPathSeasonMin).max(getNflAdvancedStatsPathSeasonMax),
+  "team": zod.coerce.string().min(1).max(getNflAdvancedStatsPathTeamMax),
+  "beforeWeek": zod.coerce.number().int().min(1).max(getNflAdvancedStatsPathBeforeWeekMax)
+})
+
+export const GetNflAdvancedStatsResponse = zod.object({
+  "season": zod.number().int(),
+  "team": zod.string(),
+  "beforeWeek": zod.number().int(),
+  "fetchedAt": zod.string(),
+  "status": zod.enum(['available', 'partial', 'unavailable']),
+  "games": zod.number().int(),
+  "dataThroughWeek": zod.number().int().nullable(),
+  "unmatchedPlayers": zod.number().int(),
+  "sources": zod.array(zod.object({
+  "kind": zod.enum(['play-by-play', 'snap-counts', 'player-identities']),
+  "url": zod.string(),
+  "status": zod.enum(['available', 'unavailable']),
+  "fetchedAt": zod.string().nullable(),
+  "updatedAt": zod.string().nullable(),
+  "error": zod.string().optional()
+})),
+  "warnings": zod.array(zod.string()),
+  "players": zod.array(zod.object({
+  "playerId": zod.string().nullable(),
+  "sourcePlayerId": zod.string(),
+  "name": zod.string(),
+  "position": zod.enum(['QB', 'RB', 'WR', 'TE', 'unknown']),
+  "games": zod.number().int(),
+  "snapGames": zod.number().int(),
+  "opportunityGames": zod.number().int(),
+  "offenseSnaps": zod.number().int().nullable(),
+  "snapShare": zod.number().nullable(),
+  "targets": zod.number().int().nullable(),
+  "targetShare": zod.number().nullable(),
+  "carries": zod.number().int().nullable(),
+  "carryShare": zod.number().nullable(),
+  "airYards": zod.number().nullable(),
+  "airYardsPerTarget": zod.number().nullable(),
+  "airYardTargets": zod.number().int()
+})),
+  "defense": zod.object({
+  "passPlays": zod.number().int(),
+  "rushPlays": zod.number().int(),
+  "passEpaPlays": zod.number().int(),
+  "rushEpaPlays": zod.number().int(),
+  "passEpaAllowed": zod.number().nullable(),
+  "rushEpaAllowed": zod.number().nullable(),
+  "sackHitPlays": zod.number().int(),
+  "sackHitRate": zod.number().nullable(),
+  "pressureRate": zod.number().nullable(),
+  "offensePlaysPerGame": zod.number().nullable()
+})
+})
+
+
+/**
  * @summary Upcoming announced NFL matchups for all teams in a season
  */
 export const getNflSchedulePathSeasonMin = 2000;

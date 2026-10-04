@@ -4,6 +4,7 @@ import { useSaveSeasonTeam, useGetNflDepthChart, getGetNflDepthChartQueryKey, ty
 import { offenseFields, defenseFields, teamDefenseFields, positions, type StatField } from '@/lib/stat-fields';
 import NflImportPanel from './NflImportPanel';
 import PriorSeasonBaselinePanel from './PriorSeasonBaselinePanel';
+import NflAdvancedStatsPanel from './NflAdvancedStatsPanel';
 import DivisionMatchup from './DivisionMatchup';
 import { getDivision } from '@/lib/nfl-divisions';
 import { rolesForRoster } from '@/lib/depth-chart';
@@ -185,6 +186,8 @@ export default function TeamLibrary({ season, onSeasonChange, teams, loading, er
           {status.kind === 'err' && <button className="btn-secondary" onClick={doSave}>Retry save</button>}
         </div>
       )}
+
+      <NflAdvancedStatsPanel key={`${season}:${team}`} season={season} team={team} record={record} />
 
       {loading && !ctx ? <div className="tl-skel" aria-busy="true"><i /><i /><i /></div> : <fieldset className="tl-fs" disabled={save.isPending}>
         <div className="tl-tabs" role="tablist">

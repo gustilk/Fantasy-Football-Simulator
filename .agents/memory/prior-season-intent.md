@@ -20,3 +20,9 @@ Conservative identity and role matching should not blindly transfer last season'
 **Why:** Historical workload depends on team, availability and role. Copying it without checking those contexts can contradict the requirement to keep current roles authoritative.
 
 **How to apply:** Disclose excluded/missing matches. Any future relaxation should distinguish role-neutral efficiency from team-dependent workload and preserve unknowns rather than inventing zeros.
+
+Advanced NFL snap, air-yard and EPA reports are reference-only unless a separate, calibrated mapping into forecast inputs is explicitly approved.
+
+**Why:** The existing simulation already uses target/carry shares. Additional untested opportunity boosts would double-count evidence; the user chose verified additions to the existing app rather than a rewrite with dummy data and arbitrary boosts.
+
+**How to apply:** Preserve saved forecasts, current eligibility and team history. Keep observed shares distinct from projections, and require a nonduplicative rationale and out-of-sample validation before giving these reports scoring influence.

@@ -11,6 +11,39 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /nfl-advanced/{season}/{team}/{beforeWeek}:
+    get:
+      operationId: getNflAdvancedStats
+      summary: Verified completed-game advanced NFL reference stats, never forecast multipliers
+      parameters:
+        - in: path
+          name: season
+          required: true
+          schema: { type: integer, minimum: 2000, maximum: 2100 }
+        - in: path
+          name: team
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 100 }
+        - in: path
+          name: beforeWeek
+          required: true
+          schema: { type: integer, minimum: 1, maximum: 19 }
+      responses:
+        "200":
+          description: Reference stats with explicit coverage and source failures
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NflAdvancedReport" }
+        "400":
+          description: Invalid season, NFL team or cutoff
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeasonError" }
+        "502":
+          description: Unexpected or inconsistent source data
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeasonError" }
   /nfl-schedule/{season}:
     get:
       operationId: getNflSchedule
@@ -177,6 +210,72 @@ paths:
               schema: { $ref: "#/components/schemas/SeasonError" }
 components:
   schemas:
+    NflAdvancedSource:
+      type: object
+      required: [kind, url, status, fetchedAt, updatedAt]
+      properties:
+        kind: { type: string, enum: [play-by-play, snap-counts, player-identities] }
+        url: { type: string }
+        status: { type: string, enum: [available, unavailable] }
+        fetchedAt: { type: ["string", "null"] }
+        updatedAt: { type: ["string", "null"] }
+        error: { type: string }
+    NflAdvancedPlayer:
+      type: object
+      required: [playerId, sourcePlayerId, name, position, games, snapGames, opportunityGames, offenseSnaps, snapShare, targets, targetShare, carries, carryShare, airYards, airYardsPerTarget, airYardTargets]
+      properties:
+        playerId: { type: ["string", "null"] }
+        sourcePlayerId: { type: string }
+        name: { type: string }
+        position: { type: string, enum: [QB, RB, WR, TE, unknown] }
+        games: { type: integer }
+        snapGames: { type: integer }
+        opportunityGames: { type: integer }
+        offenseSnaps: { type: ["integer", "null"] }
+        snapShare: { type: ["number", "null"] }
+        targets: { type: ["integer", "null"] }
+        targetShare: { type: ["number", "null"] }
+        carries: { type: ["integer", "null"] }
+        carryShare: { type: ["number", "null"] }
+        airYards: { type: ["number", "null"] }
+        airYardsPerTarget: { type: ["number", "null"] }
+        airYardTargets: { type: integer }
+    NflAdvancedDefense:
+      type: object
+      required: [passPlays, rushPlays, passEpaPlays, rushEpaPlays, passEpaAllowed, rushEpaAllowed, sackHitPlays, sackHitRate, pressureRate, offensePlaysPerGame]
+      properties:
+        passPlays: { type: integer }
+        rushPlays: { type: integer }
+        passEpaPlays: { type: integer }
+        rushEpaPlays: { type: integer }
+        passEpaAllowed: { type: ["number", "null"] }
+        rushEpaAllowed: { type: ["number", "null"] }
+        sackHitPlays: { type: integer }
+        sackHitRate: { type: ["number", "null"] }
+        pressureRate: { type: ["number", "null"] }
+        offensePlaysPerGame: { type: ["number", "null"] }
+    NflAdvancedReport:
+      type: object
+      required: [season, team, beforeWeek, fetchedAt, status, games, dataThroughWeek, unmatchedPlayers, sources, warnings, players, defense]
+      properties:
+        season: { type: integer }
+        team: { type: string }
+        beforeWeek: { type: integer }
+        fetchedAt: { type: string }
+        status: { type: string, enum: [available, partial, unavailable] }
+        games: { type: integer }
+        dataThroughWeek: { type: ["integer", "null"] }
+        unmatchedPlayers: { type: integer }
+        sources:
+          type: array
+          items: { $ref: "#/components/schemas/NflAdvancedSource" }
+        warnings:
+          type: array
+          items: { type: string }
+        players:
+          type: array
+          items: { $ref: "#/components/schemas/NflAdvancedPlayer" }
+        defense: { $ref: "#/components/schemas/NflAdvancedDefense" }
     NflScheduledGame:
       type: object
       required: [id, awayTeam, homeTeam, date, timeConfirmed, week, seasonType]

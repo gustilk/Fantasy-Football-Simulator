@@ -23,6 +23,7 @@ import type {
   GetNflScheduleParams,
   HealthStatus,
   ListSeasonTeamsParams,
+  NflAdvancedReport,
   NflDepthChart,
   NflImportPreview,
   NflSchedule,
@@ -58,6 +59,93 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetNflAdvancedStatsUrl = (season: number,
+    team: string,
+    beforeWeek: number,) => {
+
+
+
+
+  return `/api/nfl-advanced/${season}/${team}/${beforeWeek}`
+}
+
+/**
+ * @summary Verified completed-game advanced NFL reference stats, never forecast multipliers
+ */
+export const getNflAdvancedStats = async (season: number,
+    team: string,
+    beforeWeek: number, options?: Parameters<typeof customFetch>[1]): Promise<NflAdvancedReport> => {
+
+  return customFetch<NflAdvancedReport>(getGetNflAdvancedStatsUrl(season,team,beforeWeek),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetNflAdvancedStatsQueryKey = (season: number,
+    team: string,
+    beforeWeek: number,) => {
+    return [
+    `/api/nfl-advanced/${season}/${team}/${beforeWeek}`
+    ] as const;
+    }
+
+
+export const getGetNflAdvancedStatsQueryOptions = <TData = Awaited<ReturnType<typeof getNflAdvancedStats>>, TError = ErrorType<SeasonError>>(season: number,
+    team: string,
+    beforeWeek: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNflAdvancedStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetNflAdvancedStatsQueryKey(season,team,beforeWeek);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getNflAdvancedStats>>> = ({ signal }) => getNflAdvancedStats(season,team,beforeWeek, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: season !== null && season !== undefined && team !== null && team !== undefined && beforeWeek !== null && beforeWeek !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getNflAdvancedStats>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetNflAdvancedStatsQueryResult = NonNullable<Awaited<ReturnType<typeof getNflAdvancedStats>>>
+export type GetNflAdvancedStatsQueryError = ErrorType<SeasonError>
+
+
+/**
+ * @summary Verified completed-game advanced NFL reference stats, never forecast multipliers
+ */
+
+export function useGetNflAdvancedStats<TData = Awaited<ReturnType<typeof getNflAdvancedStats>>, TError = ErrorType<SeasonError>>(
+ season: number,
+    team: string,
+    beforeWeek: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNflAdvancedStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetNflAdvancedStatsQueryOptions(season,team,beforeWeek,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetNflScheduleUrl = (season: number,
     params?: GetNflScheduleParams,) => {
