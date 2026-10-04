@@ -3,6 +3,7 @@ import { defensiveEventPriorities, DEFENSE_TIER_WARNING, type TeamDefenseTier, t
 import { getDivision, isDivisionGame } from "./nfl-divisions";
 import type { AvailabilityCheck } from "./availability";
 import type { historyStrength, playerUsage } from "./history-signals";
+import type { PriorSeasonEvidence } from "./prior-season-baseline";
 import type { MarketOdds, MarketEvidence } from "./market-odds";
 import { getEliteTier, eliteOpportunityWeight, type EliteTier } from "./elite-players";
 import { backfieldOpportunityWeight, backfieldReceivingPrior, backfieldEfficiency, type BackfieldEvidence } from "./backfield-workload";
@@ -86,6 +87,8 @@ export interface TeamSetup {
   roster?: SimulationRosterPlayer[];
   record?: { wins: number; losses: number; ties: number };
   historyGames?: number;
+  /** Captured in new input snapshots only; legacy replay never consults live priors. */
+  priorSeasonBaseline?: PriorSeasonEvidence;
   headToHead?: { opponent: string; games: number; usableGames: number; maxWeight: number };
   depthChartSource?: { fetchedAt: string; url: string };
   availabilityChecks?: AvailabilityCheck[];

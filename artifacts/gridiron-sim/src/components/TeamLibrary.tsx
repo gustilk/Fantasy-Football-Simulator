@@ -3,6 +3,7 @@ import { AlertTriangle, Plus, RotateCw, Save, Trash2, ClipboardPaste, Database }
 import { useSaveSeasonTeam, useGetNflDepthChart, getGetNflDepthChartQueryKey, type NflDepthChart, type TeamSeasonRecord, type RosterPlayer, type TeamWeek } from '@workspace/api-client-react';
 import { offenseFields, defenseFields, teamDefenseFields, positions, type StatField } from '@/lib/stat-fields';
 import NflImportPanel from './NflImportPanel';
+import PriorSeasonBaselinePanel from './PriorSeasonBaselinePanel';
 import DivisionMatchup from './DivisionMatchup';
 import { getDivision } from '@/lib/nfl-divisions';
 import { rolesForRoster } from '@/lib/depth-chart';
@@ -144,6 +145,7 @@ export default function TeamLibrary({ season, onSeasonChange, teams, loading, er
         </div>
       </div>
 
+      <PriorSeasonBaselinePanel season={season} teams={teams} />
       {error && <div className="tl-banner err" role="alert"><AlertTriangle size={15} /> {error}<button className="btn-secondary" onClick={onReload} data-testid="button-library-retry">Retry</button></div>}
       {ctxMismatch && <div className="tl-banner warn" role="status">Unsaved draft belongs to {ctx.team}, {ctx.season}. Saving writes to that team and season.</div>}
 

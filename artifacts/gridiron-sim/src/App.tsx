@@ -262,7 +262,7 @@ function App() {
     setMatchupChosen(true);
     setSource(value);
     if (value === 'manual') setSetup(current => {
-      const clearHistory = (team: TeamSetup): TeamSetup => ({ ...team, roster: undefined, record: undefined, historyGames: undefined, headToHead: undefined, depthChartSource: undefined, availabilityChecks: undefined, modelEvidence: undefined });
+      const clearHistory = (team: TeamSetup): TeamSetup => ({ ...team, roster: undefined, record: undefined, historyGames: undefined, priorSeasonBaseline: undefined, headToHead: undefined, depthChartSource: undefined, availabilityChecks: undefined, modelEvidence: undefined });
       return { ...current, away: clearHistory(current.away), home: clearHistory(current.home) };
     });
   };
@@ -282,6 +282,8 @@ function App() {
           <button disabled={busy} className={tab === 'library' ? 'selected' : ''} onClick={() => setTab('library')} data-testid="tab-library">Team Library</button>
           <button disabled={busy} className={tab === 'simulator' ? 'selected' : ''} onClick={() => setTab('simulator')} data-testid="tab-simulator">Game Simulator</button>
         </nav>
+        {season === 2026 && <p className="stats-help" data-testid="baseline-active-notice">2025 baseline active for new Team Library-based simulations. Its influence decreases as 2026 evidence grows.
+          {' '}<a href="?view=library">Review imported sources and player coverage</a>. Saved forecasts are unchanged.</p>}
         <div style={{ display: tab === 'library' ? undefined : 'none' }}>
           <TeamLibrary season={season} onSeasonChange={changeSeason} teams={storedTeams} loading={history.isLoading}
             error={history.isError ? 'Could not load saved team history. Please retry.' : ''} onReload={() => { void history.refetch(); }} onSaved={onTeamSaved} teamNames={NFL_TEAMS} />

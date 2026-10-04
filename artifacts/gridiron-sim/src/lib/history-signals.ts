@@ -34,6 +34,10 @@ export function historyStrength(team: TeamSeasonRecord, games: TeamWeek[]) {
     passRating: rating(passing, 7),
     rushRating: rating(rushing, 4.3),
     defenseRating: defensive.length ? Math.round(mean(defensive)) : 55,
+    defenseComponents: {
+      passRating: passAllowed.length ? rating(passAllowed, 225, -1) : undefined,
+      rushRating: rushAllowed.length ? rating(rushAllowed, 115, -1) : undefined,
+    },
     evidence: {
       passGames: passing.length, rushGames: rushing.length,
       passDefenseGames: passAllowed.length, rushDefenseGames: rushAllowed.length,

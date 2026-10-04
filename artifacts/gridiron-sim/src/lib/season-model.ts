@@ -4,6 +4,8 @@ import { availabilityForWeek, availabilityWarnings } from "./availability";
 import { historyStrength, historyWarnings, playerUsage } from "./history-signals";
 import { getEliteTier } from "./elite-players";
 import { getDefenderTier, getTeamDefenseTier, isDefensivePosition } from "./defensive-tiers";
+import { PRIOR_GAMES, baseline2025, priorTeam, priorPlayer, priorWeight, blendPriorStats, blendPriorUsage,
+  priorBackfieldEvidence, priorTeamStrength, priorDefenseRecord, priorDefenderRecord, type PriorSeasonEvidence } from "./prior-season-baseline";
 
 const average = (rows: NumericStats[], key: string): number | undefined => {
   const values = rows.map(row => row[key]).filter((value): value is number => typeof value === "number" && Number.isFinite(value));
@@ -63,30 +65,46 @@ export function teamRecord(team: TeamSeasonRecord, week = 19) {
   };
 }
 
-export function setupFromHistory(team: TeamSeasonRecord, week: number, venue: "home" | "away", opponent?: string): TeamSetup {
+export function setupFromHistory(team: TeamSeasonRecord, week: number, venue: "home" | "away", opponent?: string, options: { usePriorSeason?: boolean } = {}): TeamSetup {
   const games = priorGames(team, week);
+  const historicalTeam = options.usePriorSeason === false ? undefined : priorTeam(team.season, team.team);
+  const priorEvidence: PriorSeasonEvidence | undefined = historicalTeam ? {
+    season: baseline2025.season, policy: 'three-game-prior-v1', retrievedAt: baseline2025.retrievedAt,
+    effectivePriorGames: PRIOR_GAMES, matchedPlayers: [], unmatchedPlayers: [], teamChangedPlayers: [],
+  } : undefined;
+  const historicalPlayers = new Map(team.players.map(player => {
+    const historical = historicalTeam ? priorPlayer(team.season, team.team, player) : undefined;
+    if (priorEvidence && player.active && (player.side === 'defense' || ['QB', 'RB', 'WR', 'TE'].includes(player.position))) {
+      if (historical?.record) priorEvidence.matchedPlayers.push(player.name);
+      else if (historical?.teamChanged) priorEvidence.teamChangedPlayers.push(player.name);
+      else priorEvidence.unmatchedPlayers.push(player.name);
+    }
+    return [player.id, historical?.record] as const;
+  }));
   const matchupOpponent = opponent && opponent !== team.team ? opponent : undefined;
   const skill = new Set(["QB", "RB", "WR", "TE"]);
   const availabilityChecks = team.players.filter(p => p.side === "offense" && skill.has(p.position)).map(p => availabilityForWeek(p, week));
   const available = new Set(availabilityChecks.filter(p => p.included).map(p => p.id));
   const roster: SimulationRosterPlayer[] = team.players.filter(player => available.has(player.id)).map(player => {
     const rows = games.filter(game => game.playerStats[player.id] !== undefined).map(game => ({ stats: game.playerStats[player.id]!, venue: game.venue, opponent: game.opponent }));
+    const historical = historicalPlayers.get(player.id);
+    const evidence = priorBackfieldEvidence(historical);
     return {
       id: player.id, name: player.name, position: player.position as SimulationRosterPlayer["position"],
       elite1x: getEliteTier(player) > 0,
       eliteTier: getEliteTier(player),
       depthRank: player.depthRank, depthRankBasis: player.depthRank === undefined ? "usage" as const : player.depthSource ? "ESPN" as const : "saved" as const,
       historyObservations: rows.filter(row => ["passAttempts", "rushAttempts", "targets", "receptions", "receivingYards"].some(key => Number.isFinite(row.stats[key]))).length,
-      recentStats: blendedStats(rows, venue, matchupOpponent) as PlayerRecentStats,
-      usage: playerUsage(games, player.id),
+      recentStats: blendPriorStats(blendedStats(rows, venue, matchupOpponent), rows.map(row => row.stats), historical) as PlayerRecentStats,
+      usage: blendPriorUsage(playerUsage(games, player.id), historicalTeam, historical),
       backfieldEvidence: player.position === "RB" ? (() => {
         const pairedRush = rows.filter(r => Number.isFinite(r.stats.rushAttempts) && r.stats.rushAttempts! > 0 && Number.isFinite(r.stats.rushYards));
         const pairedReceiving = rows.filter(r => Number.isFinite(r.stats.receptions) && r.stats.receptions! > 0 && Number.isFinite(r.stats.receivingYards));
         return {
-          rushAttempts: pairedRush.reduce((n, r) => n + r.stats.rushAttempts!, 0),
-          rushYards: pairedRush.reduce((n, r) => n + r.stats.rushYards!, 0),
-          receivingCatches: pairedReceiving.reduce((n, r) => n + r.stats.receptions!, 0),
-          receivingYards: pairedReceiving.reduce((n, r) => n + r.stats.receivingYards!, 0),
+          rushAttempts: pairedRush.reduce((n, r) => n + r.stats.rushAttempts!, 0) + evidence.rushAttempts,
+          rushYards: pairedRush.reduce((n, r) => n + r.stats.rushYards!, 0) + evidence.rushYards,
+          receivingCatches: pairedReceiving.reduce((n, r) => n + r.stats.receptions!, 0) + evidence.receivingCatches,
+          receivingYards: pairedReceiving.reduce((n, r) => n + r.stats.receivingYards!, 0) + evidence.receivingYards,
         };
       })() : undefined,
     };
@@ -118,6 +136,30 @@ export function setupFromHistory(team: TeamSeasonRecord, week: number, venue: "h
   );
   const names = (position: string) => roster.filter(player => player.position === position);
   const strength = historyStrength(team, games);
+  const historicalStrength = historicalTeam ? priorTeamStrength(historicalTeam) : undefined;
+  const rating = (current: number, old: number | undefined, count: number) => {
+    if (old === undefined) return current;
+    const weight = priorWeight(count);
+    return Math.round(current * (1 - weight) + old * weight);
+  };
+  const sameQB = roster.some(player => player.position === 'QB' && player.depthRank === 1 && historicalPlayers.has(player.id) && historicalPlayers.get(player.id));
+  const sameRB = roster.some(player => player.position === 'RB' && historicalPlayers.get(player.id));
+  const defenseComponents = [
+    [strength.defenseComponents.passRating, historicalStrength?.passDefenseRating, strength.evidence.passDefenseGames],
+    [strength.defenseComponents.rushRating, historicalStrength?.rushDefenseRating, strength.evidence.rushDefenseGames],
+  ] as const;
+  const blendedDefense = defenseComponents.flatMap(([current, historical, count]) =>
+    current === undefined && historical === undefined ? [] : [rating(current ?? historical!, historical, count)]);
+  const historicalDefense = historicalTeam ? priorDefenseRecord(historicalTeam) : undefined;
+  const priorWarnings = priorEvidence ? [
+    `2025 regular-season baseline active: up to ${PRIOR_GAMES} effective prior games per reported field, weight p/(p+n), where n is known 2026 observations. These are prior equivalents, not 2026 games. Heuristic policy; improved predictive accuracy is not established.`,
+    `2025 player matching: ${priorEvidence.matchedPlayers.length} active players matched on this team; ${priorEvidence.unmatchedPlayers.length} missing/ambiguous/changed QB-role matches; ${priorEvidence.teamChangedPlayers.length} on different 2025 teams. Excluded matches receive no guessed historical workload.`,
+    'Current roster, depth ranks, availability and elite/defensive tags remain authoritative. Team defensive continuity is an unverified assumption. Fantasy totals, red-zone and defense-versus-position tables are references, not extra multipliers.',
+  ] : [];
+  const warnings = historyWarnings(games, strength.evidence).filter(warning =>
+    !(sameQB && warning.startsWith('Passing strength uses baseline 55')) &&
+    !(sameRB && warning.startsWith('Rushing strength uses baseline 55')) &&
+    !(historicalDefense && warning.startsWith('Defensive strength has missing')));
   return {
     backfieldModel: "usage-v1",
     name: team.team,
@@ -128,25 +170,30 @@ export function setupFromHistory(team: TeamSeasonRecord, week: number, venue: "h
     wr3: names("WR")[2]?.name ?? "",
     te: names("TE")[0]?.name ?? "",
     kicker: team.players.find(player => availabilityForWeek(player, week).included && player.side === "offense" && player.position === "K")?.name ?? "Kicker",
-    passRating: strength.passRating, rushRating: strength.rushRating, defenseRating: strength.defenseRating,
+    passRating: rating(strength.passRating, sameQB ? historicalStrength?.passRating : undefined, strength.evidence.passGames),
+    rushRating: rating(strength.rushRating, sameRB ? historicalStrength?.rushRating : undefined, strength.evidence.rushGames),
+    defenseRating: historicalStrength && blendedDefense.length
+      ? Math.round(blendedDefense.reduce((sum, value) => sum + value, 0) / blendedDefense.length) : strength.defenseRating,
     roster,
     defenseTier: getTeamDefenseTier(team),
     defenders: team.players.filter(p => p.side === "defense" && isDefensivePosition(p.position) && availabilityForWeek(p, week).included)
       .map(p => ({
         id: p.id, name: p.name, position: p.position as import("./defensive-tiers").DefensivePosition,
         defensiveTier: getDefenderTier(p),
-        recentStats: blendedStats(games.map(g => ({ stats: g.playerStats[p.id] ?? {}, venue: g.venue, opponent: g.opponent })), venue, matchupOpponent),
+        recentStats: blendPriorStats(blendedStats(games.map(g => ({ stats: g.playerStats[p.id] ?? {}, venue: g.venue, opponent: g.opponent })), venue, matchupOpponent),
+          games.map(g => g.playerStats[p.id] ?? {}), priorDefenderRecord(historicalPlayers.get(p.id))),
       })),
     record: teamRecord(team, week),
     historyGames: games.length,
+    ...(priorEvidence ? { priorSeasonBaseline: priorEvidence } : {}),
     availabilityChecks,
     modelEvidence: { strength: strength.evidence, warnings: [
-      ...historyWarnings(games, strength.evidence), ...availabilityWarnings(availabilityChecks),
+      ...warnings, ...availabilityWarnings(availabilityChecks), ...priorWarnings,
       "Backfield workload uses observed carries/targets with one role-prior game and no fixed RB1 minimum. RB1/RB2 start with equal receiving priority. Paired rushing efficiency shrinks toward 4.5 yards/carry (12 prior carries); receiving efficiency toward 8 yards/catch (10 prior catches). These are uncalibrated heuristics, not verified snap shares or touchdown guarantees.",
     ] },
     depthChartSource: team.players.find(p => p.depthSource)?.depthSource,
     headToHead: matchupOpponent ? { opponent: matchupOpponent, games: meetings.length, usableGames: usable.length, maxWeight: headToHeadWeight(usable.length) } : undefined,
-    defenseRecent: blendedStats(defenseRows, venue, matchupOpponent),
-    context: `${team.season} season: ${games.length} recorded games before week ${week}. Season/recent-five averages are blended; matching-venue splits contribute when at least two observations exist. ${matchupOpponent ? `${meetings.length} earlier head-to-head game(s) against ${matchupOpponent}; known fields receive up to ${Math.round(headToHeadWeight(usable.length) * 100)}% opponent-specific weight, capped at a 20% change to each baseline average (minimum cap 0.2). ` : ''}Missing values are unknown, not zero.`,
+    defenseRecent: blendPriorStats(blendedStats(defenseRows, venue, matchupOpponent), defenseRows.map(row => row.stats), historicalDefense),
+    context: `${team.season} season: ${games.length} recorded games before week ${week}. ${priorEvidence ? '2025 regular-season baseline blended separately; up to three effective prior games per reported field, decreasing as 2026 observations grow. ' : ''}Season/recent-five averages are blended; matching-venue splits contribute when at least two observations exist. ${matchupOpponent ? `${meetings.length} earlier head-to-head game(s) against ${matchupOpponent}; known fields receive up to ${Math.round(headToHeadWeight(usable.length) * 100)}% opponent-specific weight, capped at a 20% change to each baseline average (minimum cap 0.2). ` : ''}Missing values are unknown, not zero.`,
   };
 }
