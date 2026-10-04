@@ -1,0 +1,27 @@
+To get this data into your Replit app, you can use specialized Sports Data APIs or Web Scraping. Since you are building a simulation app, the fastest way to get Replit to write the backend code is to ask it to build a data fetching script that connects to a free or low-cost API, using placeholder static JSON data as a fallback.
+1. Where to Get the Data
+• The Blueprint / Free Option: The Rundown API or ESPN's Hidden API (Free, great for Vegas lines, schedules, and basic team/player box scores).
+• Premium Fantasy Data (Highly Recommended): FantasyData API or SportsData.io. They offer dedicated endpoints for advanced metrics like target share, air yards, and snap counts.
+• Python Package Alternative: nfl_data_py is a free Python library that pulls massive historical and active advanced tracking datasets directly from NFL fastR. It is perfect for Replit.
+2. The Exact Prompt to Give Replit Agent / AI
+Copy and paste this exact prompt into Replit to generate the core simulation infrastructure:
+text
+Build a Python-based NFL Fantasy Point Simulation Engine. 
+
+1. DATA STRUCTURE: Create a data ingestion script using dummy/placeholder JSON structures for a game setup. The data structure must include:
+- Game Context: Vegas implied point total, over/under, point spread, weather (wind/dome), and team pace factor.
+- Player Metrics: Projected snap share, target share, rushing share, and historical Air Yards.
+- Defensive Modifiers: Opponent EPA/play against the pass, EPA/play against the run, and pressure rate.
+
+2. MATH LOGIC: Write a Monte Carlo simulation function that takes these inputs and simulates a game 10,000 times to project individual player fantasy points (PPR scoring format). 
+- Calculate a "Weighted Opportunity Value" where a target is worth 2.5x more than a carry.
+- Multiply the baseline player volume by the defensive EPA modifiers (e.g., if a defense has a poor pass EPA, boost target efficiency).
+- Cap or boost ceiling games if the Vegas implied total is exceptionally high (>27 points).
+
+3. WEB APP ENVIRONMENT: Wrap this engine in a simple Streamlit interface so I can use sliders to adjust a player's target share or the opponent's defensive strength, run the simulation, and instantly see a visual chart of their projected range of fantasy outcomes (floor, median, ceiling). Use clean markdown formatting for the dashboard.
+Use code with caution.
+3. Interactive Prototyping
+To help you immediately map out how these mathematical weights and distributions will look inside your Python code before you commit it to Replit, I have built an interactive simulation workspace below. You can use it to test how shifting metrics like Vegas Totals or Target Shares dynamically shifts a player's fantasy ceiling.
+Concise concept primer: This simulator maps out a player's fantasy projection using an interactive Monte Carlo algorithm. Adjust the sliders below to see how changing game environments dynamically impacts the overall simulated distribution curve.
+AI-generated. Don't enter sensitive personal info.
+Once you run this in Replit, would you like help writing a Python script specifically using the nfl_data_py library to automatically pull real advanced player stats into your simulation model?
