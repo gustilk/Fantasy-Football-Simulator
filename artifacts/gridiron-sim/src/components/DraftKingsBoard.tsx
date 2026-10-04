@@ -42,7 +42,7 @@ function HistoryRow({ c, p }: { c: DraftKingsBoardController; p: DKHistoryPlayer
         <span>{w.points === null ? 'unknown' : `${w.points.toFixed(2)}${w.partial ? '*' : ''}`}</span>
         <span className="dk-muted">{w.source === 'user-entered-official' ? 'official (you)' : w.source === 'recorded-stats' ? 'recorded stats' : 'no box score'}</span>
         <div className="row"><input type="number" step="0.01" aria-label={`Official points week ${w.week}`} value={v} onChange={e => setDrafts({ ...drafts, [w.week]: e.target.value })} />
-          <button disabled={v.trim() === '' || !Number.isFinite(Number(v))} onClick={() => { if (c.saveOfficial({ team: p.team, playerId: p.playerId, week: w.week, points: Number(v) })) setDrafts({ ...drafts, [w.week]: '' }); }}>Save</button>
+          <button disabled={v.trim() === '' || !Number.isFinite(Number(v))} onClick={async () => { if (await c.saveOfficial({ team: p.team, playerId: p.playerId, week: w.week, points: Number(v) })) setDrafts({ ...drafts, [w.week]: '' }); }}>Save</button>
           {w.source === 'user-entered-official' && <button onClick={() => c.removeOfficial(p.team, p.playerId, w.week)}>Restore</button>}</div>
       </div>;
     })}</div></td></tr>}
@@ -56,7 +56,7 @@ export default function DraftKingsBoard({ season }: { season: number }) {
   const [view, setView] = useState<'projected' | 'actual'>('projected');
   const [all, setAll] = useState(false);
   const [detail, setDetail] = useState(false);
-  const loading = c.schedule.isLoading || c.historyQuery.isLoading;
+  const loading = c.schedule.isLoading || c.historyQuery.isLoading || c.archiveLoading;
   const loadError = c.schedule.isError || c.historyQuery.isError;
   const slate = c.activeSlate;
   const grouped = groupDKPlayers(c.projections);
@@ -79,6 +79,11 @@ export default function DraftKingsBoard({ season }: { season: number }) {
     {detail && <div className="dk-note"><strong>How to read this.</strong> Saved data lives in this browser and device only; export it to keep a copy. This batch includes Sunday kickoffs before 6 PM Central and excludes Sunday night. Your contest salary CSV remains the authority for Classic eligibility; daytime games can still belong to different contests. Night forecasts in older saves are hidden from this board but retained in archive exports. Batch runs assume neutral weather: 68 F, 5 mph wind, no precipitation. Each game runs 200 simulations and shows the mean with a 10th–90th range; runs are never added together. Projections are estimates, no winnings are guaranteed, and this is not a salary or lineup optimizer. Actual stats, not projections, power the model.</div>}
     {c.storageError && <div className="dk-err" role="alert">{c.storageError} <button className="btn-secondary" onClick={c.reloadArchive}>Retry</button></div>}
     {c.error && <div className="dk-err" role="alert" data-testid="dk-error">{c.error}</div>}
+    {c.unsavedSlate && <div className="dk-note" role="alert" data-testid="dk-unsaved">
+      Latest results are shown but are not saved. They will be lost if you reload or close this page. Retry saving or export a backup first.
+      <div className="dk-row"><button className="btn-primary" disabled={c.busy} onClick={() => { void c.retrySave(); }} data-testid="button-dk-retry-save">Retry save</button>
+        <button className="btn-secondary" onClick={c.exportArchive}>Export all, including unsaved results</button></div>
+    </div>}
     {c.notice && <div className="dk-note" role="status">{c.notice}</div>}
     {loading && <div className="dk-skel" role="status" aria-label="Loading" />}
     {loadError && <div className="dk-err" role="alert">Could not load the schedule or Team Library. <button className="btn-secondary" onClick={c.refresh} data-testid="dk-retry">Retry</button></div>}
@@ -87,7 +92,7 @@ export default function DraftKingsBoard({ season }: { season: number }) {
         <div className="dk-row">
           <div className="field dk-date-field"><label htmlFor="dk-sunday">Sunday daytime · NFL week (Central)</label>
             <select id="dk-sunday" disabled={c.busy} value={c.sunday} onChange={e => c.setSunday(e.target.value)} data-testid="select-dk-sunday">{c.sundayOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>
-          <button className="btn-primary" disabled={c.busy || !c.games.length} onClick={() => { void c.runSlate(); }} data-testid="button-dk-run">
+          <button className="btn-primary" disabled={c.busy || !!c.unsavedSlate || !c.games.length} onClick={() => { void c.runSlate(); }} data-testid="button-dk-run">
             {c.busy ? <><RotateCw size={15} className="spin-icon" /> Simulating</> : <><Play size={15} /> Run and save {c.games.length} games</>}</button>
         </div>
         {c.busy && <div role="status"><span className="dk-muted">{c.progress.completed} of {c.progress.total} {c.progress.matchup}</span>
@@ -135,9 +140,9 @@ export default function DraftKingsBoard({ season }: { season: number }) {
         <div className="dk-row" style={{ marginTop: 10 }}>
           <div className="field"><label htmlFor="dk-slate">Open slate</label>
             <select id="dk-slate" value={slate?.id ?? ''} onChange={e => { setConfirm(false); c.selectSlate(e.target.value); }} data-testid="select-dk-slate">
-              {c.slates.map(s => <option key={s.id} value={s.id}>{s.sunday} · saved {new Date(s.createdAt).toLocaleString()}</option>)}</select></div>
+              {c.slates.map(s => <option key={s.id} value={s.id}>{s.sunday} · {s.id === c.unsavedSlate?.id ? 'UNSAVED' : 'saved'} {new Date(s.createdAt).toLocaleString()}</option>)}</select></div>
           {slate && !confirm && <button className="btn-secondary" onClick={() => setConfirm(true)} data-testid="button-dk-delete"><Trash2 size={14} /> Delete</button>}
-          {slate && confirm && <div className="dk-confirm">Delete this saved slate permanently?
+          {slate && confirm && <div className="dk-confirm">{slate.id === c.unsavedSlate?.id ? 'Discard these unsaved results? Export first to keep a copy.' : 'Delete this saved slate permanently?'}
             <button className="btn-secondary" onClick={() => { c.deleteSlate(slate.id); setConfirm(false); }} data-testid="button-dk-delete-confirm">Delete</button>
             <button className="btn-secondary" onClick={() => setConfirm(false)}>Cancel</button></div>}
         </div>

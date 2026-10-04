@@ -8,20 +8,31 @@ import {
   type DKMarketDraft, type DKOfficialScore, type DKSlate,
 } from '@/lib/draftkings-board';
 import {
-  addDKSlate, DK_ARCHIVE_KEY, emptyDKArchive, readDKArchive, setOfficialScore, writeDKArchive, type DKArchive,
+  addDKSlate, DK_ARCHIVE_KEY, emptyDKArchive, setOfficialScore, type DKArchive,
 } from '@/lib/draftkings-archive';
+import { readBrowserDKArchive, updateBrowserDKArchive } from '@/lib/draftkings-storage';
 import type { SimulationInput } from '@/lib/simulator';
 import { draftKingsAccuracy } from '@/lib/draftkings-accuracy';
 
 const message = (error: unknown) => error instanceof Error ? error.message : 'The operation failed. Please retry.';
+// Retain a failed-save run across in-app tab navigation, but never call it saved.
+let pendingSlate: DKSlate | null = null;
+const warnUnsaved = (event: BeforeUnloadEvent) => { if (pendingSlate) { event.preventDefault(); event.returnValue = ''; } };
 function initialArchive(): { archive: DKArchive; storageError: string } {
-  try { return { archive: readDKArchive(localStorage), storageError: '' }; }
-  catch (error) { return { archive: emptyDKArchive(), storageError: message(error) }; }
+  return { archive: emptyDKArchive(), storageError: '' };
 }
 export function useDraftKingsBoard(season: number) {
   const schedule = useGetNflSchedule(season, undefined, { query: { queryKey: getGetNflScheduleQueryKey(season), staleTime: 300_000, retry: false } });
   const historyQuery = useListSeasonTeams({ season }, { query: { queryKey: getListSeasonTeamsQueryKey({ season }), staleTime: 60_000, retry: false } });
   const [stored, setStored] = useState(initialArchive);
+  const [archiveLoading, setArchiveLoading] = useState(true);
+  const [unsavedSlate, setUnsavedSlate] = useState<DKSlate | null>(pendingSlate);
+  const rememberUnsaved = (slate: DKSlate | null) => {
+    pendingSlate = slate; setUnsavedSlate(slate);
+    if (slate) window.addEventListener('beforeunload', warnUnsaved);
+    else window.removeEventListener('beforeunload', warnUnsaved);
+  };
+  const channel = useRef<BroadcastChannel | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [selectedSunday, setSelectedSunday] = useState('');
@@ -35,39 +46,55 @@ export function useDraftKingsBoard(season: number) {
   const sundays = useMemo(() => sundayOptions.map(option => option.value), [sundayOptions]);
   const sunday = selectedSunday || sundays[0] || '';
   const games = useMemo(() => sunday ? sundayGames(schedule.data?.games ?? [], sunday) : [], [schedule.data, sunday]);
-  const slates = stored.archive.slates.filter(slate => slate.season === season);
+  const slates = [...(unsavedSlate ? [unsavedSlate] : []), ...stored.archive.slates].filter(slate => slate.season === season);
   const savedSlate = slates.find(slate => slate.id === selectedSlateId) ?? slates[0] ?? null;
   const activeSlate = useMemo(() => savedSlate ? daytimeSundaySlate(savedSlate, schedule.data?.games ?? []) : null, [savedSlate, schedule.data]);
   const actualHistory = useMemo(() => dkHistory(teams, season, stored.archive.official), [teams, season, stored.archive.official]);
   const projections = useMemo(() => activeSlate ? slateBoard(activeSlate, actualHistory) : [], [activeSlate, actualHistory]);
   const accuracy = useMemo(() => draftKingsAccuracy(stored.archive.slates.map(slate => daytimeSundaySlate(slate, schedule.data?.games ?? [])), teams, stored.archive.official, season), [stored.archive, teams, season, schedule.data]);
 
-  const reloadArchive = () => setStored(initialArchive());
+  const reloadArchive = async () => {
+    setArchiveLoading(true);
+    try { setStored({ archive: await readBrowserDKArchive(), storageError: '' }); }
+    catch (error) { setStored(previous => ({ ...previous, storageError: message(error) })); }
+    finally { setArchiveLoading(false); }
+  };
   useEffect(() => {
-    const listener = (event: StorageEvent) => { if (event.key === DK_ARCHIVE_KEY) reloadArchive(); };
+    void reloadArchive();
+    const listener = (event: StorageEvent) => { if (event.key === DK_ARCHIVE_KEY) void reloadArchive(); };
+    const focus = () => { void reloadArchive(); };
+    if (typeof BroadcastChannel !== 'undefined') {
+      channel.current = new BroadcastChannel(DK_ARCHIVE_KEY);
+      channel.current.onmessage = focus;
+    }
     window.addEventListener('storage', listener);
-    return () => window.removeEventListener('storage', listener);
+    window.addEventListener('focus', focus);
+    return () => { window.removeEventListener('storage', listener); window.removeEventListener('focus', focus); channel.current?.close(); channel.current = null; };
   }, []);
-  const commit = (change: (archive: DKArchive) => DKArchive) => {
-    // Read immediately before writing to retain edits made in another tab.
-    const next = change(readDKArchive(localStorage));
-    writeDKArchive(localStorage, next);
+  const commit = async (change: (archive: DKArchive) => DKArchive) => {
+    const next = await updateBrowserDKArchive(change);
     setStored({ archive: next, storageError: '' });
+    try { channel.current?.postMessage('updated'); }
+    catch (error) { console.warn('DraftKings data saved, but another tab could not be notified.', error); }
   };
   const getMarket = (game: NflScheduledGame): DKMarketDraft => stored.archive.marketDrafts?.[`${season}:${game.id}`] ?? {
     enabled: false, manual: false, homeSpread: game.odds ? String(game.odds.homeSpread) : '',
     total: game.odds ? String(game.odds.total) : '', recordedAt: schedule.data?.fetchedAt ?? new Date().toISOString(),
   };
-  const updateMarket = (game: NflScheduledGame, patch: Partial<DKMarketDraft>) => {
+  const updateMarket = async (game: NflScheduledGame, patch: Partial<DKMarketDraft>) => {
     setError('');
     const changesLine = patch.homeSpread !== undefined || patch.total !== undefined;
-    const value = { ...getMarket(game), ...patch, ...(changesLine ? { manual: true, recordedAt: new Date().toISOString() } : {}) };
-    try { commit(archive => ({ ...archive, marketDrafts: { ...archive.marketDrafts, [`${season}:${game.id}`]: value } })); }
+    const recordedAt = new Date().toISOString();
+    try { await commit(archive => {
+      const value = { ...(archive.marketDrafts?.[`${season}:${game.id}`] ?? getMarket(game)), ...patch,
+        ...(changesLine ? { manual: true, recordedAt } : {}) };
+      return { ...archive, marketDrafts: { ...archive.marketDrafts, [`${season}:${game.id}`]: value } };
+    }); }
     catch (error) { setError(`Odds were not saved: ${message(error)}`); }
   };
-  const usePublicMarket = (game: NflScheduledGame) => {
+  const usePublicMarket = async (game: NflScheduledGame) => {
     try {
-      commit(archive => {
+      await commit(archive => {
         const drafts = { ...archive.marketDrafts };
         delete drafts[`${season}:${game.id}`];
         return { ...archive, marketDrafts: drafts };
@@ -94,6 +121,7 @@ export function useDraftKingsBoard(season: number) {
       setError('Load the schedule and Team Library successfully before running.'); return;
     }
     if (!games.length) { setError('No upcoming games on this Sunday.'); return; }
+    if (archiveLoading || unsavedSlate) { setError('Wait for saved data to load, or save/export the unsaved results before another run.'); return; }
     if (stored.storageError) { setError('Resolve the saved-data error before running a new slate.'); return; }
     running.current = true; setBusy(true);
     const frozenGames = structuredClone(games);
@@ -140,44 +168,61 @@ export function useDraftKingsBoard(season: number) {
       }
       if (!slate.forecasts.length) throw new Error(`No games completed. ${slate.failures.map(item => `${item.matchup}: ${item.reason}`).join(' ')}`);
       // Quota/corruption errors leave earlier archive entries untouched.
-      commit(archive => addDKSlate(archive, { ...slate, savedAt: new Date().toISOString() }));
+      try {
+        await commit(archive => addDKSlate(archive, { ...slate, savedAt: new Date().toISOString() }));
+      } catch (error) {
+        rememberUnsaved(slate); setSelectedSlateId(slate.id);
+        throw error;
+      }
       setSelectedSlateId(slate.id);
       setNotice(`${slate.forecasts.length} game(s) saved on this browser.${slate.failures.length ? ` ${slate.failures.length} failed; see the exclusion list.` : ''}`);
     } catch (error) { setError(`Slate was not saved: ${message(error)}`); }
     finally { running.current = false; setBusy(false); }
   };
-  const saveOfficial = (score: Omit<DKOfficialScore, 'enteredAt' | 'season'>) => {
+  const saveOfficial = async (score: Omit<DKOfficialScore, 'enteredAt' | 'season'>) => {
     setError('');
     try {
       const entry = { ...score, season, enteredAt: new Date().toISOString() };
       validateOfficialScore(entry, teams);
-      commit(archive => setOfficialScore(archive, entry));
+      await commit(archive => setOfficialScore(archive, entry));
       setNotice('Official DK points saved separately from forecasts and Team Library statistics.');
       return true;
     } catch (error) { setError(`Actual points were not saved: ${message(error)}`); return false; }
   };
-  const removeOfficial = (team: string, playerId: string, week: number) => {
+  const removeOfficial = async (team: string, playerId: string, week: number) => {
     try {
-      commit(archive => ({ ...archive, official: archive.official.filter(score =>
+      await commit(archive => ({ ...archive, official: archive.official.filter(score =>
         !(score.season === season && score.team === team && score.playerId === playerId && score.week === week)) }));
       setNotice('Manual official score removed; recorded-stat subtotal is shown again.');
     } catch (error) { setError(message(error)); }
   };
-  const deleteSlate = (id: string) => {
+  const deleteSlate = async (id: string) => {
+    if (id === unsavedSlate?.id) { rememberUnsaved(null); setSelectedSlateId(''); setError(''); setNotice('Unsaved results discarded. Saved archives were not changed.'); return; }
     try {
-      commit(archive => ({ ...archive, slates: archive.slates.filter(slate => slate.id !== id) }));
+      await commit(archive => ({ ...archive, slates: archive.slates.filter(slate => slate.id !== id) }));
       setSelectedSlateId(''); setNotice('Saved slate removed.');
     } catch (error) { setError(message(error)); }
   };
+  const retrySave = async () => {
+    if (!unsavedSlate || running.current) return;
+    running.current = true; setBusy(true);
+    try {
+      await commit(archive => addDKSlate(archive, { ...unsavedSlate, savedAt: new Date().toISOString() }));
+      setSelectedSlateId(unsavedSlate.id); rememberUnsaved(null); setError('');
+      setNotice('The existing results were saved without rerunning the simulations.');
+    } catch (error) { setError(`Slate was not saved: ${message(error)}`); }
+    finally { running.current = false; setBusy(false); }
+  };
   const exportArchive = () => {
-    const url = URL.createObjectURL(new Blob([JSON.stringify(stored.archive, null, 2)], { type: 'application/json' }));
+    const archive = unsavedSlate ? addDKSlate(stored.archive, unsavedSlate) : stored.archive;
+    const url = URL.createObjectURL(new Blob([JSON.stringify(archive, null, 2)], { type: 'application/json' }));
     const anchor = document.createElement('a');
     anchor.href = url; anchor.download = `gridiron-draftkings-${season}.json`; anchor.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
   return {
     season, schedule, historyQuery, sundays, sundayOptions, sunday, setSunday: setSelectedSunday, games, slates,
-    activeSlate, selectSlate: setSelectedSlateId, actualHistory, projections, accuracy, busy, progress,
+    activeSlate, selectSlate: setSelectedSlateId, actualHistory, projections, accuracy, busy, progress, archiveLoading, unsavedSlate, retrySave,
     error, notice, storageError: stored.storageError, runSlate, getMarket, updateMarket, usePublicMarket,
     saveOfficial, removeOfficial, deleteSlate, exportArchive, reloadArchive,
     refresh: () => { void schedule.refetch(); void historyQuery.refetch(); },

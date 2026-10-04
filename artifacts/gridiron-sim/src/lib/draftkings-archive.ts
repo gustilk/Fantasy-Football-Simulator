@@ -32,6 +32,12 @@ const archiveSchema = z.object({
 });
 export interface DKStorage { getItem(key: string): string | null; setItem(key: string, value: string): void }
 
+export function validateDKArchive(value: unknown): DKArchive {
+  const result = archiveSchema.safeParse(value);
+  if (!result.success) throw new Error('Saved DraftKings data could not be read. Existing storage has not been changed.');
+  return result.data as unknown as DKArchive;
+}
+
 /** Corrupt or inaccessible storage is an error, never a silent reset/overwrite. */
 export function readDKArchive(storage: DKStorage): DKArchive {
   const raw = storage.getItem(DK_ARCHIVE_KEY);
@@ -39,9 +45,7 @@ export function readDKArchive(storage: DKStorage): DKArchive {
   let parsed: unknown;
   try { parsed = JSON.parse(raw); }
   catch { throw new Error('Saved DraftKings data is invalid JSON. Existing storage has not been changed.'); }
-  const result = archiveSchema.safeParse(parsed);
-  if (!result.success) throw new Error('Saved DraftKings data could not be read. Existing storage has not been changed.');
-  return result.data as unknown as DKArchive;
+  return validateDKArchive(parsed);
 }
 export function writeDKArchive(storage: DKStorage, archive: DKArchive) {
   archiveSchema.parse(archive);
