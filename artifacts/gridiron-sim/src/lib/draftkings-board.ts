@@ -89,6 +89,7 @@ export interface DKHistoryPlayer {
 }
 export interface DKBoardRow extends DKProjection {
   gameId: string;
+  opponent: string | null;
   week: number;
   actual: DKWeekPoints | null;
   difference: number | null;
@@ -217,6 +218,7 @@ export function slateBoard(slate: DKSlate, history: DKHistoryPlayer[]): DKBoardR
     const actual = past?.weeks.find(week => week.week === game.week) ?? null;
     return {
       ...player, gameId: game.gameId, week: game.week, history: past, actual,
+      opponent: player.team === game.homeTeam ? game.awayTeam : player.team === game.awayTeam ? game.homeTeam : null,
       difference: actual?.points !== null && actual?.points !== undefined && !actual.partial ? round(actual.points - player.mean) : null,
     };
   })).sort((a, b) => b.mean - a.mean || a.name.localeCompare(b.name));

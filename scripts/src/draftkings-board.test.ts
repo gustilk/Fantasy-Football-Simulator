@@ -96,6 +96,12 @@ const slate: DKSlate = {
   timezone: 'America/Chicago', forecasts: [forecast], failures: [],
 };
 const rows = slateBoard(slate, actual);
+assert.ok(rows.some(row => row.team === forecast.homeTeam) && rows.some(row => row.team === forecast.awayTeam));
+for (const row of rows) {
+  assert.equal(row.opponent, row.team === forecast.homeTeam ? forecast.awayTeam : forecast.homeTeam, 'Show the opponent from the saved matchup, for both home and away players');
+}
+const unmatchedPlayerSlate = { ...slate, forecasts: [{ ...forecast, players: [{ ...forecast.players[0]!, team: 'Unknown team' }] }] };
+assert.equal(slateBoard(unmatchedPlayerSlate, actual)[0]!.opponent, null, 'Never guess the opponent for an unrecognized team');
 assert.ok(rows.every((row, index) => index === 0 || rows[index - 1].mean >= row.mean), 'Rank highest projection first');
 assert.equal(rows[0].difference, null, 'Upcoming weeks have no fabricated actual score');
 assert.deepEqual(groupDKPlayers(rows).map(group => group.position), ['QB', 'RB', 'WR', 'TE']);
