@@ -3,6 +3,7 @@ import { getNflDepthChart, getGetNflScheduleQueryKey, getListSeasonTeamsQueryKey
 import { withDepthChart } from '@/lib/depth-chart';
 import { setupFromHistory } from '@/lib/season-model';
 import { simulateEnsemble } from '@/lib/ensemble';
+import { applyStandings, findStandings, readStandings } from '@/lib/standings';
 import {
   availableSundayOptions, daytimeSundaySlate, dkHistory, gameForecast, slateBoard, sundayGames, validateOfficialScore,
   type DKMarketDraft, type DKOfficialScore, type DKSlate,
@@ -133,6 +134,7 @@ export function useDraftKingsBoard(season: number) {
     };
     setProgress({ completed: 0, total: frozenGames.length, matchup: '' });
     try {
+      const frozenStandings = readStandings(localStorage);
       for (const [index, game] of frozenGames.entries()) {
         const matchup = `${game.awayTeam} at ${game.homeTeam}`;
         setProgress({ completed: index, total: frozenGames.length, matchup });
@@ -145,8 +147,8 @@ export function useDraftKingsBoard(season: number) {
           ]);
           const draft = frozenMarkets.get(game.id)!;
           const input: SimulationInput = {
-            away: setupFromHistory(awayTeam, game.week, 'away', game.homeTeam),
-            home: setupFromHistory(homeTeam, game.week, 'home', game.awayTeam),
+            away: applyStandings(setupFromHistory(awayTeam, game.week, 'away', game.homeTeam), findStandings(frozenStandings, season, game.week), season, game.week),
+            home: applyStandings(setupFromHistory(homeTeam, game.week, 'home', game.awayTeam), findStandings(frozenStandings, season, game.week), season, game.week),
             // No game-day weather feed exists. These assumptions are explicit in the UI and snapshot.
             weather: { temperatureF: 68, windMph: 5, precipitation: 'none' },
             importance: game.seasonType === 'postseason' ? 'playoff' : 'regular',

@@ -4,6 +4,7 @@ import { setupFromHistory } from './season-model';
 import { simulateEnsemble } from './ensemble';
 import type { SimulationInput } from './simulator';
 import type { SavedSimulation } from './saved-simulations';
+import { applyStandings, validateStandings, type StandingsSnapshot } from './standings';
 
 export interface WeeklyProgress { completed: number; total: number; matchup: string }
 export interface WeeklyRun {
@@ -25,10 +26,13 @@ export async function runWeeklySimulations(options: {
   onProgress: (progress: WeeklyProgress) => void;
   yieldUI: () => Promise<void>;
   simulate?: typeof simulateEnsemble;
+  standings?: StandingsSnapshot;
 }): Promise<WeeklyRun> {
   const { season, week } = options;
   const games = structuredClone(gamesForWeek(options.games, week));
   const teams = structuredClone(options.teams);
+  const standings = options.standings ? structuredClone(options.standings) : undefined;
+  if (standings) validateStandings(standings);
   const report: WeeklyRun = { season, week, total: games.length, saved: [], failures: [] };
   if (!games.length) throw new Error(`No announced games are available for week ${week}.`);
   const loadTeam = async (name: string) => {
@@ -53,8 +57,8 @@ export async function runWeeklySimulations(options: {
     try {
       const [away, home] = await Promise.all([loadTeam(game.awayTeam), loadTeam(game.homeTeam)]);
       const input: SimulationInput = {
-        away: setupFromHistory(away, week, 'away', home.team),
-        home: setupFromHistory(home, week, 'home', away.team),
+        away: applyStandings(setupFromHistory(away, week, 'away', home.team), standings, season, week),
+        home: applyStandings(setupFromHistory(home, week, 'home', away.team), standings, season, week),
         weather: { temperatureF: 68, windMph: 5, precipitation: 'none' },
         importance: game.seasonType === 'postseason' ? 'playoff' : 'regular',
         market: {

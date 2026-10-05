@@ -1,5 +1,6 @@
 import type { NflScheduledGame, TeamSeasonRecord } from '@workspace/api-client-react';
 import type { SimulationInput, SimulationResult } from './simulator';
+import { standingsNotes } from './standings';
 import { getDraftKingsDetails } from './draftkings';
 import { savedEliteTier, type EliteTier } from './elite-players';
 
@@ -170,7 +171,7 @@ export function gameForecast(game: NflScheduledGame, input: SimulationInput, res
     gameId: game.id, week: game.week, kickoff: game.date, awayTeam: game.awayTeam, homeTeam: game.homeTeam,
     seed: result.seed, runs: ensemble.runs, players, input: structuredClone(input), market: ensemble.market,
     defenses: ensemble.defenseFantasy,
-    warnings: [...(input.away.modelEvidence?.warnings ?? []), ...(input.home.modelEvidence?.warnings ?? []), ...(ensemble.market?.warnings ?? [])],
+    warnings: [...(input.away.modelEvidence?.warnings ?? []), ...(input.home.modelEvidence?.warnings ?? []), ...(ensemble.market?.warnings ?? []), ...standingsNotes(input.away, input.home)],
   };
 }
 

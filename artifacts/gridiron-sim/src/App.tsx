@@ -20,6 +20,8 @@ import './components/game-simulator.css';
 import { getEliteTier, ELITE_TIER_OPTIONS, type EliteTier } from '@/lib/elite-players';
 import { readSavedSimulations, saveSimulation, deleteSavedSimulation, type SavedSimulation, type StoredSetup } from '@/lib/saved-simulations';
 import { runWeeklySimulations, type WeeklyProgress, type WeeklyRun } from '@/lib/weekly-simulations';
+import { readStandings, findStandings } from '@/lib/standings';
+import StandingsEditor from '@/components/StandingsEditor';
 
 type PatchTeam = (side: 'away' | 'home', field: keyof TeamSetup, value: TeamSetup[keyof TeamSetup]) => void;
 
@@ -64,7 +66,7 @@ function formatSavedDate(value: string) {
   return Number.isNaN(date.getTime()) ? 'Saved matchup' : date.toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
 }
 function App() {
-  const [tab, setTab] = useState<'library' | 'simulator' | 'draftkings' | 'lineups'>(() => { const v = new URLSearchParams(window.location.search).get('view'); return v === 'library' || v === 'simulator' || v === 'lineups' ? v : 'draftkings'; });
+  const [tab, setTab] = useState<'library' | 'simulator' | 'draftkings' | 'lineups' | 'standings'>(() => { const v = new URLSearchParams(window.location.search).get('view'); return v === 'library' || v === 'simulator' || v === 'lineups' || v === 'standings' ? v : 'draftkings'; });
   const [season, setSeason] = useState(() => readSetup().market?.season ?? new Date().getFullYear());
   const [week, setWeek] = useState(() => readSetup().market?.week ?? 2);
   const queryClient = useQueryClient();
@@ -80,6 +82,11 @@ function App() {
   const [weeklyRun, setWeeklyRun] = useState<WeeklyRun | null>(null);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
+  const [standingsDirty, setStandingsDirty] = useState(false);
+  const changeTab = (value: typeof tab) => {
+    if (tab === 'standings' && standingsDirty && !window.confirm('You have unsaved standings. Discard them and leave this section?')) return;
+    setTab(value);
+  };
 
   useEffect(() => {
     try { localStorage.setItem(setupStorageKey, JSON.stringify(setup)); } catch { setNotice('Browser storage is unavailable; this setup will not persist.'); }
@@ -107,6 +114,7 @@ function App() {
     try {
       const report = await runWeeklySimulations({
         season, week: selectedWeek, games, teams: storedTeams, fetchedAt,
+        standings: findStandings(readStandings(localStorage), season, selectedWeek),
         loadDepth: (year, name) => queryClient.fetchQuery({
           queryKey: getGetNflDepthChartQueryKey(year, name),
           queryFn: () => getNflDepthChart(year, name), staleTime: 300_000, retry: false,
@@ -166,10 +174,11 @@ function App() {
       </header>
       <main className="workspace">
         <nav className="section-tabs" aria-label="App sections">
-          <button disabled={busy} className={tab === 'draftkings' ? 'selected' : ''} onClick={() => setTab('draftkings')} data-testid="tab-draftkings">DraftKings</button>
-          <button disabled={busy} className={tab === 'lineups' ? 'selected' : ''} onClick={() => setTab('lineups')} data-testid="tab-lineups">Lineups</button>
-          <button disabled={busy} className={tab === 'library' ? 'selected' : ''} onClick={() => setTab('library')} data-testid="tab-library">Team Library</button>
-          <button disabled={busy} className={tab === 'simulator' ? 'selected' : ''} onClick={() => setTab('simulator')} data-testid="tab-simulator">Game Simulator</button>
+          <button disabled={busy} className={tab === 'draftkings' ? 'selected' : ''} onClick={() => changeTab('draftkings')} data-testid="tab-draftkings">DraftKings</button>
+          <button disabled={busy} className={tab === 'lineups' ? 'selected' : ''} onClick={() => changeTab('lineups')} data-testid="tab-lineups">Lineups</button>
+          <button disabled={busy} className={tab === 'library' ? 'selected' : ''} onClick={() => changeTab('library')} data-testid="tab-library">Team Library</button>
+          <button disabled={busy} className={tab === 'standings' ? 'selected' : ''} onClick={() => changeTab('standings')} data-testid="tab-standings">Standings</button>
+          <button disabled={busy} className={tab === 'simulator' ? 'selected' : ''} onClick={() => changeTab('simulator')} data-testid="tab-simulator">Game Simulator</button>
         </nav>
         {season === 2026 && <p className="stats-help" data-testid="baseline-active-notice">2025 baseline active for new Team Library-based simulations. Its influence decreases as 2026 evidence grows.
           {' '}<a href="?view=library">Review imported sources and player coverage</a>. Saved forecasts are unchanged.</p>}
@@ -179,6 +188,7 @@ function App() {
         </div>
         <div style={{ display: tab === 'draftkings' ? undefined : 'none' }}><DraftKingsBoard season={season} /></div>
         {tab === 'lineups' && <LineupsSection season={season} />}
+        {tab === 'standings' && <StandingsEditor season={season} onSeasonChange={changeSeason} onDirtyChange={setStandingsDirty} />}
         <div className="game-simulator" style={{ display: tab === 'simulator' ? undefined : 'none' }}>
         <div className="page-heading">
           <div>

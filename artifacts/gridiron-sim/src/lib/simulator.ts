@@ -1,6 +1,7 @@
 import { calculateDraftKings } from "./draftkings";
 import { defensiveEventPriorities, DEFENSE_TIER_WARNING, type TeamDefenseTier, type SimulationDefender } from "./defensive-tiers";
 import { getDivision, isDivisionGame } from "./nfl-divisions";
+import { passingStrategyAdjustment, standingsNotes, type StandingContext } from "./standings";
 import type { AvailabilityCheck } from "./availability";
 import type { historyStrength, playerUsage } from "./history-signals";
 import type { PriorSeasonEvidence } from "./prior-season-baseline";
@@ -86,6 +87,8 @@ export interface TeamSetup {
   defenders?: SimulationDefender[];
   roster?: SimulationRosterPlayer[];
   record?: { wins: number; losses: number; ties: number };
+  /** Manual, exact-week context frozen with the forecast; absent in legacy saves. */
+  standings?: StandingContext;
   historyGames?: number;
   /** Captured in new input snapshots only; legacy replay never consults live priors. */
   priorSeasonBaseline?: PriorSeasonEvidence;
@@ -452,7 +455,7 @@ function simulateTeam(
       windPenalty * 0.6 -
       precipitation * 0.75 +
       (isHome ? 0.005 : 0) +
-      (importance === "must-win" ? 0.012 : importance === "playoff" ? 0.008 : 0),
+      passingStrategyAdjustment(setup, defense, importance),
     0.4,
     0.68,
   );
@@ -812,6 +815,7 @@ function makeOverview(
     overview.push(`Records before this matchup: ${input.away.name} ${record(input.away)}; ${input.home.name} ${record(input.home)}. Winning percentage is only a small strength prior, not a guarantee.`);
   }
   const awayDivision = getDivision(input.away.name), homeDivision = getDivision(input.home.name);
+  overview.push(...standingsNotes(input.away, input.home));
   overview.push(isDivisionGame(input.away.name, input.home.name)
     ? `Division game: both teams are in ${awayDivision}. Familiarity can matter, but no blanket difficulty, scoring or fantasy-point penalty is applied.`
     : `Non-division or unclassified matchup: ${input.away.name} (${awayDivision ?? "unknown division"}) vs ${input.home.name} (${homeDivision ?? "unknown division"}). Division labels use current NFL alignment.`);

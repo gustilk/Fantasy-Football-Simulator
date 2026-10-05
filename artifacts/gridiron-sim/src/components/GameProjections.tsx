@@ -17,6 +17,10 @@ export default function GameProjections({ result, awayName, homeName }: {
         <p className="sim-caption">{awayName} at {homeName}</p>
       </div>
     </div>
+     {result.overview.some(note => note.includes('manually entered standings')) && <details style={{ margin: '0 20px 16px' }}>
+       <summary>Division standings and win-pressure context</summary>
+       {result.overview.filter(note => note.includes('manually entered standings') || note.includes('manually marked needs') || note.includes('needs-win mark')).map(note => <p className="sim-caption" key={note}>{note}</p>)}
+     </details>}
     <div className="sim-projections">
       {!projections ? <p className="history-warning" role="status">This older saved run has no compatible DraftKings averages. Run its week again to generate new projections.</p> : <>
         <p className="sim-caption">Average of {result.ensemble!.runs} simulations{result.ensemble!.market ? ' · odds-adjusted' : ''}. Estimates, not guaranteed points.</p>
