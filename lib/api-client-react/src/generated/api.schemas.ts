@@ -5,6 +5,21 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface FeaturedClassicSalary {
+  /** @minimum 1 */
+  draftGroupId: number;
+  startTime: string;
+  /** @minimum 2 */
+  gameCount: number;
+  filename: string;
+  /**
+     * @minLength 1
+     * @maxLength 2000000
+     */
+  csv: string;
+  sourceUrl: string;
+}
+
 export type SalaryRowPosition = typeof SalaryRowPosition[keyof typeof SalaryRowPosition];
 
 

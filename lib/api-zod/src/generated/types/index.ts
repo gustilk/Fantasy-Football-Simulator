@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './featuredClassicSalary';
 export * from './getNflScheduleParams';
 export * from './getNflScheduleScope';
 export * from './healthStatus';

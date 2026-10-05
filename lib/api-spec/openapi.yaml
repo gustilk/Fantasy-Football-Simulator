@@ -11,6 +11,31 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /draftkings/featured-classic/{season}:
+    get:
+      operationId: getFeaturedClassicSalary
+      summary: Retrieve the official upcoming Featured NFL Classic salary CSV
+      parameters:
+        - in: path
+          name: season
+          required: true
+          schema: { type: integer, minimum: 2000, maximum: 2100 }
+      responses:
+        "200":
+          description: Verified official featured Classic slate and CSV, not yet saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FeaturedClassicSalary" }
+        "404":
+          description: No upcoming featured Classic slate for this season
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeasonError" }
+        "502":
+          description: DraftKings unavailable or export failed validation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeasonError" }
   /nfl-matchup-evidence/{season}/{team}/{beforeWeek}/{window}:
     get:
       operationId: getNflMatchupEvidence
@@ -297,6 +322,16 @@ paths:
               schema: { $ref: "#/components/schemas/SeasonError" }
 components:
   schemas:
+    FeaturedClassicSalary:
+      type: object
+      required: [draftGroupId, startTime, gameCount, filename, csv, sourceUrl]
+      properties:
+        draftGroupId: { type: integer, minimum: 1 }
+        startTime: { type: string, format: date-time }
+        gameCount: { type: integer, minimum: 2 }
+        filename: { type: string }
+        csv: { type: string, minLength: 1, maxLength: 2000000 }
+        sourceUrl: { type: string, format: uri }
     SalaryRow:
       type: object
       required: [id, name, position, team, salary, gameInfo, rosterPosition]

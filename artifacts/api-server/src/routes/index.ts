@@ -4,6 +4,7 @@ import seasonTeamsRouter from "./season-teams";
 import nflAdvancedRouter from "./nfl-advanced";
 import nflImportRouter from "./nfl-import";
 import salaryFilesRouter from "./salary-files";
+import featuredClassicRouter from "./featured-classic";
 
 const router: IRouter = Router();
 
@@ -12,5 +13,6 @@ router.use(seasonTeamsRouter);
 router.use(nflAdvancedRouter);
 router.use(nflImportRouter);
 router.use(salaryFilesRouter);
+router.use(featuredClassicRouter);
 
 export default router;

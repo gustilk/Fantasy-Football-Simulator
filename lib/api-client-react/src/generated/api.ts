@@ -20,6 +20,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  FeaturedClassicSalary,
   GetNflScheduleParams,
   HealthStatus,
   ListSeasonTeamsParams,
@@ -62,6 +63,83 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetFeaturedClassicSalaryUrl = (season: number,) => {
+
+
+
+
+  return `/api/draftkings/featured-classic/${season}`
+}
+
+/**
+ * @summary Retrieve the official upcoming Featured NFL Classic salary CSV
+ */
+export const getFeaturedClassicSalary = async (season: number, options?: Parameters<typeof customFetch>[1]): Promise<FeaturedClassicSalary> => {
+
+  return customFetch<FeaturedClassicSalary>(getGetFeaturedClassicSalaryUrl(season),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFeaturedClassicSalaryQueryKey = (season: number,) => {
+    return [
+    `/api/draftkings/featured-classic/${season}`
+    ] as const;
+    }
+
+
+export const getGetFeaturedClassicSalaryQueryOptions = <TData = Awaited<ReturnType<typeof getFeaturedClassicSalary>>, TError = ErrorType<SeasonError>>(season: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFeaturedClassicSalary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFeaturedClassicSalaryQueryKey(season);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFeaturedClassicSalary>>> = ({ signal }) => getFeaturedClassicSalary(season, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: season !== null && season !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFeaturedClassicSalary>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFeaturedClassicSalaryQueryResult = NonNullable<Awaited<ReturnType<typeof getFeaturedClassicSalary>>>
+export type GetFeaturedClassicSalaryQueryError = ErrorType<SeasonError>
+
+
+/**
+ * @summary Retrieve the official upcoming Featured NFL Classic salary CSV
+ */
+
+export function useGetFeaturedClassicSalary<TData = Awaited<ReturnType<typeof getFeaturedClassicSalary>>, TError = ErrorType<SeasonError>>(
+ season: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFeaturedClassicSalary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFeaturedClassicSalaryQueryOptions(season,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetNflMatchupEvidenceUrl = (season: number,
     team: string,

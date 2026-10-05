@@ -9,6 +9,35 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Retrieve the official upcoming Featured NFL Classic salary CSV
+ */
+export const getFeaturedClassicSalaryPathSeasonMin = 2000;
+export const getFeaturedClassicSalaryPathSeasonMax = 2100;
+
+
+
+export const GetFeaturedClassicSalaryParams = zod.object({
+  "season": zod.coerce.number().int().min(getFeaturedClassicSalaryPathSeasonMin).max(getFeaturedClassicSalaryPathSeasonMax)
+})
+
+
+export const getFeaturedClassicSalaryResponseGameCountMin = 2;
+
+export const getFeaturedClassicSalaryResponseCsvMax = 2000000;
+
+
+
+export const GetFeaturedClassicSalaryResponse = zod.object({
+  "draftGroupId": zod.number().int().min(1),
+  "startTime": zod.coerce.date(),
+  "gameCount": zod.number().int().min(getFeaturedClassicSalaryResponseGameCountMin),
+  "filename": zod.string(),
+  "csv": zod.string().min(1).max(getFeaturedClassicSalaryResponseCsvMax),
+  "sourceUrl": zod.string().url()
+})
+
+
+/**
  * @summary Verified completed-game football evidence for new forecast inputs
  */
 export const getNflMatchupEvidencePathSeasonMin = 2000;

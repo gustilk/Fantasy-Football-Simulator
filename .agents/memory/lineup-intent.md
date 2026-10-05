@@ -15,6 +15,12 @@ For direct Classic salary retrieval, the user wants the featured NFL Classic sla
 
 **How to apply:** Verify the official featured Classic draft group and its game dates before retrieving its salary CSV. Do not substitute another Classic slate, Madden contests, Showdown, or the app's broader Sunday forecast group.
 
+The user uses the published app on their phone. Salary-import assistance must address that app, not just preview data.
+
+**Why:** When asked which phone version they use, the user selected the published app after questioning why they had to download and upload the salary CSV themselves.
+
+**How to apply:** Keep preview and published data distinct in both actions and explanations. Prefer a direct import through the user's app session over a phone download/re-upload step. New import functionality requires republishing before it is available on their phone.
+
 Salary imports must not depend on a forecast already existing. Forecast pairing is required for generation, not for uploading and retaining the contest CSV.
 
 **Why:** The user reported that the lineup salary upload would not let them proceed and kept waiting; requiring a saved forecast blocked the independent salary-import step.
