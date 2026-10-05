@@ -67,9 +67,9 @@ async function seasonData(season: number) {
   void promise.then(result => { if (result.sources.some(source => source.status === 'unavailable')) entry.expires = Date.now() + 30_000; }, () => {});
   return promise;
 }
-export async function getAdvancedNflStats(season: number, team: string, beforeWeek: number) {
+export async function getAdvancedNflStats(season: number, team: string, beforeWeek: number, window: 4 | 18 = 18) {
   if (!Object.values(NFL_TEAM_CODES).includes(team) || !Number.isInteger(season) || season < 2000 || season > 2100
     || !Number.isInteger(beforeWeek) || beforeWeek < 1 || beforeWeek > 19) throw new Error('Choose a valid NFL team, season and cutoff week.');
   const { data, sources } = await seasonData(season);
-  return advancedReport(data, team, beforeWeek, sources);
+  return advancedReport(data, team, beforeWeek, sources, Date.now(), window);
 }

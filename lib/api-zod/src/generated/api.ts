@@ -9,6 +9,89 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Verified completed-game football evidence for new forecast inputs
+ */
+export const getNflMatchupEvidencePathSeasonMin = 2000;
+export const getNflMatchupEvidencePathSeasonMax = 2100;
+
+export const getNflMatchupEvidencePathBeforeWeekMax = 19;
+
+
+
+export const GetNflMatchupEvidenceParams = zod.object({
+  "season": zod.coerce.number().int().min(getNflMatchupEvidencePathSeasonMin).max(getNflMatchupEvidencePathSeasonMax),
+  "team": zod.coerce.string(),
+  "beforeWeek": zod.coerce.number().int().min(1).max(getNflMatchupEvidencePathBeforeWeekMax),
+  "window": zod.union([zod.literal(4),zod.literal(18)])
+})
+
+export const GetNflMatchupEvidenceResponse = zod.object({
+  "season": zod.number().int(),
+  "team": zod.string(),
+  "beforeWeek": zod.number().int(),
+  "fetchedAt": zod.string(),
+  "status": zod.enum(['available', 'partial', 'unavailable']),
+  "games": zod.number().int(),
+  "dataThroughWeek": zod.number().int().nullable(),
+  "unmatchedPlayers": zod.number().int(),
+  "sources": zod.array(zod.object({
+  "kind": zod.enum(['play-by-play', 'snap-counts', 'player-identities']),
+  "url": zod.string(),
+  "status": zod.enum(['available', 'unavailable']),
+  "fetchedAt": zod.string().nullable(),
+  "updatedAt": zod.string().nullable(),
+  "error": zod.string().optional()
+})),
+  "warnings": zod.array(zod.string()),
+  "players": zod.array(zod.object({
+  "playerId": zod.string().nullable(),
+  "sourcePlayerId": zod.string(),
+  "name": zod.string(),
+  "position": zod.enum(['QB', 'RB', 'WR', 'TE', 'unknown']),
+  "games": zod.number().int(),
+  "snapGames": zod.number().int(),
+  "opportunityGames": zod.number().int(),
+  "offenseSnaps": zod.number().int().nullable(),
+  "snapShare": zod.number().nullable(),
+  "targets": zod.number().int().nullable(),
+  "targetShare": zod.number().nullable(),
+  "carries": zod.number().int().nullable(),
+  "carryShare": zod.number().nullable(),
+  "airYards": zod.number().nullable(),
+  "airYardsPerTarget": zod.number().nullable(),
+  "airYardTargets": zod.number().int(),
+  "redZoneTargetShare": zod.number().nullish(),
+  "goalLineCarryShare": zod.number().nullish()
+})),
+  "defense": zod.object({
+  "passPlays": zod.number().int(),
+  "rushPlays": zod.number().int(),
+  "passEpaPlays": zod.number().int(),
+  "rushEpaPlays": zod.number().int(),
+  "passEpaAllowed": zod.number().nullable(),
+  "rushEpaAllowed": zod.number().nullable(),
+  "sackHitPlays": zod.number().int(),
+  "sackHitRate": zod.number().nullable(),
+  "pressureRate": zod.number().nullable(),
+  "offensePlaysPerGame": zod.number().nullable(),
+  "sackRate": zod.number().nullish(),
+  "receivingEpaAllowed": zod.number().nullish(),
+  "positionEpaAllowed": zod.record(zod.string(), zod.number()).optional(),
+  "positionEpaSamples": zod.record(zod.string(), zod.number().int()).optional()
+}),
+  "offense": zod.object({
+  "dropbackShare": zod.number().nullable(),
+  "passEpa": zod.number().nullable(),
+  "rushEpa": zod.number().nullable(),
+  "passSamples": zod.number().int(),
+  "rushSamples": zod.number().int(),
+  "playsPerGame": zod.number().nullable()
+}).optional(),
+  "sampleWeeks": zod.array(zod.number().int()).optional()
+})
+
+
+/**
  * @summary Shared personal-app contest salary data
  */
 export const getSharedSalaryFilePathSeasonMin = 2000;
@@ -249,7 +332,9 @@ export const GetNflAdvancedStatsResponse = zod.object({
   "carryShare": zod.number().nullable(),
   "airYards": zod.number().nullable(),
   "airYardsPerTarget": zod.number().nullable(),
-  "airYardTargets": zod.number().int()
+  "airYardTargets": zod.number().int(),
+  "redZoneTargetShare": zod.number().nullish(),
+  "goalLineCarryShare": zod.number().nullish()
 })),
   "defense": zod.object({
   "passPlays": zod.number().int(),
@@ -261,8 +346,21 @@ export const GetNflAdvancedStatsResponse = zod.object({
   "sackHitPlays": zod.number().int(),
   "sackHitRate": zod.number().nullable(),
   "pressureRate": zod.number().nullable(),
-  "offensePlaysPerGame": zod.number().nullable()
-})
+  "offensePlaysPerGame": zod.number().nullable(),
+  "sackRate": zod.number().nullish(),
+  "receivingEpaAllowed": zod.number().nullish(),
+  "positionEpaAllowed": zod.record(zod.string(), zod.number()).optional(),
+  "positionEpaSamples": zod.record(zod.string(), zod.number().int()).optional()
+}),
+  "offense": zod.object({
+  "dropbackShare": zod.number().nullable(),
+  "passEpa": zod.number().nullable(),
+  "rushEpa": zod.number().nullable(),
+  "passSamples": zod.number().int(),
+  "rushSamples": zod.number().int(),
+  "playsPerGame": zod.number().nullable()
+}).optional(),
+  "sampleWeeks": zod.array(zod.number().int()).optional()
 })
 
 

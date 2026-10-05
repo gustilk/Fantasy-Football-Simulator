@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { NflAdvancedDefense } from './nflAdvancedDefense';
+import type { NflAdvancedOffense } from './nflAdvancedOffense';
 import type { NflAdvancedPlayer } from './nflAdvancedPlayer';
 import type { NflAdvancedReportStatus } from './nflAdvancedReportStatus';
 import type { NflAdvancedSource } from './nflAdvancedSource';
@@ -24,4 +25,6 @@ export interface NflAdvancedReport {
   warnings: string[];
   players: NflAdvancedPlayer[];
   defense: NflAdvancedDefense;
+  offense?: NflAdvancedOffense;
+  sampleWeeks?: number[];
 }

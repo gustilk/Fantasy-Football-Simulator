@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getNflDepthChart, getGetNflScheduleQueryKey, getListSeasonTeamsQueryKey, useGetNflSchedule, useListSeasonTeams, type NflScheduledGame, type TeamSeasonRecord } from '@workspace/api-client-react';
 import { withDepthChart } from '@/lib/depth-chart';
-import { setupFromHistory } from '@/lib/season-model';
+import { footballSetup } from '@/lib/football-evidence';
+import { loadFootballReports } from '@/lib/load-football-evidence';
 import { simulateEnsemble } from '@/lib/ensemble';
 import { applyStandings, findStandings, readStandings } from '@/lib/standings';
 import {
@@ -146,9 +147,13 @@ export function useDraftKingsBoard(season: number) {
             loadTeam(game.awayTeam, game.week, frozenTeams), loadTeam(game.homeTeam, game.week, frozenTeams),
           ]);
           const draft = frozenMarkets.get(game.id)!;
+          const [awayEvidence, homeEvidence] = await Promise.all([
+            loadFootballReports(season, game.awayTeam, game.week), loadFootballReports(season, game.homeTeam, game.week),
+          ]);
+          if (Date.parse(game.date) <= Date.now()) throw new Error('Kickoff passed while football evidence was loading. This game was not forecast.');
           const input: SimulationInput = {
-            away: applyStandings(setupFromHistory(awayTeam, game.week, 'away', game.homeTeam), findStandings(frozenStandings, season, game.week), season, game.week),
-            home: applyStandings(setupFromHistory(homeTeam, game.week, 'home', game.awayTeam), findStandings(frozenStandings, season, game.week), season, game.week),
+            away: applyStandings(footballSetup(awayTeam, game.week, 'away', game.homeTeam, awayEvidence), findStandings(frozenStandings, season, game.week), season, game.week),
+            home: applyStandings(footballSetup(homeTeam, game.week, 'home', game.awayTeam, homeEvidence), findStandings(frozenStandings, season, game.week), season, game.week),
             // No game-day weather feed exists. These assumptions are explicit in the UI and snapshot.
             weather: { temperatureF: 68, windMph: 5, precipitation: 'none' },
             importance: game.seasonType === 'postseason' ? 'playoff' : 'regular',

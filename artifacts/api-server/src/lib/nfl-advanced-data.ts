@@ -16,15 +16,17 @@ const code = (value: string) => aliases[value] ?? value;
 const position = (value: string): NflAdvancedPlayer['position'] => value === 'FB' ? 'RB' : ['QB', 'RB', 'WR', 'TE'].includes(value) ? value as NflAdvancedPlayer['position'] : 'unknown';
 const round = (value: number) => Math.round(value * 10000) / 10000;
 interface Identity { key: string; playerId: string | null; name: string; position: NflAdvancedPlayer['position'] }
-interface PlayerGame extends Identity { targets: number; carries: number; airYards: number; airTargets: number; snaps: number | null; snapShare: number | null; participated: boolean }
+interface PlayerGame extends Identity { targets: number; carries: number; airYards: number; airTargets: number; redZoneTargets: number; goalLineCarries: number; snaps: number | null; snapShare: number | null; participated: boolean }
 interface TeamGame {
   players: Map<string, PlayerGame>; targets: number; carries: number; offensePlays: number;
   passPlays: number; rushPlays: number; passEpaSum: number; rushEpaSum: number; passEpaPlays: number; rushEpaPlays: number; hits: number; hitSamples: number;
+  dropbacks: number; offRushes: number; offPassEpaSum: number; offRushEpaSum: number; offPassSamples: number; offRushSamples: number; sacks: number; redZoneTargets: number; goalLineCarries: number;
+  rbEpa: number; wrEpa: number; teEpa: number; rbTargets: number; wrTargets: number; teTargets: number;
 }
 interface Game { week: number; date: string; endedAt: number | null; complete: boolean; teams: Map<string, TeamGame> }
 export interface AdvancedSeason { season: number; games: Map<string, Game>; hasPbp: boolean; hasSnaps: boolean; hasIdentities: boolean }
-const newTeam = (): TeamGame => ({ players: new Map(), targets: 0, carries: 0, offensePlays: 0, passPlays: 0, rushPlays: 0, passEpaSum: 0, rushEpaSum: 0, passEpaPlays: 0, rushEpaPlays: 0, hits: 0, hitSamples: 0 });
-const newPlayer = (identity: Identity): PlayerGame => ({ ...identity, targets: 0, carries: 0, airYards: 0, airTargets: 0, snaps: null, snapShare: null, participated: false });
+const newTeam = (): TeamGame => ({ players: new Map(), targets: 0, carries: 0, offensePlays: 0, passPlays: 0, rushPlays: 0, passEpaSum: 0, rushEpaSum: 0, passEpaPlays: 0, rushEpaPlays: 0, hits: 0, hitSamples: 0, dropbacks: 0, offRushes: 0, offPassEpaSum: 0, offRushEpaSum: 0, offPassSamples: 0, offRushSamples: 0, sacks: 0, redZoneTargets: 0, goalLineCarries: 0, rbEpa: 0, wrEpa: 0, teEpa: 0, rbTargets: 0, wrTargets: 0, teTargets: 0 });
+const newPlayer = (identity: Identity): PlayerGame => ({ ...identity, targets: 0, carries: 0, airYards: 0, airTargets: 0, redZoneTargets: 0, goalLineCarries: 0, snaps: null, snapShare: null, participated: false });
 
 /** Aggregate immutable observed game facts first. Cutoffs are applied to whole
  * completed games later, so repeated team requests don't repeatedly parse PBP. */
@@ -82,11 +84,15 @@ export function parseAdvancedSeason(season: number, pbp?: string, snaps?: string
     offense.offensePlays++;
     const epa = number(row.epa);
     if (dropback) {
+      offense.dropbacks++;
+      if (epa !== null) { offense.offPassEpaSum += epa; offense.offPassSamples++; }
       defense.passPlays++;
       if (epa !== null) { defense.passEpaSum += epa; defense.passEpaPlays++; }
       const hit = number(row.qb_hit), sack = number(row.sack);
-      if (hit !== null && sack !== null) { defense.hitSamples++; defense.hits += Number(hit === 1 || sack === 1); }
+      if (hit !== null && sack !== null) { defense.hitSamples++; defense.hits += Number(hit === 1 || sack === 1); defense.sacks += Number(sack === 1); }
     } else {
+      offense.offRushes++;
+      if (epa !== null) { offense.offRushEpaSum += epa; offense.offRushSamples++; }
       defense.rushPlays++;
       if (epa !== null) { defense.rushEpaSum += epa; defense.rushEpaPlays++; }
     }
@@ -94,12 +100,21 @@ export function parseAdvancedSeason(season: number, pbp?: string, snaps?: string
     if (row.pass_attempt === '1' && row.receiver_player_id && row.receiver_player_id !== 'NA') {
       const player = actor(offense, row.receiver_player_id, row.receiver_player_name ?? '');
       offense.targets++; player.targets++; player.participated = true;
+      if (epa !== null) {
+        if (player.position === 'RB') { defense.rbEpa += epa; defense.rbTargets++; }
+        if (player.position === 'WR') { defense.wrEpa += epa; defense.wrTargets++; }
+        if (player.position === 'TE') { defense.teEpa += epa; defense.teTargets++; }
+      }
+      const yardline = number(row.yardline_100);
+      if (yardline !== null && yardline <= 20 && yardline >= 0) { player.redZoneTargets++; offense.redZoneTargets++; }
       const air = number(row.air_yards);
       if (air !== null) { player.airYards += air; player.airTargets++; }
     }
     if (rush && row.rusher_player_id && row.rusher_player_id !== 'NA') {
       const player = actor(offense, row.rusher_player_id, row.rusher_player_name ?? '');
       offense.carries++; player.carries++; player.participated = true;
+      const yardline = number(row.yardline_100);
+      if (yardline !== null && yardline <= 5 && yardline >= 0) { player.goalLineCarries++; offense.goalLineCarries++; }
     }
   }
   if (snaps) for (const row of csvRecords(snaps, ['season', 'game_type', 'week', 'game_id', 'pfr_player_id', 'player', 'position', 'team', 'offense_snaps', 'offense_pct'])) {
@@ -124,13 +139,14 @@ export function parseAdvancedSeason(season: number, pbp?: string, snaps?: string
   return { season, games, hasPbp: !!pbp, hasSnaps: !!snaps, hasIdentities: !!identities };
 }
 
-export function advancedReport(data: AdvancedSeason, teamName: string, beforeWeek: number, sources: NflAdvancedSource[], now = Date.now()): NflAdvancedReport {
+export function advancedReport(data: AdvancedSeason, teamName: string, beforeWeek: number, sources: NflAdvancedSource[], now = Date.now(), window = 18): NflAdvancedReport {
   const teamCode = Object.keys(NFL_TEAM_CODES).find(key => NFL_TEAM_CODES[key] === teamName);
   if (!teamCode || !Number.isInteger(beforeWeek) || beforeWeek < 1 || beforeWeek > 19) throw new Error('Choose an NFL team and cutoff week 1–19.');
   const today = new Date(now).toISOString().slice(0, 10);
   const selected = [...data.games.values()].filter(g => g.complete && g.week < beforeWeek && g.teams.has(teamCode)
     && (g.endedAt === null || g.endedAt <= now)
-    && (g.date < today || (g.date === today && g.endedAt !== null && g.endedAt <= now)));
+    && (g.date < today || (g.date === today && g.endedAt !== null && g.endedAt <= now)))
+    .sort((a, b) => a.week - b.week || a.date.localeCompare(b.date)).slice(-window);
   const groups = new Map<string, { player: PlayerGame; rows: { player: PlayerGame; team: TeamGame }[] }>();
   for (const game of selected) {
     const team = game.teams.get(teamCode)!;
@@ -152,7 +168,11 @@ export function advancedReport(data: AdvancedSeason, teamName: string, beforeWee
       targets: participation.length ? targets : null, carries: participation.length ? carries : null,
       targetShare: targetGames.length ? round(targetGames.reduce((sum, r) => sum + r.player.targets / r.team.targets, 0) / targetGames.length) : null,
       carryShare: carryGames.length ? round(carryGames.reduce((sum, r) => sum + r.player.carries / r.team.carries, 0) / carryGames.length) : null,
-      airYards: airTargets ? air : null, airYardsPerTarget: airTargets ? round(air / airTargets) : null, airYardTargets: airTargets };
+      airYards: airTargets ? air : null, airYardsPerTarget: airTargets ? round(air / airTargets) : null, airYardTargets: airTargets,
+      redZoneTargetShare: participation.reduce((sum, r) => sum + r.team.redZoneTargets, 0) > 0
+        ? round(participation.reduce((sum, r) => sum + r.player.redZoneTargets, 0) / participation.reduce((sum, r) => sum + r.team.redZoneTargets, 0)) : null,
+      goalLineCarryShare: participation.reduce((sum, r) => sum + r.team.goalLineCarries, 0) > 0
+        ? round(participation.reduce((sum, r) => sum + r.player.goalLineCarries, 0) / participation.reduce((sum, r) => sum + r.team.goalLineCarries, 0)) : null };
   }).filter(p => p.position !== 'unknown' || (p.targets ?? 0) > 0 || (p.carries ?? 0) > 0)
     .sort((a, b) => (b.offenseSnaps ?? 0) - (a.offenseSnaps ?? 0) || a.name.localeCompare(b.name));
   const teams = selected.map(g => g.teams.get(teamCode)!);
@@ -162,10 +182,19 @@ export function advancedReport(data: AdvancedSeason, teamName: string, beforeWee
     passEpaAllowed: passEpaPlays ? round(sum('passEpaSum') / passEpaPlays) : null,
     rushEpaAllowed: rushEpaPlays ? round(sum('rushEpaSum') / rushEpaPlays) : null,
     sackHitPlays: hitSamples, sackHitRate: hitSamples ? round(sum('hits') / hitSamples) : null, pressureRate: null,
-    offensePlaysPerGame: teams.length ? round(sum('offensePlays') / teams.length) : null };
+    offensePlaysPerGame: teams.length ? round(sum('offensePlays') / teams.length) : null,
+    sackRate: hitSamples ? round(sum('sacks') / hitSamples) : null,
+    receivingEpaAllowed: sum('rbTargets') + sum('wrTargets') + sum('teTargets')
+      ? round((sum('rbEpa') + sum('wrEpa') + sum('teEpa')) / (sum('rbTargets') + sum('wrTargets') + sum('teTargets'))) : null,
+    positionEpaAllowed: Object.fromEntries((['RB', 'WR', 'TE'] as const).flatMap(pos => {
+      const keys = { RB: ['rbEpa', 'rbTargets'], WR: ['wrEpa', 'wrTargets'], TE: ['teEpa', 'teTargets'] } as const;
+      const [epa, count] = keys[pos];
+      return sum(count) > 0 ? [[pos, round(sum(epa) / sum(count))]] : [];
+    })),
+    positionEpaSamples: { RB: sum('rbTargets'), WR: sum('wrTargets'), TE: sum('teTargets') } };
   const unmatchedPlayers = players.filter(p => p.playerId === null).length;
   const warnings = [
-    'Observed history, not projected snap or opportunity shares. These reference stats do not change fantasy projections or saved forecasts.',
+    'Observed history, not guaranteed projected shares. New football-evidence forecasts can use verified fields; existing saved forecasts are never rewritten.',
     'Full pressure rate is unavailable. Sack-or-QB-hit rate counts each dropback once and is not a full pressure measure.',
     'Target/carry shares are averages across verified participation games; absent players are not assigned zero. Targets require an identified receiver; carries exclude kneels. Scrambles count as dropbacks for EPA.',
     'Only completed regular-season games before the cutoff are included. Fetch time is not independent proof of historical pregame publication.',
@@ -179,5 +208,11 @@ export function advancedReport(data: AdvancedSeason, teamName: string, beforeWee
   const partial = sources.some(s => s.status === 'unavailable') || unmatchedPlayers > 0 || missingRows;
   return { season: data.season, team: teamName, beforeWeek, fetchedAt: new Date(now).toISOString(),
     status: !data.hasPbp ? 'unavailable' : partial ? 'partial' : 'available', games: selected.length,
-    dataThroughWeek: selected.length ? Math.max(...selected.map(g => g.week)) : null, unmatchedPlayers, sources, warnings, players, defense };
+    dataThroughWeek: selected.length ? Math.max(...selected.map(g => g.week)) : null, unmatchedPlayers, sources, warnings, players, defense,
+    sampleWeeks: selected.map(g => g.week),
+    offense: { dropbackShare: sum('offensePlays') ? round(sum('dropbacks') / sum('offensePlays')) : null,
+      passEpa: sum('offPassSamples') ? round(sum('offPassEpaSum') / sum('offPassSamples')) : null,
+      rushEpa: sum('offRushSamples') ? round(sum('offRushEpaSum') / sum('offRushSamples')) : null,
+      passSamples: sum('offPassSamples'), rushSamples: sum('offRushSamples'),
+      playsPerGame: teams.length ? round(sum('offensePlays') / teams.length) : null } };
 }

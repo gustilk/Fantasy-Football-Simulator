@@ -76,4 +76,33 @@ assert.deepEqual([...csvRecords('a,b\n"hello,\n""world""",2\n')], [{ a: 'hello,\
 assert.equal(sourceNumber('NA'), null); assert.equal(sourceNumber(''), null); assert.equal(sourceNumber('-8'), -8);
 assert.equal(sourceNumber('1.2e-7'), 1.2e-7); assert.equal(sourceNumber('Infinity'), null);
 assert.equal(JSON.stringify({ pbp, snaps, ids }), original);
+const rollingRows = Array.from({ length: 6 }, (_, i) => {
+  const common = { ...base, week: i + 1, game_id: `2026_0${i + 1}_BUF_DET`, game_date: `2026-09-0${i + 1}` };
+  return [
+    { ...common, play_id: 1, qb_dropback: 1, pass_attempt: 1, receiver_player_id: 'WR1', epa: 1, air_yards: 15, yardline_100: 10 },
+    { ...common, play_id: 2, play_type: 'run', rush_attempt: 1, rusher_player_id: 'RB1', epa: -0.1, yardline_100: 3 },
+    { ...common, play_id: 3, play_type: '', desc: 'END GAME' },
+  ];
+}).flat();
+const rollingData = parseAdvancedSeason(2026, csv([...headers, 'yardline_100'], rollingRows), undefined, ids);
+const rolling = advancedReport(rollingData, 'Buffalo Bills', 7, sources, now, 4);
+assert.deepEqual(rolling.sampleWeeks, [3, 4, 5, 6], 'Actual last four completed games, not first four or whole season');
+assert.equal(rolling.offense?.dropbackShare, 0.5);
+assert.equal(rolling.offense?.playsPerGame, 2);
+assert.equal(rolling.offense?.passEpa, 1);
+assert.equal(rolling.offense?.rushEpa, -0.1);
+assert.equal(rolling.players.find(p => p.playerId === 'espn:100')?.redZoneTargetShare, 1);
+assert.equal(rolling.players.find(p => p.playerId === 'espn:101')?.goalLineCarryShare, 1);
+const rollingDefense = advancedReport(rollingData, 'Detroit Lions', 7, sources, now, 4);
+assert.equal(rollingDefense.defense.positionEpaAllowed?.WR, 1);
+assert.equal(rollingDefense.defense.positionEpaSamples?.WR, 4);
+assert.equal(rollingDefense.defense.positionEpaAllowed?.TE, undefined, 'Unknown positional evidence is never zero');
+assert.equal(rollingDefense.defense.sackRate, 0);
+const zeroSnaps = csv(['season', 'game_type', 'week', 'game_id', 'pfr_player_id', 'player', 'position', 'team', 'offense_snaps', 'offense_pct'], [
+  { season: 2026, game_type: 'REG', week: 3, game_id: '2026_03_BUF_DET', pfr_player_id: 'Qb0200',
+    player: 'Backup Zero Snaps', position: 'QB', team: 'BUF', offense_snaps: 0, offense_pct: 0 },
+]);
+const zeroReport = advancedReport(parseAdvancedSeason(2026, csv([...headers, 'yardline_100'], rollingRows), zeroSnaps, ids), 'Buffalo Bills', 7, sources, now, 4);
+assert.equal(zeroReport.players.find(p => p.sourcePlayerId === 'gsis:QB2')?.redZoneTargetShare, null, 'DNP is not a zero red-zone performance');
+assert.equal(zeroReport.players.find(p => p.sourcePlayerId === 'gsis:QB2')?.goalLineCarryShare, null, 'DNP is not a zero goal-line performance');
 console.log('Advanced stats: season/cutoff/completion safeguards, stable identity matching, unknown/DNP handling, shares, negative air yards, EPA, unique sack/hit proxy, partial coverage, CSV and unchanged inputs passed.');

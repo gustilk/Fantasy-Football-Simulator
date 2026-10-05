@@ -12,3 +12,4 @@
 - [DraftKings save integrity](draftkings-save-integrity.md) — preserve full frozen inputs; show failed-save results as unsaved rather than leaving stale coverage on screen.
 - [Standings intent](standings-intent.md) — user marks win pressure manually; division-only, team-specific strategy assumptions must preserve point-in-time forecasts.
 - [Backup QB intent](quarterback-strategy-intent.md) — backup starters should favor rushing; distinguish known depth roles from unknowns and support promoted replacements.
+- [API path validation](api-path-validation.md) — generated numeric-enum path literals do not coerce HTTP strings; validate and convert at the route boundary.

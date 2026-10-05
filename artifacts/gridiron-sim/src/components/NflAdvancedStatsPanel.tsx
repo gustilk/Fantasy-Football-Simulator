@@ -39,7 +39,7 @@ export default function NflAdvancedStatsPanel({ season, team, record }: Props) {
 
   return (
     <details className="nas" open={open} onToggle={e => setOpen(e.currentTarget.open)} data-testid="panel-nfl-advanced">
-      <summary>Advanced NFL reference stats <span>observed past games only</span></summary>
+      <summary>Advanced NFL stats <span>observed past games only</span></summary>
       <p className="tl-hint">These are stats from games already played, from public nflverse data. They are not projected shares and are not applied as automatic fantasy-point boosts. Your saved roster and eligibility are unchanged.</p>
       <div className="nas-controls">
         <label>Games before week

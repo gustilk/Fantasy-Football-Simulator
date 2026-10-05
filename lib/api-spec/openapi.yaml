@@ -11,6 +11,38 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /nfl-matchup-evidence/{season}/{team}/{beforeWeek}/{window}:
+    get:
+      operationId: getNflMatchupEvidence
+      summary: Verified completed-game football evidence for new forecast inputs
+      parameters:
+        - in: path
+          name: season
+          required: true
+          schema: { type: integer, minimum: 2000, maximum: 2100 }
+        - in: path
+          name: team
+          required: true
+          schema: { type: string }
+        - in: path
+          name: beforeWeek
+          required: true
+          schema: { type: integer, minimum: 1, maximum: 19 }
+        - in: path
+          name: window
+          required: true
+          schema: { type: integer, enum: [4, 18] }
+      responses:
+        "200":
+          description: Last four completed games or prior regular season, never future games
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NflAdvancedReport" }
+        "502":
+          description: Source unavailable or failed validation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeasonError" }
   /salary-files/{season}/{format}:
     parameters:
       - in: path
@@ -342,6 +374,8 @@ components:
         airYards: { type: ["number", "null"] }
         airYardsPerTarget: { type: ["number", "null"] }
         airYardTargets: { type: integer }
+        redZoneTargetShare: { type: ["number", "null"] }
+        goalLineCarryShare: { type: ["number", "null"] }
     NflAdvancedDefense:
       type: object
       required: [passPlays, rushPlays, passEpaPlays, rushEpaPlays, passEpaAllowed, rushEpaAllowed, sackHitPlays, sackHitRate, pressureRate, offensePlaysPerGame]
@@ -356,6 +390,24 @@ components:
         sackHitRate: { type: ["number", "null"] }
         pressureRate: { type: ["number", "null"] }
         offensePlaysPerGame: { type: ["number", "null"] }
+        sackRate: { type: ["number", "null"] }
+        receivingEpaAllowed: { type: ["number", "null"] }
+        positionEpaAllowed:
+          type: object
+          additionalProperties: { type: number }
+        positionEpaSamples:
+          type: object
+          additionalProperties: { type: integer }
+    NflAdvancedOffense:
+      type: object
+      required: [dropbackShare, passEpa, rushEpa, passSamples, rushSamples, playsPerGame]
+      properties:
+        dropbackShare: { type: ["number", "null"] }
+        passEpa: { type: ["number", "null"] }
+        rushEpa: { type: ["number", "null"] }
+        passSamples: { type: integer }
+        rushSamples: { type: integer }
+        playsPerGame: { type: ["number", "null"] }
     NflAdvancedReport:
       type: object
       required: [season, team, beforeWeek, fetchedAt, status, games, dataThroughWeek, unmatchedPlayers, sources, warnings, players, defense]
@@ -378,6 +430,10 @@ components:
           type: array
           items: { $ref: "#/components/schemas/NflAdvancedPlayer" }
         defense: { $ref: "#/components/schemas/NflAdvancedDefense" }
+        offense: { $ref: "#/components/schemas/NflAdvancedOffense" }
+        sampleWeeks:
+          type: array
+          items: { type: integer }
     NflScheduledGame:
       type: object
       required: [id, awayTeam, homeTeam, date, timeConfirmed, week, seasonType]

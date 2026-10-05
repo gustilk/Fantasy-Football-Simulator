@@ -8,6 +8,7 @@ import { quarterbackPassShare, quarterbackStrategyNotes, type QuarterbackStrateg
 import type { AvailabilityCheck } from "./availability";
 import type { historyStrength, playerUsage } from "./history-signals";
 import type { PriorSeasonEvidence } from "./prior-season-baseline";
+import type { FootballEvidence, FootballPlayerEvidence } from "./football-evidence";
 import type { MarketOdds, MarketEvidence } from "./market-odds";
 import { getEliteTier, eliteOpportunityWeight, type EliteTier } from "./elite-players";
 import { backfieldOpportunityWeight, backfieldReceivingPrior, backfieldEfficiency, type BackfieldEvidence } from "./backfield-workload";
@@ -21,6 +22,7 @@ export interface WeatherSetup {
 }
 
 export interface PlayerRecentStats {
+  fumblesLost?: number;
   passAttempts?: number;
   passCompletions?: number;
   passYards?: number;
@@ -47,6 +49,7 @@ export interface DefenseRecentStats {
 }
 
 export interface SimulationRosterPlayer {
+  football?: FootballPlayerEvidence;
   id: string;
   name: string;
   position: "QB" | "RB" | "WR" | "TE";
@@ -61,6 +64,8 @@ export interface SimulationRosterPlayer {
 }
 
 export interface TeamSetup {
+  /** Frozen opt-in: absence preserves all legacy simulated outcomes. */
+  footballEvidence?: FootballEvidence;
   /** Absent on older frozen forecasts: retain their original workload behavior. */
   backfieldModel?: "usage-v1";
   /** New-input opt-in; absent on legacy forecasts to preserve their replay. */
@@ -170,6 +175,7 @@ export interface SimulationResult {
 }
 
 interface PlayerAccumulator extends Omit<PlayerProjection, "draftKings"> {
+  football?: FootballPlayerEvidence;
   backfieldEvidence?: BackfieldEvidence;
   historyObservations?: number;
   usage?: ReturnType<typeof playerUsage>;
@@ -269,7 +275,7 @@ function makeTeamSimulation(setup: TeamSetup): TeamSimulation {
         id: player.id,
         elite1x: getEliteTier(player) > 0,
         eliteTier: getEliteTier(player),
-        recentStats: player.recentStats, historyObservations: player.historyObservations, usage: player.usage, backfieldEvidence: player.backfieldEvidence,
+        recentStats: player.recentStats, historyObservations: player.historyObservations, usage: player.usage, backfieldEvidence: player.backfieldEvidence, football: player.football,
       };
     }) : [
       makePlayer(setup.qb, "QB", teamName),
@@ -297,6 +303,16 @@ function receiverFor(
     ? backfieldReceivingPrior(player.depthRank ?? 1) : receivingRoleWeight(player.position, player.depthRank ?? 1));
   const weighted = receivers.map((player, index) => {
     const playerStats = recentForPlayer(team, player);
+    if (team.setup.footballEvidence) {
+      const share = redZone && supplied(player.football?.redZoneTargetShare)
+        ? player.football.redZoneTargetShare : player.football?.targetShare;
+      if (supplied(share)) return eliteOpportunityWeight(player.position === 'RB'
+        ? backfieldOpportunityWeight(fallback[index]!, share * 34, player.football?.observations ?? 0)
+        : roleGuidedWeight(fallback[index]!, share * 34, clamp((player.football?.observations ?? 0) / 5, 0, 0.75)), player.eliteTier ?? 0);
+      if (!supplied(player.usage?.targetShare) && !supplied(playerStats?.targets) && supplied(player.football?.snapShare)) {
+        return eliteOpportunityWeight(fallback[index]! * clamp(player.football.snapShare / 0.6, 0.35, 1.35), player.eliteTier ?? 0);
+      }
+    }
     const targetWeight = supplied(player.usage?.targetShare) ? player.usage.targetShare * 34 : playerStats?.targets;
     const usageReliability = supplied(player.usage?.targetShare) ? clamp((player.usage.targetGames + 1) / 6, 0.2, 1) : playerReliability(team.setup, player);
     const recentTargetWeight = team.setup.backfieldModel === "usage-v1" && player.position === "RB"
@@ -341,6 +357,12 @@ function playerReliability(setup: TeamSetup, player: PlayerAccumulator): number 
   return player.historyObservations === undefined ? historyReliability(setup) : clamp((player.historyObservations + 1) / 6, 0.2, 1);
 }
 
+function observedFumbleChance(setup: TeamSetup, player: PlayerAccumulator, stats: PlayerRecentStats | undefined, baseline: number) {
+  const touches = supplied(stats?.rushAttempts) && supplied(stats?.receptions) ? stats.rushAttempts + stats.receptions : 0;
+  return setup.footballEvidence && supplied(stats?.fumblesLost) && touches > 0
+    ? blend(baseline, clamp(stats.fumblesLost / touches, 0, 0.08), 0.4 * playerReliability(setup, player)) : baseline;
+}
+
 /** Workload priors, not fixed points or talent guarantees. */
 export function receivingRoleWeight(position: string, rank: number): number {
   if (position === "WR") return [10, 7, 4][rank - 1] ?? 0.9 / Math.max(1, rank - 3);
@@ -358,11 +380,21 @@ export function roleGuidedWeight(prior: number, reported: number, reliability: n
   return clamp(blend(prior, reported, Math.min(0.75, reliability)), prior * 0.65, prior * 1.75);
 }
 
-function runningBackFor(team: TeamSimulation, random: Random): PlayerAccumulator {
+function runningBackFor(team: TeamSimulation, random: Random, goalLine = false): PlayerAccumulator {
   if (team.setup.roster) {
     const runners = team.players.filter((player, index) => index === 0 || (player.position !== "QB" && (player.position === "RB" || (player.recentStats?.rushAttempts ?? 0) > 0)));
     const defaults = runners.map(player => player.position === "QB" ? 3 : player.position === "RB" ? rushingRoleWeight(player.depthRank ?? 1) : 1);
     let weights = runners.map((player, index) => {
+      if (team.setup.footballEvidence) {
+        const share = goalLine && supplied(player.football?.goalLineCarryShare)
+          ? player.football.goalLineCarryShare : player.football?.carryShare;
+        if (supplied(share)) return player.position === 'RB'
+          ? backfieldOpportunityWeight(defaults[index]!, share * 28, player.football?.observations ?? 0)
+          : roleGuidedWeight(defaults[index]!, share * 28, clamp((player.football?.observations ?? 0) / 5, 0, 0.75));
+        if (!supplied(player.recentStats?.rushAttempts) && !supplied(player.usage?.carryShare) && supplied(player.football?.snapShare)) {
+          return defaults[index]! * clamp(player.football.snapShare / 0.6, 0.35, 1.35);
+        }
+      }
       if (team.setup.backfieldModel === "usage-v1" && player.position === "RB") {
         return backfieldOpportunityWeight(defaults[index]!, player.recentStats?.rushAttempts, player.usage?.carryGames ?? 0);
       }
@@ -431,6 +463,15 @@ function weatherLabel(weather: WeatherSetup): string {
   return conditions.join(", ");
 }
 
+export function footballPassingShare(base: number, setup: TeamSetup, defense: TeamSetup): number {
+  if (!setup.footballEvidence) return base;
+  let share = supplied(setup.footballEvidence.dropbackShare)
+    ? blend(base, clamp(setup.footballEvidence.dropbackShare, 0.35, 0.78), 0.45) : base;
+  const matchup = defense.footballEvidence;
+  if (matchup) share += clamp((matchup.rushDefenseRating - matchup.passDefenseRating) * 0.0015, -0.05, 0.05);
+  return clamp(share, 0.35, 0.76);
+}
+
 function simulateTeam(
   setup: TeamSetup,
   defense: TeamSetup,
@@ -470,14 +511,15 @@ function simulateTeam(
     0.4,
     0.68,
   );
-  const passShare = quarterbackPassShare(clamp(
+  let passShare = clamp(
     recentPassingShare === undefined
       ? basePassShare
       : blend(basePassShare, recentPassingShare, 0.42 * reliability),
     0.4,
     0.68,
-  ), setup);
-  const ratingEdge = setup.rushRating - defense.defenseRating;
+  );
+  passShare = quarterbackPassShare(footballPassingShare(passShare, setup, defense), setup);
+  const ratingEdge = setup.rushRating - (defense.footballEvidence?.rushDefenseRating ?? defense.defenseRating);
   const passYardsPerAttempt =
     supplied(qbRecent?.passYards) && supplied(qbRecent?.passAttempts) &&
     qbRecent.passAttempts > 0
@@ -487,10 +529,14 @@ function simulateTeam(
     passYardsPerAttempt === undefined
       ? 1
       : clamp(blend(1, passYardsPerAttempt / 7, 0.42 * reliability), 0.8, 1.22);
-  const passDefenseFactor = supplied(defenseRecent?.passYardsAllowed)
+  const passDefenseFactor = supplied(defense.footballEvidence?.passEpaAllowed)
+    ? clamp(1 + defense.footballEvidence.passEpaAllowed * 0.3 * defense.footballEvidence.passSamples / (defense.footballEvidence.passSamples + 100), 0.82, 1.2)
+    : supplied(defenseRecent?.passYardsAllowed)
     ? clamp(blend(1, defenseRecent.passYardsAllowed / 225, 0.36 * defenseReliability), 0.82, 1.2)
     : 1;
-  const rushDefenseFactor = supplied(defenseRecent?.rushYardsAllowed)
+  const rushDefenseFactor = supplied(defense.footballEvidence?.rushEpaAllowed)
+    ? clamp(1 + defense.footballEvidence.rushEpaAllowed * 0.3 * defense.footballEvidence.rushSamples / (defense.footballEvidence.rushSamples + 80), 0.82, 1.2)
+    : supplied(defenseRecent?.rushYardsAllowed)
     ? clamp(blend(1, defenseRecent.rushYardsAllowed / 115, 0.36 * defenseReliability), 0.82, 1.2)
     : 1;
   const receiverTouchdowns = (setup.roster ? setup.roster.map(player => player.recentStats?.receivingTD) : [
@@ -541,7 +587,7 @@ function simulateTeam(
       let turnover = false;
       let playText = "";
       let scorer: PlayerAccumulator | undefined;
-      const qbEdge = setup.passRating - defense.defenseRating;
+      const qbEdge = setup.passRating - (defense.footballEvidence?.passDefenseRating ?? defense.defenseRating);
 
       if (pass) {
         qb.attempts += 1;
@@ -562,9 +608,11 @@ function simulateTeam(
           0.006,
           0.075,
         );
-        const baseSackChance = 0.047 + (defense.defenseRating - setup.passRating) * 0.001;
+        const baseSackChance = supplied(defense.footballEvidence?.sackRate)
+          ? blend(0.047, defense.footballEvidence.sackRate, 0.5)
+          : 0.047 + ((defense.footballEvidence?.passDefenseRating ?? defense.defenseRating) - setup.passRating) * 0.001;
         const interceptionChance = clamp(unboostedInterceptionChance * defensePriority.interceptions, 0.006, 0.075);
-        const unboostedSackChance = clamp(supplied(defenseRecent?.sacks)
+        const unboostedSackChance = clamp(!supplied(defense.footballEvidence?.sackRate) && supplied(defenseRecent?.sacks)
           ? blend(baseSackChance, defenseRecent.sacks / 35, 0.4 * defenseReliability)
           : baseSackChance, 0.015, 0.13);
         const sackChance = clamp(unboostedSackChance * defensePriority.sacks, 0.015, 0.13);
@@ -620,9 +668,15 @@ function simulateTeam(
           if (defensePriority.passesDefended > 1) {
             completionChance = clamp(1 - (1 - completionChance) * defensePriority.passesDefended, 0.25, 0.9);
           }
+          if (supplied(defense.footballEvidence?.nonSackHitRate)) {
+            completionChance = clamp(completionChance - clamp((defense.footballEvidence.nonSackHitRate - 0.09) * 0.15, -0.02, 0.03), 0.25, 0.9);
+          }
           if (random() >= completionChance) {
             playText = `${qb.name} pass incomplete`;
           } else {
+            const positionMatchup = defense.footballEvidence?.positionMatchups[receiver.position];
+            const positionEfficiency = positionMatchup
+              ? 1 + clamp(positionMatchup.delta * 0.25 * positionMatchup.samples / (positionMatchup.samples + 30), -0.1, 0.1) : 1;
             const receiverEfficiency = setup.backfieldModel === "usage-v1" && receiver.position === "RB"
               ? backfieldEfficiency(receiver.backfieldEvidence, true) :
               supplied(receiverRecent?.receivingYards) &&
@@ -636,10 +690,13 @@ function simulateTeam(
                 : 1;
             gain = Math.min(
               yardsToGoal,
-              Math.max(1, Math.round(weightedPassYards(random) * passEfficiencyFactor * passDefenseFactor * receiverEfficiency)),
+              Math.max(1, Math.round(weightedPassYards(random) * passEfficiencyFactor * passDefenseFactor * receiverEfficiency * positionEfficiency *
+                (setup.footballEvidence && supplied(receiver.football?.airYardsPerTarget)
+                  ? 1 + clamp((receiver.football.airYardsPerTarget - 8) / 20, -0.4, 0.5) * (random() < 0.5 ? -1 : 1)
+                  : 1))),
             );
             const fumbled = random() < clamp(
-              (0.009 + precipitation * 0.035 +
+              (observedFumbleChance(setup, receiver, receiverRecent, 0.009) + precipitation * 0.035 +
                 (supplied(defenseRecent?.fumblesForced)
                   ? (defenseRecent.fumblesForced - 0.7) * 0.004
                   : 0)) * defensePriority.fumblesForced,
@@ -661,7 +718,7 @@ function simulateTeam(
           }
         }
       } else {
-        const runner = runningBackFor(team, random);
+        const runner = runningBackFor(team, random, yardsToGoal <= 5);
         const runnerRecent = recentForPlayer(team, runner);
         const runnerEfficiency = setup.backfieldModel === "usage-v1" && runner.position === "RB"
           ? backfieldEfficiency(runner.backfieldEvidence, false) :
@@ -689,7 +746,7 @@ function simulateTeam(
           gain = Math.round(gain >= 0 ? gain / defensePriority.runStops : gain * defensePriority.runStops);
         }
         const fumbled = random() < clamp(
-          (0.012 + precipitation * 0.045 +
+          (observedFumbleChance(setup, runner, runnerRecent, 0.012) + precipitation * 0.045 +
             (supplied(defenseRecent?.fumblesForced)
               ? (defenseRecent.fumblesForced - 0.7) * 0.004
               : 0)) * defensePriority.fumblesForced,
@@ -837,6 +894,12 @@ function makeOverview(
     ? `Division game: both teams are in ${awayDivision}. Familiarity can matter, but no blanket difficulty, scoring or fantasy-point penalty is applied.`
     : `Non-division or unclassified matchup: ${input.away.name} (${awayDivision ?? "unknown division"}) vs ${input.home.name} (${homeDivision ?? "unknown division"}). Division labels use current NFL alignment.`);
   for (const [team, opponent] of [[input.away, input.home], [input.home, input.away]] as const) {
+    if (team.footballEvidence) {
+      const e = team.footballEvidence;
+      overview.push(`${team.name}: football-v2 uses recent-four box scores plus ${e.sources.map(s => `${s.season}: ${s.games} verified game(s), weeks ${s.weeks.join('/')}`).join('; ') || 'no verified PBP games'}. ${e.matchedPlayers} eligible players uniquely matched. Passing/rushing defenses modeled separately (${e.passDefenseRating.toFixed(1)}/${e.rushDefenseRating.toFixed(1)}).`);
+      overview.push(`${team.name}: PBP passing/rushing EPA informs efficiency; RB/WR/TE target EPA measures position matchups relative to that defense's receiving average; dropback share informs pass volume; snap coverage supports missing-workload estimates; targets/carries and red-zone/goal-line shares replace overlapping workload estimates; air yards vary receiving upside without a blanket mean-points boost; sacks and non-sack hits affect passing disruption (not a full pressure-rate measurement); observed play volume informs pace. Missing fields stay neutral. These bounded mappings are heuristics, not validated accuracy gains.`);
+      overview.push(...e.warnings.map(w => `${team.name}: ${w}`));
+    }
     if (team.modelEvidence) {
       overview.push(`${team.name}: ${team.modelEvidence.strength.basis}. Strength ratings shrink toward baseline 55 with sparse history. Workload shares use reported targets/carries, not verified complete snap or route coverage.`);
       overview.push(...team.modelEvidence.warnings.map(warning => `${team.name}: ${warning}`));
@@ -897,8 +960,13 @@ export function simulateGame(input: SimulationInput): SimulationResult {
     input.seed ??
     Math.floor(Math.random() * 0xffffffff) + 1;
   const random = makeRandom(seed);
-  const targetAwayPlays = integerBetween(random, 62, 68);
-  const targetHomePlays = integerBetween(random, 62, 68);
+  const plannedPlays = (setup: TeamSetup) => {
+    const base = integerBetween(random, 62, 68);
+    return supplied(setup.footballEvidence?.playsPerGame)
+      ? Math.round(clamp(blend(base, setup.footballEvidence.playsPerGame, 0.4), 48, 82)) : base;
+  };
+  const targetAwayPlays = plannedPlays(input.away);
+  const targetHomePlays = plannedPlays(input.home);
   const away = simulateTeam(
     input.away,
     input.home,
@@ -948,7 +1016,7 @@ export function simulateGame(input: SimulationInput): SimulationResult {
   }
 
   const players = [...away.players, ...home.players].map((player) => {
-    const { attempts: _attempts, completions: _completions, recentStats: _recentStats, backfieldEvidence: _backfieldEvidence, ...projection } = player;
+    const { attempts: _attempts, completions: _completions, recentStats: _recentStats, backfieldEvidence: _backfieldEvidence, football: _football, ...projection } = player;
     return { ...projection, draftKings: calculateDraftKings({
       passYards: player.passYards, passTD: player.passTD, interceptions: player.interceptions,
       rushYards: player.rushYards, rushTD: player.rushTD, receptions: player.receptions,

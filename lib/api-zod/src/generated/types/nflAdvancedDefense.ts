@@ -5,6 +5,8 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { NflAdvancedDefensePositionEpaAllowed } from './nflAdvancedDefensePositionEpaAllowed';
+import type { NflAdvancedDefensePositionEpaSamples } from './nflAdvancedDefensePositionEpaSamples';
 
 export interface NflAdvancedDefense {
   passPlays: number;
@@ -22,4 +24,10 @@ export interface NflAdvancedDefense {
   pressureRate: number | null;
   /** @nullable */
   offensePlaysPerGame: number | null;
+  /** @nullable */
+  sackRate?: number | null;
+  /** @nullable */
+  receivingEpaAllowed?: number | null;
+  positionEpaAllowed?: NflAdvancedDefensePositionEpaAllowed;
+  positionEpaSamples?: NflAdvancedDefensePositionEpaSamples;
 }

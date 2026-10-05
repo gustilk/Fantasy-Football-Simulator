@@ -33,4 +33,8 @@ export interface NflAdvancedPlayer {
   /** @nullable */
   airYardsPerTarget: number | null;
   airYardTargets: number;
+  /** @nullable */
+  redZoneTargetShare?: number | null;
+  /** @nullable */
+  goalLineCarryShare?: number | null;
 }

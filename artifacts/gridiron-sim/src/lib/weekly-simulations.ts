@@ -1,6 +1,7 @@
 import type { NflDepthChart, NflScheduledGame, TeamSeasonRecord } from '@workspace/api-client-react';
 import { withDepthChart } from './depth-chart';
-import { setupFromHistory } from './season-model';
+import { footballSetup, type FootballReports } from './football-evidence';
+import { loadFootballReports } from './load-football-evidence';
 import { simulateEnsemble } from './ensemble';
 import type { SimulationInput } from './simulator';
 import type { SavedSimulation } from './saved-simulations';
@@ -22,6 +23,7 @@ export async function runWeeklySimulations(options: {
   season: number; week: number; games: NflScheduledGame[];
   teams: TeamSeasonRecord[]; fetchedAt: string;
   loadDepth: (season: number, team: string) => Promise<NflDepthChart>;
+  loadEvidence?: (season: number, team: string, week: number) => Promise<FootballReports>;
   save: (entry: SavedSimulation) => void;
   onProgress: (progress: WeeklyProgress) => void;
   yieldUI: () => Promise<void>;
@@ -57,10 +59,12 @@ export async function runWeeklySimulations(options: {
     await options.yieldUI();
     try {
       const [away, home] = await Promise.all([loadTeam(game.awayTeam), loadTeam(game.homeTeam)]);
+      const loadEvidence = options.loadEvidence ?? loadFootballReports;
+      const [awayEvidence, homeEvidence] = await Promise.all([loadEvidence(season, away.team, week), loadEvidence(season, home.team, week)]);
       const input: SimulationInput = {
         showdownModel: 'showdown-v1',
-        away: applyStandings(setupFromHistory(away, week, 'away', home.team), standings, season, week),
-        home: applyStandings(setupFromHistory(home, week, 'home', away.team), standings, season, week),
+        away: applyStandings(footballSetup(away, week, 'away', home.team, awayEvidence), standings, season, week),
+        home: applyStandings(footballSetup(home, week, 'home', away.team, homeEvidence), standings, season, week),
         weather: { temperatureF: 68, windMph: 5, precipitation: 'none' },
         importance: game.seasonType === 'postseason' ? 'playoff' : 'regular',
         market: {

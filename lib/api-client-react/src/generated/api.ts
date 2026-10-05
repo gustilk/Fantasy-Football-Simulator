@@ -63,6 +63,98 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result;
 };
 
+export const getGetNflMatchupEvidenceUrl = (season: number,
+    team: string,
+    beforeWeek: number,
+    window: 4 | 18,) => {
+
+
+
+
+  return `/api/nfl-matchup-evidence/${season}/${team}/${beforeWeek}/${window}`
+}
+
+/**
+ * @summary Verified completed-game football evidence for new forecast inputs
+ */
+export const getNflMatchupEvidence = async (season: number,
+    team: string,
+    beforeWeek: number,
+    window: 4 | 18, options?: Parameters<typeof customFetch>[1]): Promise<NflAdvancedReport> => {
+
+  return customFetch<NflAdvancedReport>(getGetNflMatchupEvidenceUrl(season,team,beforeWeek,window),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetNflMatchupEvidenceQueryKey = (season: number,
+    team: string,
+    beforeWeek: number,
+    window: 4 | 18,) => {
+    return [
+    `/api/nfl-matchup-evidence/${season}/${team}/${beforeWeek}/${window}`
+    ] as const;
+    }
+
+
+export const getGetNflMatchupEvidenceQueryOptions = <TData = Awaited<ReturnType<typeof getNflMatchupEvidence>>, TError = ErrorType<SeasonError>>(season: number,
+    team: string,
+    beforeWeek: number,
+    window: 4 | 18, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNflMatchupEvidence>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetNflMatchupEvidenceQueryKey(season,team,beforeWeek,window);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getNflMatchupEvidence>>> = ({ signal }) => getNflMatchupEvidence(season,team,beforeWeek,window, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: season !== null && season !== undefined && team !== null && team !== undefined && beforeWeek !== null && beforeWeek !== undefined && window !== null && window !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getNflMatchupEvidence>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetNflMatchupEvidenceQueryResult = NonNullable<Awaited<ReturnType<typeof getNflMatchupEvidence>>>
+export type GetNflMatchupEvidenceQueryError = ErrorType<SeasonError>
+
+
+/**
+ * @summary Verified completed-game football evidence for new forecast inputs
+ */
+
+export function useGetNflMatchupEvidence<TData = Awaited<ReturnType<typeof getNflMatchupEvidence>>, TError = ErrorType<SeasonError>>(
+ season: number,
+    team: string,
+    beforeWeek: number,
+    window: 4 | 18, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNflMatchupEvidence>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetNflMatchupEvidenceQueryOptions(season,team,beforeWeek,window,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getGetSharedSalaryFileUrl = (season: number,
     format: 'classic' | 'showdown',) => {
 

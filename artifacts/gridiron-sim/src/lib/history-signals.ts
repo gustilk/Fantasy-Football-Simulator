@@ -2,7 +2,7 @@ import type { TeamSeasonRecord, TeamWeek } from "@workspace/api-client-react";
 
 const known = (n: number | undefined): n is number => typeof n === "number" && Number.isFinite(n) && n >= 0;
 const mean = (values: number[]) => values.reduce((sum, n) => sum + n, 0) / values.length;
-const blended = (values: number[]) => values.length ? mean(values) * 0.35 + mean(values.slice(-5)) * 0.65 : undefined;
+const blended = (values: number[], recentWindow = 5) => values.length ? mean(values) * 0.35 + mean(values.slice(-recentWindow)) * 0.65 : undefined;
 const bound = (n: number, low: number, high: number) => Math.max(low, Math.min(high, n));
 
 /** Ratios only use paired observations; absent rows never become zero performances. */
@@ -16,27 +16,28 @@ function yardsPerAttempt(games: TeamWeek[], yards: string, attempts: string, ids
   });
 }
 
-export function historyStrength(team: TeamSeasonRecord, games: TeamWeek[]) {
+export function historyStrength(team: TeamSeasonRecord, games: TeamWeek[], recentWindow = 5) {
   const qbs = new Set(team.players.filter(p => p.position === "QB").map(p => p.id));
   const passing = yardsPerAttempt(games, "passYards", "passAttempts", qbs);
   const rushing = yardsPerAttempt(games, "rushYards", "rushAttempts");
   const passAllowed = games.flatMap(g => known(g.teamDefense.passYardsAllowed) ? [g.teamDefense.passYardsAllowed] : []);
   const rushAllowed = games.flatMap(g => known(g.teamDefense.rushYardsAllowed) ? [g.teamDefense.rushYardsAllowed] : []);
-  const rating = (values: number[], reference: number, direction = 1) => {
-    const value = blended(values);
+  const recent = games.slice(-recentWindow);
+  const rating = (values: number[], reference: number, direction = 1, recentValues: number[] = []) => {
+    const value = recentWindow === 4 && values.length ? mean(values) * 0.35 + (recentValues.length ? mean(recentValues) : mean(values)) * 0.65 : blended(values, recentWindow);
     return value === undefined ? 55 : Math.round(bound(55 + direction * (value / reference - 1) * 30 * values.length / (values.length + 5), 35, 75));
   };
   const defensive = [
-    ...(passAllowed.length ? [rating(passAllowed, 225, -1)] : []),
-    ...(rushAllowed.length ? [rating(rushAllowed, 115, -1)] : []),
+    ...(passAllowed.length ? [rating(passAllowed, 225, -1, recent.flatMap(g => known(g.teamDefense.passYardsAllowed) ? [g.teamDefense.passYardsAllowed] : []))] : []),
+    ...(rushAllowed.length ? [rating(rushAllowed, 115, -1, recent.flatMap(g => known(g.teamDefense.rushYardsAllowed) ? [g.teamDefense.rushYardsAllowed] : []))] : []),
   ];
   return {
-    passRating: rating(passing, 7),
-    rushRating: rating(rushing, 4.3),
+    passRating: rating(passing, 7, 1, yardsPerAttempt(recent, "passYards", "passAttempts", qbs)),
+    rushRating: rating(rushing, 4.3, 1, yardsPerAttempt(recent, "rushYards", "rushAttempts")),
     defenseRating: defensive.length ? Math.round(mean(defensive)) : 55,
     defenseComponents: {
-      passRating: passAllowed.length ? rating(passAllowed, 225, -1) : undefined,
-      rushRating: rushAllowed.length ? rating(rushAllowed, 115, -1) : undefined,
+      passRating: passAllowed.length ? rating(passAllowed, 225, -1, recent.flatMap(g => known(g.teamDefense.passYardsAllowed) ? [g.teamDefense.passYardsAllowed] : [])) : undefined,
+      rushRating: rushAllowed.length ? rating(rushAllowed, 115, -1, recent.flatMap(g => known(g.teamDefense.rushYardsAllowed) ? [g.teamDefense.rushYardsAllowed] : [])) : undefined,
     },
     evidence: {
       passGames: passing.length, rushGames: rushing.length,
@@ -46,7 +47,7 @@ export function historyStrength(team: TeamSeasonRecord, games: TeamWeek[]) {
   };
 }
 
-function reportedShare(games: TeamWeek[], id: string, key: string) {
+function reportedShare(games: TeamWeek[], id: string, key: string, recentWindow = 5) {
   const values: number[] = [];
   for (const game of games) {
     const own = game.playerStats[id]?.[key];
@@ -55,12 +56,19 @@ function reportedShare(games: TeamWeek[], id: string, key: string) {
     const total = reported.reduce((sum, n) => sum + n, 0);
     if (total > 0) values.push(bound(own / total, 0, 1));
   }
-  return { share: blended(values), games: values.length };
+  const recentValues = recentWindow === 4 ? games.slice(-4).flatMap(game => {
+    const own = game.playerStats[id]?.[key];
+    const total = Object.values(game.playerStats).map(row => row[key]).filter(known).reduce((a, b) => a + b, 0);
+    return known(own) && total > 0 ? [bound(own / total, 0, 1)] : [];
+  }) : [];
+  return { share: recentWindow === 4 && values.length
+    ? mean(values) * 0.35 + (recentValues.length ? mean(recentValues) : mean(values)) * 0.65
+    : blended(values, recentWindow), games: values.length };
 }
 
-export function playerUsage(games: TeamWeek[], id: string) {
-  const targets = reportedShare(games, id, "targets");
-  const carries = reportedShare(games, id, "rushAttempts");
+export function playerUsage(games: TeamWeek[], id: string, recentWindow = 5) {
+  const targets = reportedShare(games, id, "targets", recentWindow);
+  const carries = reportedShare(games, id, "rushAttempts", recentWindow);
   return {
     targetShare: targets.share, targetGames: targets.games,
     carryShare: carries.share, carryGames: carries.games,

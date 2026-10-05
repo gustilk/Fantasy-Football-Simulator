@@ -116,6 +116,16 @@ export default function DraftKingsBoard({ season }: { season: number }) {
     {view === 'projected' ? (!slate ? <p className="dk-muted">Run a Sunday to see projections.</p> :
       <div className="dk-list">
         <p className="dk-muted">Saved Sunday {slate.sunday} · {slate.forecasts.length} games</p>
+        <details className="dk-gap"><summary>Football stats used &amp; missing data</summary>
+          <p className="dk-muted">New forecasts combine season history, last-four-game trends and a separate prior-season baseline. Verified PBP adds passing/rushing efficiency and matchups, play volume, workload shares, red-zone/goal-line roles, snap support, air-yard upside, sacks and hits. Fantasy totals and overlapping scoring summaries are comparisons, not additional point boosts.</p>
+          {slate.forecasts.flatMap(g => [g.input.away, g.input.home]).map((team, i) =>
+            <div key={`${team.name}-${i}`} className="dk-gap"><strong>{team.name}</strong>
+              {team.footballEvidence ? <>
+                <p className="dk-muted">{team.footballEvidence.sources.map(s => `${s.season}: ${s.games} verified game(s), weeks ${s.weeks.join(', ')} (${s.status})`).join(' · ') || 'No verified play-by-play available.'} · {team.footballEvidence.matchedPlayers} eligible players matched.</p>
+                {team.footballEvidence.warnings.map((w, j) => <p className="dk-muted" key={j}>{w}</p>)}
+              </> : <p className="dk-muted">Legacy saved forecast: original inputs preserved. Run a new forecast to use the expanded football evidence model.</p>}
+            </div>)}
+        </details>
         <div className="player-table-wrap"><table className="player-table"><thead><tr><th>#  Player</th><th>DK points</th>{detail && <><th>10th–90th</th><th>Actual</th><th>Diff</th></>}</tr></thead><tbody>
           {projList.map((r, i) => <tr key={`${r.team}-${r.playerId}`} data-testid={`dk-proj-${r.playerId}`}>
             <td><span className="dk-rank">{i + 1}</span><span className="player-name">{r.name}</span><EliteBadge player={r} /><span className="player-pos">{r.opponent ? `vs ${r.opponent}` : 'Opponent unavailable'}</span></td>

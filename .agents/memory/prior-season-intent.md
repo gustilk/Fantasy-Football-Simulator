@@ -13,7 +13,7 @@ Overlapping fantasy, scrimmage, scoring and red-zone totals describe many of the
 
 **Why:** The user's source list deliberately spans overlapping tables; repeated representations of the same touchdowns, yards and catches are not independent evidence.
 
-**How to apply:** Identify directly modeled fields versus supporting references. Require a nonduplicative rationale and held-out evidence before adding further influences or claiming improved predictive accuracy.
+**How to apply:** Identify directly modeled fields versus supporting references. Require a nonduplicative rationale for new influences and held-out evidence before claiming improved predictive accuracy.
 
 Conservative identity and role matching should not blindly transfer last season's opportunity volume to a new team or promote a former backup's per-appearance volume into a current starter forecast.
 
@@ -21,8 +21,8 @@ Conservative identity and role matching should not blindly transfer last season'
 
 **How to apply:** Disclose excluded/missing matches. Any future relaxation should distinguish role-neutral efficiency from team-dependent workload and preserve unknowns rather than inventing zeros.
 
-Advanced NFL snap, air-yard and EPA reports are reference-only unless a separate, calibrated mapping into forecast inputs is explicitly approved.
+The user approved connecting available advanced NFL statistics to new forecasts: “We need to use every stats we have access to, you're an expert on football use it.” The earlier reference-only restriction is superseded.
 
-**Why:** The existing simulation already uses target/carry shares. Additional untested opportunity boosts would double-count evidence; the user chose verified additions to the existing app rather than a rewrite with dummy data and arbitrary boosts.
+**Why:** The user wants the available evidence used in forecasting, not merely displayed. Overlapping target/carry and scoring statistics still cannot justify repeated boosts or invented accuracy claims.
 
-**How to apply:** Preserve saved forecasts, current eligibility and team history. Keep observed shares distinct from projections, and require a nonduplicative rationale and out-of-sample validation before giving these reports scoring influence.
+**How to apply:** Use versioned, frozen mappings for new forecasts while preserving saved-model replay and current eligibility. Assign statistics to workload, efficiency, matchup or validation roles; label unknown coverage. Use four completed current games and separate prior-season evidence. Out-of-sample validation is required for accuracy claims, not a reason to leave approved evidence disconnected.

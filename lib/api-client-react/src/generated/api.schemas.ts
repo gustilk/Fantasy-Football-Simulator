@@ -157,7 +157,15 @@ export interface NflAdvancedPlayer {
   /** @nullable */
   airYardsPerTarget: number | null;
   airYardTargets: number;
+  /** @nullable */
+  redZoneTargetShare?: number | null;
+  /** @nullable */
+  goalLineCarryShare?: number | null;
 }
+
+export type NflAdvancedDefensePositionEpaAllowed = {[key: string]: number};
+
+export type NflAdvancedDefensePositionEpaSamples = {[key: string]: number};
 
 export interface NflAdvancedDefense {
   passPlays: number;
@@ -175,6 +183,25 @@ export interface NflAdvancedDefense {
   pressureRate: number | null;
   /** @nullable */
   offensePlaysPerGame: number | null;
+  /** @nullable */
+  sackRate?: number | null;
+  /** @nullable */
+  receivingEpaAllowed?: number | null;
+  positionEpaAllowed?: NflAdvancedDefensePositionEpaAllowed;
+  positionEpaSamples?: NflAdvancedDefensePositionEpaSamples;
+}
+
+export interface NflAdvancedOffense {
+  /** @nullable */
+  dropbackShare: number | null;
+  /** @nullable */
+  passEpa: number | null;
+  /** @nullable */
+  rushEpa: number | null;
+  passSamples: number;
+  rushSamples: number;
+  /** @nullable */
+  playsPerGame: number | null;
 }
 
 export type NflAdvancedReportStatus = typeof NflAdvancedReportStatus[keyof typeof NflAdvancedReportStatus];
@@ -200,6 +227,8 @@ export interface NflAdvancedReport {
   warnings: string[];
   players: NflAdvancedPlayer[];
   defense: NflAdvancedDefense;
+  offense?: NflAdvancedOffense;
+  sampleWeeks?: number[];
 }
 
 export type NflScheduledGameSeasonType = typeof NflScheduledGameSeasonType[keyof typeof NflScheduledGameSeasonType];

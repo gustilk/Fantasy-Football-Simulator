@@ -16,11 +16,11 @@ const average = (rows: NumericStats[], key: string): number | undefined => {
 type HistoryRow = { stats: NumericStats; venue: string; opponent: string };
 export const headToHeadWeight = (observations: number) => Math.min(0.15, observations * 0.05);
 
-function blendedStats(rows: HistoryRow[], venue: string, opponent?: string): NumericStats {
+function blendedStats(rows: HistoryRow[], venue: string, opponent?: string, recentWindow = 5): NumericStats {
   const result: NumericStats = {};
   const baseline: NumericStats = {};
   const all = rows.map(row => row.stats);
-  const recent = all.slice(-5);
+  const recent = all.slice(-recentWindow);
   const split = rows.filter(row => row.venue === venue).map(row => row.stats);
   const keys = new Set(all.flatMap(row => Object.keys(row)));
   for (const key of keys) {
@@ -66,7 +66,8 @@ export function teamRecord(team: TeamSeasonRecord, week = 19) {
   };
 }
 
-export function setupFromHistory(team: TeamSeasonRecord, week: number, venue: "home" | "away", opponent?: string, options: { usePriorSeason?: boolean } = {}): TeamSetup {
+export function setupFromHistory(team: TeamSeasonRecord, week: number, venue: "home" | "away", opponent?: string, options: { usePriorSeason?: boolean; recentWindow?: 4 | 5 } = {}): TeamSetup {
+  const recentWindow = options.recentWindow ?? 5;
   const games = priorGames(team, week);
   const historicalTeam = options.usePriorSeason === false ? undefined : priorTeam(team.season, team.team);
   const priorEvidence: PriorSeasonEvidence | undefined = historicalTeam ? {
@@ -87,7 +88,8 @@ export function setupFromHistory(team: TeamSeasonRecord, week: number, venue: "h
   const availabilityChecks = team.players.filter(p => p.side === "offense" && skill.has(p.position)).map(p => availabilityForWeek(p, week));
   const available = new Set(availabilityChecks.filter(p => p.included).map(p => p.id));
   const roster: SimulationRosterPlayer[] = team.players.filter(player => available.has(player.id)).map(player => {
-    const rows = games.filter(game => game.playerStats[player.id] !== undefined).map(game => ({ stats: game.playerStats[player.id]!, venue: game.venue, opponent: game.opponent }));
+    const rows = (recentWindow === 4 ? games : games.filter(game => game.playerStats[player.id] !== undefined))
+      .map(game => ({ stats: game.playerStats[player.id] ?? {}, venue: game.venue, opponent: game.opponent }));
     const historical = historicalPlayers.get(player.id);
     const evidence = priorBackfieldEvidence(historical);
     return {
@@ -96,8 +98,8 @@ export function setupFromHistory(team: TeamSeasonRecord, week: number, venue: "h
       eliteTier: getEliteTier(player),
       depthRank: player.depthRank, depthRankBasis: player.depthRank === undefined ? "usage" as const : player.depthSource ? "ESPN" as const : "saved" as const,
       historyObservations: rows.filter(row => ["passAttempts", "rushAttempts", "targets", "receptions", "receivingYards"].some(key => Number.isFinite(row.stats[key]))).length,
-      recentStats: blendPriorStats(blendedStats(rows, venue, matchupOpponent), rows.map(row => row.stats), historical) as PlayerRecentStats,
-      usage: blendPriorUsage(playerUsage(games, player.id), historicalTeam, historical),
+      recentStats: blendPriorStats(blendedStats(rows, venue, matchupOpponent, recentWindow), rows.map(row => row.stats), historical) as PlayerRecentStats,
+      usage: blendPriorUsage(playerUsage(games, player.id, recentWindow), historicalTeam, historical),
       backfieldEvidence: player.position === "RB" ? (() => {
         const pairedRush = rows.filter(r => Number.isFinite(r.stats.rushAttempts) && r.stats.rushAttempts! > 0 && Number.isFinite(r.stats.rushYards));
         const pairedReceiving = rows.filter(r => Number.isFinite(r.stats.receptions) && r.stats.receptions! > 0 && Number.isFinite(r.stats.receivingYards));
@@ -136,7 +138,7 @@ export function setupFromHistory(team: TeamSeasonRecord, week: number, venue: "h
     Object.entries(defenseRows[games.indexOf(game)]!.stats).some(([key, value]) => defenseKeys.has(key) && Number.isFinite(value)),
   );
   const names = (position: string) => roster.filter(player => player.position === position);
-  const strength = historyStrength(team, games);
+  const strength = historyStrength(team, games, recentWindow);
   const historicalStrength = historicalTeam ? priorTeamStrength(historicalTeam) : undefined;
   const rating = (current: number, old: number | undefined, count: number) => {
     if (old === undefined) return current;
@@ -182,7 +184,7 @@ export function setupFromHistory(team: TeamSeasonRecord, week: number, venue: "h
       .map(p => ({
         id: p.id, name: p.name, position: p.position as import("./defensive-tiers").DefensivePosition,
         defensiveTier: getDefenderTier(p),
-        recentStats: blendPriorStats(blendedStats(games.map(g => ({ stats: g.playerStats[p.id] ?? {}, venue: g.venue, opponent: g.opponent })), venue, matchupOpponent),
+        recentStats: blendPriorStats(blendedStats(games.map(g => ({ stats: g.playerStats[p.id] ?? {}, venue: g.venue, opponent: g.opponent })), venue, matchupOpponent, recentWindow),
           games.map(g => g.playerStats[p.id] ?? {}), priorDefenderRecord(historicalPlayers.get(p.id))),
       })),
     record: teamRecord(team, week),
@@ -195,7 +197,7 @@ export function setupFromHistory(team: TeamSeasonRecord, week: number, venue: "h
     ] },
     depthChartSource: team.players.find(p => p.depthSource)?.depthSource,
     headToHead: matchupOpponent ? { opponent: matchupOpponent, games: meetings.length, usableGames: usable.length, maxWeight: headToHeadWeight(usable.length) } : undefined,
-    defenseRecent: blendPriorStats(blendedStats(defenseRows, venue, matchupOpponent), defenseRows.map(row => row.stats), historicalDefense),
+    defenseRecent: blendPriorStats(blendedStats(defenseRows, venue, matchupOpponent, recentWindow), defenseRows.map(row => row.stats), historicalDefense),
     context: `${team.season} season: ${games.length} recorded games before week ${week}. ${priorEvidence ? '2025 regular-season baseline blended separately; up to three effective prior games per reported field, decreasing as 2026 observations grow. ' : ''}Season/recent-five averages are blended; matching-venue splits contribute when at least two observations exist. ${matchupOpponent ? `${meetings.length} earlier head-to-head game(s) against ${matchupOpponent}; known fields receive up to ${Math.round(headToHeadWeight(usable.length) * 100)}% opponent-specific weight, capped at a 20% change to each baseline average (minimum cap 0.2). ` : ''}Missing values are unknown, not zero.`,
   };
 }
