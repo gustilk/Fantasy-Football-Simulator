@@ -28,7 +28,10 @@ import type {
   NflImportPreview,
   NflSchedule,
   PreviewNflTeamParams,
+  SalaryDeletionInput,
+  SalaryUploadInput,
   SeasonError,
+  SharedSalaryState,
   TeamSeasonInput,
   TeamSeasonRecord
 } from './api.schemas';
@@ -59,6 +62,258 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetSharedSalaryFileUrl = (season: number,
+    format: 'classic' | 'showdown',) => {
+
+
+
+
+  return `/api/salary-files/${season}/${format}`
+}
+
+/**
+ * @summary Shared personal-app contest salary data
+ */
+export const getSharedSalaryFile = async (season: number,
+    format: 'classic' | 'showdown', options?: Parameters<typeof customFetch>[1]): Promise<SharedSalaryState> => {
+
+  return customFetch<SharedSalaryState>(getGetSharedSalaryFileUrl(season,format),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSharedSalaryFileQueryKey = (season: number,
+    format: 'classic' | 'showdown',) => {
+    return [
+    `/api/salary-files/${season}/${format}`
+    ] as const;
+    }
+
+
+export const getGetSharedSalaryFileQueryOptions = <TData = Awaited<ReturnType<typeof getSharedSalaryFile>>, TError = ErrorType<unknown>>(season: number,
+    format: 'classic' | 'showdown', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSharedSalaryFile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSharedSalaryFileQueryKey(season,format);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSharedSalaryFile>>> = ({ signal }) => getSharedSalaryFile(season,format, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: season !== null && season !== undefined && format !== null && format !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSharedSalaryFile>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSharedSalaryFileQueryResult = NonNullable<Awaited<ReturnType<typeof getSharedSalaryFile>>>
+export type GetSharedSalaryFileQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Shared personal-app contest salary data
+ */
+
+export function useGetSharedSalaryFile<TData = Awaited<ReturnType<typeof getSharedSalaryFile>>, TError = ErrorType<unknown>>(
+ season: number,
+    format: 'classic' | 'showdown', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSharedSalaryFile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSharedSalaryFileQueryOptions(season,format,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSaveSharedSalaryFileUrl = (season: number,
+    format: 'classic' | 'showdown',) => {
+
+
+
+
+  return `/api/salary-files/${season}/${format}`
+}
+
+export const saveSharedSalaryFile = async (season: number,
+    format: 'classic' | 'showdown',
+    salaryUploadInput: SalaryUploadInput, options?: Parameters<typeof customFetch>[1]): Promise<SharedSalaryState> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SharedSalaryState>(getSaveSharedSalaryFileUrl(season,format),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(salaryUploadInput)
+  }
+);}
+
+
+
+
+
+export const getSaveSharedSalaryFileMutationKey = () => ['saveSharedSalaryFile'] as const;
+
+export const getSaveSharedSalaryFileMutationOptions = <TError = ErrorType<SeasonError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveSharedSalaryFile>>, TError,SaveSharedSalaryFileMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveSharedSalaryFile>>, TError,SaveSharedSalaryFileMutationVariables, TContext> => {
+
+const mutationKey = getSaveSharedSalaryFileMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveSharedSalaryFile>>, SaveSharedSalaryFileMutationVariables> = (props) => {
+          const {season,format,data} = props ?? {};
+
+          return  saveSharedSalaryFile(season,format,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveSharedSalaryFileMutationResult = NonNullable<Awaited<ReturnType<typeof saveSharedSalaryFile>>>
+    export type SaveSharedSalaryFileMutationBody = BodyType<SalaryUploadInput>
+    export type SaveSharedSalaryFileMutationError = ErrorType<SeasonError>
+    export type SaveSharedSalaryFileMutationVariables = {season: number;format: 'classic' | 'showdown';data: BodyType<SalaryUploadInput>}
+
+    export const useSaveSharedSalaryFile = <TError = ErrorType<SeasonError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveSharedSalaryFile>>, TError,SaveSharedSalaryFileMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof saveSharedSalaryFile>>,
+        TError,
+        SaveSharedSalaryFileMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSaveSharedSalaryFileMutationOptions(options));
+    }
+
+export const getDeleteSharedSalaryFileUrl = (season: number,
+    format: 'classic' | 'showdown',) => {
+
+
+
+
+  return `/api/salary-files/${season}/${format}`
+}
+
+export const deleteSharedSalaryFile = async (season: number,
+    format: 'classic' | 'showdown',
+    salaryDeletionInput: SalaryDeletionInput, options?: Parameters<typeof customFetch>[1]): Promise<SharedSalaryState> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SharedSalaryState>(getDeleteSharedSalaryFileUrl(season,format),
+  {
+    ...options,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(salaryDeletionInput)
+  }
+);}
+
+
+
+
+
+export const getDeleteSharedSalaryFileMutationKey = () => ['deleteSharedSalaryFile'] as const;
+
+export const getDeleteSharedSalaryFileMutationOptions = <TError = ErrorType<SeasonError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSharedSalaryFile>>, TError,DeleteSharedSalaryFileMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteSharedSalaryFile>>, TError,DeleteSharedSalaryFileMutationVariables, TContext> => {
+
+const mutationKey = getDeleteSharedSalaryFileMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteSharedSalaryFile>>, DeleteSharedSalaryFileMutationVariables> = (props) => {
+          const {season,format,data} = props ?? {};
+
+          return  deleteSharedSalaryFile(season,format,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteSharedSalaryFileMutationResult = NonNullable<Awaited<ReturnType<typeof deleteSharedSalaryFile>>>
+    export type DeleteSharedSalaryFileMutationBody = BodyType<SalaryDeletionInput>
+    export type DeleteSharedSalaryFileMutationError = ErrorType<SeasonError>
+    export type DeleteSharedSalaryFileMutationVariables = {season: number;format: 'classic' | 'showdown';data: BodyType<SalaryDeletionInput>}
+
+    export const useDeleteSharedSalaryFile = <TError = ErrorType<SeasonError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSharedSalaryFile>>, TError,DeleteSharedSalaryFileMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteSharedSalaryFile>>,
+        TError,
+        DeleteSharedSalaryFileMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteSharedSalaryFileMutationOptions(options));
+    }
 
 export const getGetNflAdvancedStatsUrl = (season: number,
     team: string,

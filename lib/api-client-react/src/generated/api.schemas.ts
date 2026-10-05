@@ -5,6 +5,93 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type SalaryRowPosition = typeof SalaryRowPosition[keyof typeof SalaryRowPosition];
+
+
+export const SalaryRowPosition = {
+  QB: 'QB',
+  RB: 'RB',
+  WR: 'WR',
+  TE: 'TE',
+  K: 'K',
+  DST: 'DST',
+} as const;
+
+export interface SalaryRow {
+  /**
+     * @maxLength 30
+     * @pattern ^\d+$
+     */
+  id: string;
+  /**
+     * @minLength 1
+     * @maxLength 150
+     */
+  name: string;
+  position: SalaryRowPosition;
+  /**
+     * @minLength 2
+     * @maxLength 4
+     */
+  team: string;
+  /**
+     * @minimum 1
+     * @maximum 50000
+     */
+  salary: number;
+  /**
+     * @minLength 1
+     * @maxLength 300
+     */
+  gameInfo: string;
+  /**
+     * @minLength 1
+     * @maxLength 30
+     */
+  rosterPosition: string;
+}
+
+export interface SalaryUploadInput {
+  /** @minimum 0 */
+  expectedRevision: number;
+  /**
+     * @minLength 1
+     * @maxLength 255
+     */
+  filename: string;
+  /**
+     * @minItems 1
+     * @maxItems 1500
+     */
+  players: SalaryRow[];
+}
+
+export interface SalaryDeletionInput {
+  /** @minimum 0 */
+  expectedRevision: number;
+}
+
+export type SharedSalaryFileFormat = typeof SharedSalaryFileFormat[keyof typeof SharedSalaryFileFormat];
+
+
+export const SharedSalaryFileFormat = {
+  classic: 'classic',
+  showdown: 'showdown',
+} as const;
+
+export interface SharedSalaryFile {
+  season: number;
+  format: SharedSalaryFileFormat;
+  filename: string;
+  importedAt: string;
+  players: SalaryRow[];
+}
+
+export interface SharedSalaryState {
+  revision: number;
+  file: SharedSalaryFile | null;
+}
+
 export type NflAdvancedSourceKind = typeof NflAdvancedSourceKind[keyof typeof NflAdvancedSourceKind];
 
 

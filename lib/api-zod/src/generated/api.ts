@@ -9,6 +9,195 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Shared personal-app contest salary data
+ */
+export const getSharedSalaryFilePathSeasonMin = 2000;
+export const getSharedSalaryFilePathSeasonMax = 2100;
+
+
+
+export const GetSharedSalaryFileParams = zod.object({
+  "season": zod.coerce.number().int().min(getSharedSalaryFilePathSeasonMin).max(getSharedSalaryFilePathSeasonMax),
+  "format": zod.enum(['classic', 'showdown'])
+})
+
+export const getSharedSalaryFileResponseFileOnePlayersItemIdMax = 30;
+
+
+export const getSharedSalaryFileResponseFileOnePlayersItemIdRegExp = new RegExp('^\\d+$');
+export const getSharedSalaryFileResponseFileOnePlayersItemNameMax = 150;
+
+export const getSharedSalaryFileResponseFileOnePlayersItemTeamMin = 2;
+export const getSharedSalaryFileResponseFileOnePlayersItemTeamMax = 4;
+
+export const getSharedSalaryFileResponseFileOnePlayersItemSalaryMax = 50000;
+
+export const getSharedSalaryFileResponseFileOnePlayersItemGameInfoMax = 300;
+
+export const getSharedSalaryFileResponseFileOnePlayersItemRosterPositionMax = 30;
+
+
+
+export const GetSharedSalaryFileResponse = zod.object({
+  "revision": zod.number().int(),
+  "file": zod.union([zod.object({
+  "season": zod.number().int(),
+  "format": zod.enum(['classic', 'showdown']),
+  "filename": zod.string(),
+  "importedAt": zod.string(),
+  "players": zod.array(zod.object({
+  "id": zod.string().max(getSharedSalaryFileResponseFileOnePlayersItemIdMax).regex(getSharedSalaryFileResponseFileOnePlayersItemIdRegExp),
+  "name": zod.string().min(1).max(getSharedSalaryFileResponseFileOnePlayersItemNameMax),
+  "position": zod.enum(['QB', 'RB', 'WR', 'TE', 'K', 'DST']),
+  "team": zod.string().min(getSharedSalaryFileResponseFileOnePlayersItemTeamMin).max(getSharedSalaryFileResponseFileOnePlayersItemTeamMax),
+  "salary": zod.number().int().min(1).max(getSharedSalaryFileResponseFileOnePlayersItemSalaryMax),
+  "gameInfo": zod.string().min(1).max(getSharedSalaryFileResponseFileOnePlayersItemGameInfoMax),
+  "rosterPosition": zod.string().min(1).max(getSharedSalaryFileResponseFileOnePlayersItemRosterPositionMax)
+}))
+}),zod.null()])
+})
+
+
+export const saveSharedSalaryFilePathSeasonMin = 2000;
+export const saveSharedSalaryFilePathSeasonMax = 2100;
+
+
+
+export const SaveSharedSalaryFileParams = zod.object({
+  "season": zod.coerce.number().int().min(saveSharedSalaryFilePathSeasonMin).max(saveSharedSalaryFilePathSeasonMax),
+  "format": zod.enum(['classic', 'showdown'])
+})
+
+export const saveSharedSalaryFileBodyExpectedRevisionMin = 0;
+
+export const saveSharedSalaryFileBodyFilenameMax = 255;
+
+export const saveSharedSalaryFileBodyPlayersItemIdMax = 30;
+
+
+export const saveSharedSalaryFileBodyPlayersItemIdRegExp = new RegExp('^\\d+$');
+export const saveSharedSalaryFileBodyPlayersItemNameMax = 150;
+
+export const saveSharedSalaryFileBodyPlayersItemTeamMin = 2;
+export const saveSharedSalaryFileBodyPlayersItemTeamMax = 4;
+
+export const saveSharedSalaryFileBodyPlayersItemSalaryMax = 50000;
+
+export const saveSharedSalaryFileBodyPlayersItemGameInfoMax = 300;
+
+export const saveSharedSalaryFileBodyPlayersItemRosterPositionMax = 30;
+
+export const saveSharedSalaryFileBodyPlayersMax = 1500;
+
+
+
+export const SaveSharedSalaryFileBody = zod.object({
+  "expectedRevision": zod.number().int().min(saveSharedSalaryFileBodyExpectedRevisionMin),
+  "filename": zod.string().min(1).max(saveSharedSalaryFileBodyFilenameMax),
+  "players": zod.array(zod.object({
+  "id": zod.string().max(saveSharedSalaryFileBodyPlayersItemIdMax).regex(saveSharedSalaryFileBodyPlayersItemIdRegExp),
+  "name": zod.string().min(1).max(saveSharedSalaryFileBodyPlayersItemNameMax),
+  "position": zod.enum(['QB', 'RB', 'WR', 'TE', 'K', 'DST']),
+  "team": zod.string().min(saveSharedSalaryFileBodyPlayersItemTeamMin).max(saveSharedSalaryFileBodyPlayersItemTeamMax),
+  "salary": zod.number().int().min(1).max(saveSharedSalaryFileBodyPlayersItemSalaryMax),
+  "gameInfo": zod.string().min(1).max(saveSharedSalaryFileBodyPlayersItemGameInfoMax),
+  "rosterPosition": zod.string().min(1).max(saveSharedSalaryFileBodyPlayersItemRosterPositionMax)
+})).min(1).max(saveSharedSalaryFileBodyPlayersMax)
+})
+
+export const saveSharedSalaryFileResponseFileOnePlayersItemIdMax = 30;
+
+
+export const saveSharedSalaryFileResponseFileOnePlayersItemIdRegExp = new RegExp('^\\d+$');
+export const saveSharedSalaryFileResponseFileOnePlayersItemNameMax = 150;
+
+export const saveSharedSalaryFileResponseFileOnePlayersItemTeamMin = 2;
+export const saveSharedSalaryFileResponseFileOnePlayersItemTeamMax = 4;
+
+export const saveSharedSalaryFileResponseFileOnePlayersItemSalaryMax = 50000;
+
+export const saveSharedSalaryFileResponseFileOnePlayersItemGameInfoMax = 300;
+
+export const saveSharedSalaryFileResponseFileOnePlayersItemRosterPositionMax = 30;
+
+
+
+export const SaveSharedSalaryFileResponse = zod.object({
+  "revision": zod.number().int(),
+  "file": zod.union([zod.object({
+  "season": zod.number().int(),
+  "format": zod.enum(['classic', 'showdown']),
+  "filename": zod.string(),
+  "importedAt": zod.string(),
+  "players": zod.array(zod.object({
+  "id": zod.string().max(saveSharedSalaryFileResponseFileOnePlayersItemIdMax).regex(saveSharedSalaryFileResponseFileOnePlayersItemIdRegExp),
+  "name": zod.string().min(1).max(saveSharedSalaryFileResponseFileOnePlayersItemNameMax),
+  "position": zod.enum(['QB', 'RB', 'WR', 'TE', 'K', 'DST']),
+  "team": zod.string().min(saveSharedSalaryFileResponseFileOnePlayersItemTeamMin).max(saveSharedSalaryFileResponseFileOnePlayersItemTeamMax),
+  "salary": zod.number().int().min(1).max(saveSharedSalaryFileResponseFileOnePlayersItemSalaryMax),
+  "gameInfo": zod.string().min(1).max(saveSharedSalaryFileResponseFileOnePlayersItemGameInfoMax),
+  "rosterPosition": zod.string().min(1).max(saveSharedSalaryFileResponseFileOnePlayersItemRosterPositionMax)
+}))
+}),zod.null()])
+})
+
+
+export const deleteSharedSalaryFilePathSeasonMin = 2000;
+export const deleteSharedSalaryFilePathSeasonMax = 2100;
+
+
+
+export const DeleteSharedSalaryFileParams = zod.object({
+  "season": zod.coerce.number().int().min(deleteSharedSalaryFilePathSeasonMin).max(deleteSharedSalaryFilePathSeasonMax),
+  "format": zod.enum(['classic', 'showdown'])
+})
+
+export const deleteSharedSalaryFileBodyExpectedRevisionMin = 0;
+
+
+
+export const DeleteSharedSalaryFileBody = zod.object({
+  "expectedRevision": zod.number().int().min(deleteSharedSalaryFileBodyExpectedRevisionMin)
+})
+
+export const deleteSharedSalaryFileResponseFileOnePlayersItemIdMax = 30;
+
+
+export const deleteSharedSalaryFileResponseFileOnePlayersItemIdRegExp = new RegExp('^\\d+$');
+export const deleteSharedSalaryFileResponseFileOnePlayersItemNameMax = 150;
+
+export const deleteSharedSalaryFileResponseFileOnePlayersItemTeamMin = 2;
+export const deleteSharedSalaryFileResponseFileOnePlayersItemTeamMax = 4;
+
+export const deleteSharedSalaryFileResponseFileOnePlayersItemSalaryMax = 50000;
+
+export const deleteSharedSalaryFileResponseFileOnePlayersItemGameInfoMax = 300;
+
+export const deleteSharedSalaryFileResponseFileOnePlayersItemRosterPositionMax = 30;
+
+
+
+export const DeleteSharedSalaryFileResponse = zod.object({
+  "revision": zod.number().int(),
+  "file": zod.union([zod.object({
+  "season": zod.number().int(),
+  "format": zod.enum(['classic', 'showdown']),
+  "filename": zod.string(),
+  "importedAt": zod.string(),
+  "players": zod.array(zod.object({
+  "id": zod.string().max(deleteSharedSalaryFileResponseFileOnePlayersItemIdMax).regex(deleteSharedSalaryFileResponseFileOnePlayersItemIdRegExp),
+  "name": zod.string().min(1).max(deleteSharedSalaryFileResponseFileOnePlayersItemNameMax),
+  "position": zod.enum(['QB', 'RB', 'WR', 'TE', 'K', 'DST']),
+  "team": zod.string().min(deleteSharedSalaryFileResponseFileOnePlayersItemTeamMin).max(deleteSharedSalaryFileResponseFileOnePlayersItemTeamMax),
+  "salary": zod.number().int().min(1).max(deleteSharedSalaryFileResponseFileOnePlayersItemSalaryMax),
+  "gameInfo": zod.string().min(1).max(deleteSharedSalaryFileResponseFileOnePlayersItemGameInfoMax),
+  "rosterPosition": zod.string().min(1).max(deleteSharedSalaryFileResponseFileOnePlayersItemRosterPositionMax)
+}))
+}),zod.null()])
+})
+
+
+/**
  * @summary Verified completed-game advanced NFL reference stats, never forecast multipliers
  */
 export const getNflAdvancedStatsPathSeasonMin = 2000;

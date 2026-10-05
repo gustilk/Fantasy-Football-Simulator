@@ -11,6 +11,61 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /salary-files/{season}/{format}:
+    parameters:
+      - in: path
+        name: season
+        required: true
+        schema: { type: integer, minimum: 2000, maximum: 2100 }
+      - in: path
+        name: format
+        required: true
+        schema: { type: string, enum: [classic, showdown] }
+    get:
+      operationId: getSharedSalaryFile
+      summary: Shared personal-app contest salary data
+      responses:
+        "200":
+          description: Current salary upload or deletion marker
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SharedSalaryState" }
+    put:
+      operationId: saveSharedSalaryFile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SalaryUploadInput" }
+      responses:
+        "200":
+          description: Saved structured salaries
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SharedSalaryState" }
+        "409":
+          description: Another device changed this upload; refresh before replacing
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeasonError" }
+    delete:
+      operationId: deleteSharedSalaryFile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SalaryDeletionInput" }
+      responses:
+        "200":
+          description: Deletion marker prevents older browsers restoring removed uploads
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SharedSalaryState" }
+        "409":
+          description: Another device changed this upload
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeasonError" }
   /nfl-advanced/{season}/{team}/{beforeWeek}:
     get:
       operationId: getNflAdvancedStats
@@ -210,6 +265,53 @@ paths:
               schema: { $ref: "#/components/schemas/SeasonError" }
 components:
   schemas:
+    SalaryRow:
+      type: object
+      required: [id, name, position, team, salary, gameInfo, rosterPosition]
+      properties:
+        id: { type: string, pattern: '^\d+$', maxLength: 30 }
+        name: { type: string, minLength: 1, maxLength: 150 }
+        position: { type: string, enum: [QB, RB, WR, TE, K, DST] }
+        team: { type: string, minLength: 2, maxLength: 4 }
+        salary: { type: integer, minimum: 1, maximum: 50000 }
+        gameInfo: { type: string, minLength: 1, maxLength: 300 }
+        rosterPosition: { type: string, minLength: 1, maxLength: 30 }
+    SalaryUploadInput:
+      type: object
+      required: [expectedRevision, filename, players]
+      properties:
+        expectedRevision: { type: integer, minimum: 0 }
+        filename: { type: string, minLength: 1, maxLength: 255 }
+        players:
+          type: array
+          minItems: 1
+          maxItems: 1500
+          items: { $ref: "#/components/schemas/SalaryRow" }
+    SalaryDeletionInput:
+      type: object
+      required: [expectedRevision]
+      properties:
+        expectedRevision: { type: integer, minimum: 0 }
+    SharedSalaryFile:
+      type: object
+      required: [season, format, filename, importedAt, players]
+      properties:
+        season: { type: integer }
+        format: { type: string, enum: [classic, showdown] }
+        filename: { type: string }
+        importedAt: { type: string }
+        players:
+          type: array
+          items: { $ref: "#/components/schemas/SalaryRow" }
+    SharedSalaryState:
+      type: object
+      required: [revision, file]
+      properties:
+        revision: { type: integer }
+        file:
+          anyOf:
+            - { $ref: "#/components/schemas/SharedSalaryFile" }
+            - { type: "null" }
     NflAdvancedSource:
       type: object
       required: [kind, url, status, fetchedAt, updatedAt]

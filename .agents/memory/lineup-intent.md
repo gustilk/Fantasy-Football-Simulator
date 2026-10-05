@@ -32,3 +32,15 @@ Classic and Captain CSV uploads must be independent, including retention and for
 **Why:** The user said, “I did not upload the captain mode CVs, the classic CVs and captain mode should be separate.”
 
 **How to apply:** A Classic upload must not appear as the Captain upload. Uploading, replacing or removing either file must not overwrite or delete the other's file. Without a Captain CSV, explain that it must be uploaded rather than displaying the Classic file.
+
+Salary uploads must be available across desktop and mobile browsers without uploading again.
+
+**Why:** The user said desktop CSV uploads did not show on mobile and uploading twice was inconvenient.
+
+**How to apply:** Keep contest salary data shared across devices while retaining Classic/Captain separation. Existing browser-only uploads must have a safe migration path; a stale browser must not restore a remotely deleted file.
+
+Shared salary data does not automatically imply shared forecast pairing.
+
+**Why:** Simulation archives remain device-specific; copying a desktop forecast reference to a fresh phone would link to a forecast that the phone cannot access.
+
+**How to apply:** Preserve each device's pairing for unchanged contest data. Synchronizing forecast archives is a separate feature; until that exists, require a matching forecast on the current device rather than silently importing another device's forecast reference.

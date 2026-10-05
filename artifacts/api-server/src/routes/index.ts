@@ -3,6 +3,7 @@ import healthRouter from "./health";
 import seasonTeamsRouter from "./season-teams";
 import nflAdvancedRouter from "./nfl-advanced";
 import nflImportRouter from "./nfl-import";
+import salaryFilesRouter from "./salary-files";
 
 const router: IRouter = Router();
 
@@ -10,5 +11,6 @@ router.use(healthRouter);
 router.use(seasonTeamsRouter);
 router.use(nflAdvancedRouter);
 router.use(nflImportRouter);
+router.use(salaryFilesRouter);
 
 export default router;
