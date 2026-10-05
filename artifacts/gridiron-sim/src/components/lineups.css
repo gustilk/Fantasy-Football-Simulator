@@ -6,6 +6,14 @@
 .lu-file{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--app-border);border-radius:8px;background:var(--app-bg);font-size:13px}
 .lu-file>div{display:grid;gap:3px;min-width:0;word-break:break-word}
 .lu-actions{display:flex;gap:8px;flex-wrap:wrap}
+.lu-exclusion-filters .field:first-child{flex:1;min-width:180px}
+.lu-exclusion-list{max-height:330px;overflow:auto;border:1px solid var(--app-border);border-radius:8px}
+.lu-exclusion-row{display:flex;align-items:center;gap:12px;padding:11px 12px;min-height:52px;border-bottom:1px solid var(--app-border);cursor:pointer;font-size:13px}
+.lu-exclusion-row:last-child{border-bottom:0}
+.lu-exclusion-row>span{display:grid;gap:3px;min-width:0}
+.lu-exclusion-row input{width:20px;height:20px;flex-shrink:0;accent-color:var(--app-home)}
+.lu-exclusion-row.excluded{background:var(--app-bg)}
+.lu-exclusion-row:focus-within{outline:2px solid var(--app-home);outline-offset:-2px}
 .lu-mono{font:12px var(--app-font-mono)}
 .lu-gap{margin:0}
 .lu-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}

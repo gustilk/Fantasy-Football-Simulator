@@ -15,6 +15,9 @@ import { SHOWDOWN_RULES_URL } from '@/lib/showdown-scoring';
 import type { SavedSalaries } from '@/lib/salary-storage';
 import { useSyncedSalaries } from '@/hooks/use-synced-salaries';
 import { getFeaturedClassicSalary } from '@workspace/api-client-react';
+import { useLineupExclusions } from '@/hooks/use-lineup-exclusions';
+import { applyLineupExclusions } from '@/lib/lineup-exclusions';
+import LineupExclusions from './LineupExclusions';
 
 const CAP = 50000;
 const money = (n: number) => `$${n.toLocaleString('en-US')}`;
@@ -63,16 +66,22 @@ export default function LineupsSection({ season, forecastSource }: { season: num
 
   const record = saved.status === 'ok' ? saved.record : null;
   const salaryRows = useMemo(() => record ? parseSalaryCsv(record.csv, record.format ?? 'classic') : [], [record]);
+  const exclusions = useLineupExclusions(season, format, salaryRows);
+  const exclusionSignature = [...exclusions.excluded].sort().join('|');
   const game = slate?.forecasts.find(g => g.gameId === selectedGameId) ??
     slate?.forecasts.find(g => g.gameId === record?.gameId) ?? slate?.forecasts[0];
   const sameFormat = !!record && (record.format ?? 'classic') === format;
   const linked = sameFormat && !!slate && record!.slateId === slate.id && (format !== 'showdown' || record!.gameId === game?.gameId);
   const pool = useMemo(() => {
     if (!record || !slate || !linked) return null;
-    try { return { ...(format === 'showdown' ? buildShowdownPool(salaryRows, slate, game?.gameId ?? '', c.historyQuery.data, clock) : buildLineupPool(salaryRows, slate, c.historyQuery.data, clock)), error: '' }; }
-    catch (e) { return { players: [] as LineupPlayer[], issues: [] as { player: SalaryPlayer; reason: string }[], warnings: [] as string[], error: msg(e) }; }
-  }, [record, salaryRows, slate, linked, c.historyQuery.data, clock, format, game?.gameId]);
-  const key = record && slate ? `${record.importedAt}|${format}|${game?.gameId}|${slate.id}|${count}|${mode}|${c.historyQuery.data?.map(t => `${t.team}:${t.version}`).join(',')}|${(format === 'showdown' && game ? [game] : slate.forecasts).map(f => Date.parse(f.kickoff) <= clock).join(',')}` : '';
+    try {
+      const built = format === 'showdown' ? buildShowdownPool(salaryRows, slate, game?.gameId ?? '', c.historyQuery.data, clock) : buildLineupPool(salaryRows, slate, c.historyQuery.data, clock);
+      const players = applyLineupExclusions(built.players, exclusions.excluded);
+      return { ...built, players, userExcludedCount: built.players.length - players.length, error: '' };
+    }
+    catch (e) { return { players: [] as LineupPlayer[], issues: [] as { player: SalaryPlayer; reason: string }[], warnings: [] as string[], userExcludedCount: 0, error: msg(e) }; }
+  }, [record, salaryRows, slate, linked, c.historyQuery.data, clock, format, game?.gameId, exclusions.excluded]);
+  const key = record && slate ? `${record.importedAt}|${format}|${game?.gameId}|${slate.id}|${count}|${mode}|${exclusionSignature}|${c.historyQuery.data?.map(t => `${t.team}:${t.version}`).join(',')}|${(format === 'showdown' && game ? [game] : slate.forecasts).map(f => Date.parse(f.kickoff) <= clock).join(',')}` : '';
 
   const stop = () => { worker.current?.terminate(); worker.current = null; setRunning(false); };
   useEffect(() => { stop(); setResult(null); setGenError(''); }, [key]);
@@ -143,6 +152,8 @@ export default function LineupsSection({ season, forecastSource }: { season: num
       ? buildShowdownPool(parseSalaryCsv(record!.csv, format), slate!, game!.gameId, c.historyQuery.data, Date.now())
       : buildLineupPool(parseSalaryCsv(record!.csv), slate!, c.historyQuery.data, Date.now()); }
     catch (e) { setGenError(msg(e)); return; }
+    fresh.players = applyLineupExclusions(fresh.players, exclusions.excluded);
+    if (!fresh.players.length) { setGenError('No eligible players remain after your exclusions. Clear some exclusions and try again.'); return; }
     const runKey = key;
     let w: Worker;
     try { w = new Worker(new URL('../lib/lineup-worker.ts', import.meta.url), { type: 'module' }); }
@@ -240,6 +251,9 @@ export default function LineupsSection({ season, forecastSource }: { season: num
         <button className="btn-secondary" disabled={importing || salarySync.loading || !!salarySync.error} onClick={relink}>{record.slateId ? 'Confirm same contest' : 'Use selected forecast'}</button></div>}
     </div>
 
+    {record && salaryRows.length > 0 && <LineupExclusions players={salaryRows} excluded={exclusions.excluded}
+      toggle={exclusions.toggle} clear={exclusions.clear} warning={exclusions.warning} />}
+
     {pool && <div className="panel dk-panel lu-panel">
       <h2 className="lu-h">3. Pool</h2>
       {pool.error ? <div className="dk-err" role="alert">{pool.error}</div> : <>
@@ -248,6 +262,8 @@ export default function LineupsSection({ season, forecastSource }: { season: num
           <div><span>Excluded rows</span><strong>{pool.issues.length}</strong></div>
           <div><span>Games</span><strong>{new Set(pool.players.map(p => p.gameId)).size}</strong></div>
         </div>
+        {exclusions.excluded.size > 0 && <p className="dk-note lu-gap" role="status">{pool.userExcludedCount} matched salary rows removed by your player exclusions.</p>}
+        {!pool.players.length && exclusions.excluded.size > 0 && <p className="dk-err" role="alert">No eligible players remain. Clear some exclusions to generate lineups.</p>}
         {pool.warnings.map((w, i) => <div className="dk-note lu-gap" key={i}>{w}</div>)}
         {pool.issues.length > 0 && <details><summary>Unmatched, started and excluded rows ({pool.issues.length})</summary>
           <div className="player-table-wrap lu-issues"><table className="player-table"><thead><tr><th>Player</th><th>Salary</th><th>Reason</th></tr></thead><tbody>

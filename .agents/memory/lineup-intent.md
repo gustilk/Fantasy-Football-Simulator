@@ -21,6 +21,12 @@ The user uses the published app on their phone. Salary-import assistance must ad
 
 **How to apply:** Keep preview and published data distinct in both actions and explanations. Prefer a direct import through the user's app session over a phone download/re-upload step. New import functionality requires republishing before it is available on their phone.
 
+Player exclusions are lineup preferences, not changes to player availability or forecast evidence.
+
+**Why:** Choosing not to roster a player does not mean they are injured or that their saved projection is incorrect.
+
+**How to apply:** When extending exclusions, keep frozen forecasts and official salaries intact. Restrict optimizer candidates without marking the player unavailable elsewhere in the app.
+
 Salary imports must not depend on a forecast already existing. Forecast pairing is required for generation, not for uploading and retaining the contest CSV.
 
 **Why:** The user reported that the lineup salary upload would not let them proceed and kept waiting; requiring a saved forecast blocked the independent salary-import step.
