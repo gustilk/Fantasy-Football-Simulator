@@ -1,5 +1,7 @@
 import { calculateDraftKings } from "./draftkings";
 import { defensiveEventPriorities, DEFENSE_TIER_WARNING, type TeamDefenseTier, type SimulationDefender } from "./defensive-tiers";
+import { calculateKickerDraftKings, defensiveTouchdowns, SHOWDOWN_MODEL_WARNING, type KickerStats, type KickerProjection } from './showdown-scoring';
+import type { DefenseStats } from './draftkings-defense';
 import { getDivision, isDivisionGame } from "./nfl-divisions";
 import { passingStrategyAdjustment, standingsNotes, type StandingContext } from "./standings";
 import { quarterbackPassShare, quarterbackStrategyNotes, type QuarterbackStrategy } from "./quarterback-strategy";
@@ -109,6 +111,8 @@ export interface SimulationInput {
   importance?: "regular" | "must-win" | "playoff";
   /** Optional market weighting is applied to ensemble summaries, not a single game's raw stats. */
   market?: MarketOdds;
+  /** Opt-in so legacy frozen forecasts retain their original scoring/replay. */
+  showdownModel?: 'showdown-v1';
 }
 
 export interface SimulatedDrive {
@@ -151,7 +155,8 @@ export interface SimulationResult {
   overview: string[];
   drives: SimulatedDrive[];
   players: PlayerProjection[];
-  defenses?: { team: string; sacks: number; interceptions: number; fumblesRecovered: number; pointsAllowed: number }[];
+  defenses?: ({ team: string } & DefenseStats)[];
+  kickers?: KickerProjection[];
   ensemble?: {
     runs: number;
     awayWinPct: number;
@@ -159,6 +164,7 @@ export interface SimulationResult {
     tiePct: number;
     fantasy: { mean: number; p10: number; p90: number }[];
     defenseFantasy?: { team: string; mean: number; p10: number; p90: number }[];
+    kickerFantasy?: { team: string; name: string; mean: number; p10: number; p90: number }[];
     market?: MarketEvidence;
   };
 }
@@ -177,6 +183,7 @@ interface TeamSimulation {
   score: number;
   plays: number;
   sacksAllowed: number;
+  kicking: KickerStats;
   players: PlayerAccumulator[];
   drives: Omit<SimulatedDrive, "id" | "quarter">[];
 }
@@ -254,6 +261,7 @@ function makeTeamSimulation(setup: TeamSetup): TeamSimulation {
     score: 0,
     plays: 0,
     sacksAllowed: 0,
+    kicking: { extraPoints: 0, fieldGoals039: 0, fieldGoals4049: 0, fieldGoals50Plus: 0 },
     players: setup.roster ? setup.roster.map(player => {
       ranks[player.position] = (ranks[player.position] ?? 0) + 1;
       return {
@@ -712,6 +720,7 @@ function simulateTeam(
 
       if (yardsToGoal <= 0) {
         team.score += 7;
+        team.kicking.extraPoints++;
         if (pass && scorer) {
           qb.passTD += 1;
           scorer.receivingTD += 1;
@@ -746,6 +755,9 @@ function simulateTeam(
           const makeChance = clamp(0.96 - Math.max(0, fgDistance - 35) * 0.012 - windPenalty * 0.4 - precipitation * 0.2, 0.3, 0.96);
           if (random() < makeChance) {
             team.score += 3;
+            if (fgDistance < 40) team.kicking.fieldGoals039++;
+            else if (fgDistance < 50) team.kicking.fieldGoals4049++;
+            else team.kicking.fieldGoals50Plus++;
             result = "Field goal";
             terminalSummary = `${setup.kicker || "Kicker"} converts from ${fgDistance} yards.`;
             highlights.push(terminalSummary);
@@ -943,18 +955,37 @@ export function simulateGame(input: SimulationInput): SimulationResult {
       receivingYards: player.receivingYards, receivingTD: player.receivingTD, fumblesLost: player.fumblesLost,
     }) };
   });
+  const defenses: NonNullable<SimulationResult['defenses']> = [
+    { team: away.setup.name, sacks: home.sacksAllowed, interceptions: home.players.reduce((n, p) => n + p.interceptions, 0), fumblesRecovered: home.players.reduce((n, p) => n + p.fumblesLost, 0), pointsAllowed: home.score },
+    { team: home.setup.name, sacks: away.sacksAllowed, interceptions: away.players.reduce((n, p) => n + p.interceptions, 0), fumblesRecovered: away.players.reduce((n, p) => n + p.fumblesLost, 0), pointsAllowed: away.score },
+  ];
+  let kickers: KickerProjection[] | undefined;
+  if (input.showdownModel === 'showdown-v1') {
+    const eventRandom = makeRandom((seed ^ 0x51d0ca7) >>> 0);
+    defenses.forEach((defense, i) => {
+      defense.defensiveTD = defensiveTouchdowns(defense.interceptions, defense.fumblesRecovered, eventRandom);
+      const team = i === 0 ? away : home;
+      team.score += 7 * defense.defensiveTD;
+      team.kicking.extraPoints += defense.defensiveTD;
+    });
+    // Opponent defensive TDs are excluded from points allowed, but their XPs count.
+    defenses[0]!.pointsAllowed += defenses[1]!.defensiveTD!;
+    defenses[1]!.pointsAllowed += defenses[0]!.defensiveTD!;
+    kickers = [away, home].filter(t => !!t.setup.kicker && t.setup.kicker !== 'Kicker').map(t => ({
+      name: t.setup.kicker, team: t.setup.name, ...t.kicking, draftKings: calculateKickerDraftKings(t.kicking),
+    }));
+  }
 
   return {
     seed,
     awayScore: away.score,
     homeScore: home.score,
     totalPlays: { away: away.plays, home: home.plays },
-    overview: makeOverview(input, away, home),
+    overview: [...makeOverview(input, away, home), ...(kickers ? [SHOWDOWN_MODEL_WARNING,
+      `Simulated defensive return touchdowns: ${away.setup.name} ${defenses[0]!.defensiveTD}; ${home.setup.name} ${defenses[1]!.defensiveTD}. Team totals include these TDs and assumed extra points.`] : [])],
     drives: mergedDrives,
     players,
-    defenses: [
-      { team: away.setup.name, sacks: home.sacksAllowed, interceptions: home.players.reduce((n, p) => n + p.interceptions, 0), fumblesRecovered: home.players.reduce((n, p) => n + p.fumblesLost, 0), pointsAllowed: home.score },
-      { team: home.setup.name, sacks: away.sacksAllowed, interceptions: away.players.reduce((n, p) => n + p.interceptions, 0), fumblesRecovered: away.players.reduce((n, p) => n + p.fumblesLost, 0), pointsAllowed: away.score },
-    ],
+    defenses,
+    ...(kickers ? { kickers } : {}),
   };
 }

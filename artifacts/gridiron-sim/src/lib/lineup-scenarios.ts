@@ -23,7 +23,7 @@ export interface JointScenarios { samples: Map<string, Float64Array>; count: num
 /** Same-game players and DST share an outcome; different games are independently
  * shuffled. Stratified draws preserve marginal means and original market weights.
  * Replays frozen seeds/inputs, never current rosters or sums of player ceilings. */
-export function replayLineupScenarios(players: LineupPlayer[], slate: DKSlate, count = 1000): JointScenarios {
+export function replayLineupScenarios(players: LineupPlayer[], slate: DKSlate, count = 1000, format: 'classic' | 'showdown' = 'classic'): JointScenarios {
   if (!Number.isInteger(count) || count < 100 || count > 3000) throw new Error('Invalid lineup scenario count.');
   const samples = new Map<string, Float64Array>();
   const reportSamples = new Map<string, Float64Array>();
@@ -52,6 +52,10 @@ export function replayLineupScenarios(players: LineupPlayer[], slate: DKSlate, c
           const defense = result.defenses?.filter(defense => defense.team === team) ?? [];
           if (defense.length !== 1) throw new Error(`Frozen DST identity is missing for ${player.name}.`);
           points = calculateDefenseDraftKings(defense[0]!);
+        } else if (player.position === 'K' && format === 'showdown') {
+          const kickers = result.kickers?.filter(k => k.team === team && playerNameKey(k.name) === playerNameKey(player.name)) ?? [];
+          if (kickers.length !== 1) throw new Error(`Frozen kicker identity is missing for ${player.name}.`);
+          points = kickers[0]!.draftKings;
         } else {
           const saved = game.players.filter(p => p.team === team && p.position === player.position && playerNameKey(p.name) === playerNameKey(player.name));
           const outcome = result.players.filter(p => p.team === team && p.position === player.position &&
@@ -59,6 +63,7 @@ export function replayLineupScenarios(players: LineupPlayer[], slate: DKSlate, c
           if (saved.length !== 1 || outcome.length !== 1) throw new Error(`Frozen player identity is missing for ${player.name}.`);
           points = outcome[0]!.draftKings;
         }
+        if (format === 'showdown' && player.rosterPosition === 'CPT') points *= 1.5;
         if (!Number.isFinite(points)) throw new Error('Invalid fantasy outcome in the frozen replay.');
         values.get(player.id)!.push(points);
       }
@@ -93,7 +98,7 @@ export function replayLineupScenarios(players: LineupPlayer[], slate: DKSlate, c
   return { samples, count, reporting: { samples: reportSamples, count } };
 }
 
-export function summarizeLineup(players: LineupPlayer[], scenarios: JointScenarios) {
+export function summarizeLineup(players: LineupPlayer[], scenarios: JointScenarios, targetScore = 220) {
   const totals = new Float64Array(scenarios.count);
   for (const player of players) {
     const values = scenarios.samples.get(player.id);
@@ -102,7 +107,8 @@ export function summarizeLineup(players: LineupPlayer[], scenarios: JointScenari
   }
   const mean = totals.reduce((sum, value) => sum + value, 0) / totals.length;
   const chance220 = totals.reduce((sum, value) => sum + Number(value >= 220), 0) / totals.length * 100;
+  const chanceTarget = totals.reduce((sum, value) => sum + Number(value >= targetScore), 0) / totals.length * 100;
   totals.sort();
   return { p10: totals[Math.floor((totals.length - 1) * 0.1)]!, p90: totals[Math.floor((totals.length - 1) * 0.9)]!,
-    simulatedMean: mean, chance220, scenarios: scenarios.count };
+    simulatedMean: mean, chance220, scenarios: scenarios.count, ...(targetScore !== 220 ? { targetScore, chanceTarget } : {}) };
 }

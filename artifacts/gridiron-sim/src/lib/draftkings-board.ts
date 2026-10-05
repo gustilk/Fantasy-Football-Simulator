@@ -39,6 +39,7 @@ export interface DKGameForecast {
   runs: number;
   players: DKProjection[];
   defenses?: { team: string; mean: number; p10: number; p90: number }[];
+  kickers?: { team: string; name: string; mean: number; p10: number; p90: number }[];
   input: SimulationInput;
   market?: NonNullable<SimulationResult['ensemble']>['market'];
   warnings: string[];
@@ -149,7 +150,7 @@ export function availableSundayOptions(games: NflScheduledGame[]) {
   }));
 }
 
-export function gameForecast(game: NflScheduledGame, input: SimulationInput, result: SimulationResult): DKGameForecast {
+export function gameForecast(game: Pick<NflScheduledGame, 'id' | 'week' | 'date' | 'awayTeam' | 'homeTeam'>, input: SimulationInput, result: SimulationResult): DKGameForecast {
   const ensemble = result.ensemble;
   if (!ensemble || ensemble.fantasy.length !== result.players.length) throw new Error('Complete ensemble projections are required.');
   const players = result.players.filter(player => supported(player.position)).map(player => {
@@ -172,6 +173,7 @@ export function gameForecast(game: NflScheduledGame, input: SimulationInput, res
     gameId: game.id, week: game.week, kickoff: game.date, awayTeam: game.awayTeam, homeTeam: game.homeTeam,
     seed: result.seed, runs: ensemble.runs, players, input: structuredClone(input), market: ensemble.market,
     defenses: ensemble.defenseFantasy,
+    ...(ensemble.kickerFantasy ? { kickers: ensemble.kickerFantasy } : {}),
     warnings: [...(input.away.modelEvidence?.warnings ?? []), ...(input.home.modelEvidence?.warnings ?? []), ...(ensemble.market?.warnings ?? []), ...standingsNotes(input.away, input.home), ...quarterbackStrategyNotes(input.away), ...quarterbackStrategyNotes(input.home)],
   };
 }

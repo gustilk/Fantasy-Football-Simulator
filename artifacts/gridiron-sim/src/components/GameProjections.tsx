@@ -23,9 +23,10 @@ export default function GameProjections({ result, awayName, homeName }: {
      </details>}
     <div className="sim-projections">
       {!projections ? <p className="history-warning" role="status">This older saved run has no compatible DraftKings averages. Run its week again to generate new projections.</p> : <>
-        <p className="sim-caption">Average of {result.ensemble!.runs} simulations{result.ensemble!.market ? ' · odds-adjusted' : ''}. Estimates, not guaranteed points.</p>
+         <p className="sim-caption">Average of {result.ensemble!.runs} simulations{result.ensemble!.market ? ' · odds-adjusted' : ''}. Standard FLEX points; Captain earns 1.5× in the lineup builder. Estimates, not guaranteed points.</p>
+         {result.kickers && <details><summary>Showdown scoring assumptions</summary>{result.overview.filter(note => note.includes('uncalibrated') || note.includes('defensive return touchdowns')).map(note => <p className="sim-caption" key={note}>{note}</p>)}</details>}
         <div className="sim-position-tabs" role="group" aria-label="Player position">
-          {['QB', 'RB', 'WR', 'TE'].map(value => <button key={value} className={position === value ? 'on' : ''} aria-pressed={position === value} onClick={() => { setPosition(value); setExpanded(false); }}>{value}</button>)}
+           {['QB', 'RB', 'WR', 'TE', 'K', 'DST'].map(value => <button key={value} className={position === value ? 'on' : ''} aria-pressed={position === value} onClick={() => { setPosition(value); setExpanded(false); }}>{value}</button>)}
         </div>
         <div className="sim-list-heading"><span>Player</span><span>Projected DK</span></div>
         <ol className="sim-player-list" data-testid="player-projections">

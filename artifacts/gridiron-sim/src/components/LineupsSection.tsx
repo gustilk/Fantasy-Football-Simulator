@@ -3,19 +3,22 @@ import { Download, Upload, Trash2, Play, Square, RotateCw } from 'lucide-react';
 import { useDraftKingsBoard } from '@/hooks/use-draftkings-board';
 import {
   buildLineupPool, exportLineups, lineupSlots, parseSalaryCsv,
-  type Lineup, type LineupPlayer, type SalaryPlayer,
+  matchesGameInfo, type Lineup, type LineupPlayer, type SalaryPlayer, type LineupFormat,
 } from '@/lib/lineups';
 import DraftKingsAccuracy from './DraftKingsAccuracy';
 import './lineups.css';
 import './draftkings.css';
 import { readSalaryFile } from '@/lib/salary-file';
+import type { SimulatorLineupSource } from '@/lib/simulator-lineups';
+import { buildShowdownPool } from '@/lib/showdown-lineups';
+import { SHOWDOWN_RULES_URL } from '@/lib/showdown-scoring';
 
 const KEY = 'gridiron-dk-salaries-v1';
 const CAP = 50000;
 const money = (n: number) => `$${n.toLocaleString('en-US')}`;
 const msg = (e: unknown) => e instanceof Error ? e.message : 'The operation failed. Please retry.';
 
-interface SavedSalaries { version: 1; season: number; filename: string; importedAt: string; slateId: string; sunday: string; csv: string }
+interface SavedSalaries { version: 1; season: number; filename: string; importedAt: string; slateId: string; sunday: string; csv: string; format?: LineupFormat; gameId?: string }
 type Saved =
   | { status: 'none' }
   | { status: 'corrupt'; reason: string }
@@ -30,15 +33,26 @@ function loadSaved(season: number): Saved {
     const r = JSON.parse(raw) as Partial<SavedSalaries>;
     if (!r || r.version !== 1 || typeof r.season !== 'number' || typeof r.csv !== 'string' || typeof r.filename !== 'string'
       || typeof r.importedAt !== 'string' || typeof r.slateId !== 'string' || typeof r.sunday !== 'string') throw new Error('Unrecognized format or version.');
-    parseSalaryCsv(r.csv);
+    if ((r.format !== undefined && r.format !== 'classic' && r.format !== 'showdown') || (r.gameId !== undefined && typeof r.gameId !== 'string')) throw new Error('Unrecognized contest format.');
+    parseSalaryCsv(r.csv, r.format ?? 'classic');
     const record = r as SavedSalaries;
     return record.season === season ? { status: 'ok', record } : { status: 'other-season', record };
   } catch (e) { return { status: 'corrupt', reason: msg(e) }; }
 }
 
-export default function LineupsSection({ season }: { season: number }) {
+export default function LineupsSection({ season, forecastSource }: { season: number; forecastSource?: SimulatorLineupSource }) {
   const c = useDraftKingsBoard(season);
-  const slate = c.activeSlate;
+  const format: LineupFormat = forecastSource ? 'showdown' : 'classic';
+  const [selectedGameId, setSelectedGameId] = useState('');
+  const [selectedSimulatorSlate, setSelectedSimulatorSlate] = useState('');
+  const slates = forecastSource ? forecastSource.slates : c.slates;
+  const slate = forecastSource
+    ? slates.find(s => s.id === selectedSimulatorSlate) ??
+      slates.find(s => s.forecasts[0]?.week === forecastSource.preferredWeek) ?? slates[0] ?? null
+    : c.activeSlate;
+  const selectSlate = (id: string) => forecastSource ? setSelectedSimulatorSlate(id) : c.selectSlate(id);
+  const storageError = forecastSource ? forecastSource.error : c.storageError;
+  const forecastInstructions = forecastSource ? 'run and save an upcoming week in Game Simulator' : 'run and save the matching Sunday on the DraftKings tab';
   const [saved, setSaved] = useState<Saved>(() => loadSaved(season));
   const [fileError, setFileError] = useState('');
   const [importing, setImporting] = useState(false);
@@ -54,6 +68,8 @@ export default function LineupsSection({ season }: { season: number }) {
 
   useEffect(() => {
     importAttempt.current++;
+    setSelectedSimulatorSlate('');
+    setSelectedGameId('');
     setImporting(false); setSaved(loadSaved(season)); setFileError('');
     return () => { importAttempt.current++; };
   }, [season]);
@@ -65,14 +81,17 @@ export default function LineupsSection({ season }: { season: number }) {
   }, [season]);
 
   const record = saved.status === 'ok' ? saved.record : null;
-  const salaryRows = useMemo(() => record ? parseSalaryCsv(record.csv) : [], [record]);
-  const linked = !!record && !!slate && record.slateId === slate.id;
+  const salaryRows = useMemo(() => record ? parseSalaryCsv(record.csv, record.format ?? 'classic') : [], [record]);
+  const game = slate?.forecasts.find(g => g.gameId === selectedGameId) ??
+    slate?.forecasts.find(g => g.gameId === record?.gameId) ?? slate?.forecasts[0];
+  const sameFormat = !!record && (record.format ?? 'classic') === format;
+  const linked = sameFormat && !!slate && record!.slateId === slate.id && (format !== 'showdown' || record!.gameId === game?.gameId);
   const pool = useMemo(() => {
     if (!record || !slate || !linked) return null;
-    try { return { ...buildLineupPool(salaryRows, slate, c.historyQuery.data, clock), error: '' }; }
+    try { return { ...(format === 'showdown' ? buildShowdownPool(salaryRows, slate, game?.gameId ?? '', c.historyQuery.data, clock) : buildLineupPool(salaryRows, slate, c.historyQuery.data, clock)), error: '' }; }
     catch (e) { return { players: [] as LineupPlayer[], issues: [] as { player: SalaryPlayer; reason: string }[], warnings: [] as string[], error: msg(e) }; }
-  }, [record, salaryRows, slate, linked, c.historyQuery.data, clock]);
-  const key = record && slate ? `${record.importedAt}|${slate.id}|${count}|${mode}|${c.historyQuery.data?.map(t => `${t.team}:${t.version}`).join(',')}|${slate.forecasts.map(f => Date.parse(f.kickoff) <= clock).join(',')}` : '';
+  }, [record, salaryRows, slate, linked, c.historyQuery.data, clock, format, game?.gameId]);
+  const key = record && slate ? `${record.importedAt}|${format}|${game?.gameId}|${slate.id}|${count}|${mode}|${c.historyQuery.data?.map(t => `${t.team}:${t.version}`).join(',')}|${(format === 'showdown' && game ? [game] : slate.forecasts).map(f => Date.parse(f.kickoff) <= clock).join(',')}` : '';
 
   const stop = () => { worker.current?.terminate(); worker.current = null; setRunning(false); };
   useEffect(() => { stop(); setResult(null); setGenError(''); }, [key]);
@@ -84,9 +103,14 @@ export default function LineupsSection({ season }: { season: number }) {
     const attempt = ++importAttempt.current;
     setImporting(true);
     try {
-      const { csv } = await readSalaryFile(file);
+      const { csv, players } = await readSalaryFile(file, undefined, format);
       if (attempt !== importAttempt.current) return;
-      const next: SavedSalaries = { version: 1, season, filename: file.name, importedAt: new Date().toISOString(), slateId: slate?.id ?? '', sunday: slate?.sunday ?? '', csv };
+      const matches = format === 'showdown' ? slate?.forecasts.filter(f => players.every(p => matchesGameInfo(p, f))) ?? [] : [];
+      const importGame = matches.length === 1 ? matches[0] : undefined;
+      if (importGame) setSelectedGameId(importGame.gameId);
+      const next: SavedSalaries = { version: 1, season, filename: file.name, importedAt: new Date().toISOString(),
+        slateId: format === 'showdown' && !importGame ? '' : slate?.id ?? '', sunday: slate?.sunday ?? '', csv, format,
+        ...(format === 'showdown' ? { gameId: importGame?.gameId ?? '' } : {}) };
       localStorage.setItem(KEY, JSON.stringify(next));
       setSaved({ status: 'ok', record: next });
     } catch (e) {
@@ -101,9 +125,13 @@ export default function LineupsSection({ season }: { season: number }) {
     catch (e) { setFileError(msg(e)); }
   };
   const relink = () => {
-    if (!record || !slate) return;
+    if (!record || !slate || !sameFormat) return;
+    if (format === 'showdown' && (!game || !salaryRows.every(p => matchesGameInfo(p, game)))) {
+      setFileError('This salary CSV is for a different matchup or kickoff. Select its matching game and forecast first.'); return;
+    }
     try {
-      const next = { ...record, slateId: slate.id, sunday: slate.sunday, importedAt: new Date().toISOString() };
+      const next = { ...record, slateId: slate.id, sunday: slate.sunday, importedAt: new Date().toISOString(),
+        ...(format === 'showdown' ? { gameId: game!.gameId } : {}) };
       localStorage.setItem(KEY, JSON.stringify(next));
       setSaved({ status: 'ok', record: next });
     } catch (e) { setFileError(msg(e)); }
@@ -112,7 +140,11 @@ export default function LineupsSection({ season }: { season: number }) {
   const generate = () => {
     if (!pool || !pool.players.length) return;
     stop(); setGenError(''); setResult(null);
-    const fresh = buildLineupPool(parseSalaryCsv(record!.csv), slate!, c.historyQuery.data, Date.now());
+    let fresh: ReturnType<typeof buildLineupPool>;
+    try { fresh = format === 'showdown'
+      ? buildShowdownPool(parseSalaryCsv(record!.csv, format), slate!, game!.gameId, c.historyQuery.data, Date.now())
+      : buildLineupPool(parseSalaryCsv(record!.csv), slate!, c.historyQuery.data, Date.now()); }
+    catch (e) { setGenError(msg(e)); return; }
     const runKey = key;
     let w: Worker;
     try { w = new Worker(new URL('../lib/lineup-worker.ts', import.meta.url), { type: 'module' }); }
@@ -129,38 +161,49 @@ export default function LineupsSection({ season }: { season: number }) {
       if (worker.current !== w) return;
       w.terminate(); worker.current = null; setRunning(false); setGenError(`Optimizer failed: ${e.message || 'worker error'}`);
     };
-    w.postMessage(mode === 'tournament' ? { players: fresh.players, count, mode, slate: slate! } : { players: fresh.players, count, mode });
+    w.postMessage(mode === 'tournament' ? { players: fresh.players, count, mode, format, slate: slate! } : { players: fresh.players, count, mode, format });
   };
 
   const download = (lineups: Lineup[]) => {
     try {
       const url = URL.createObjectURL(new Blob([exportLineups(lineups)], { type: 'text/csv' }));
       const a = document.createElement('a');
-      a.href = url; a.download = `gridiron-dk-lineups-${season}.csv`; a.click();
+      a.href = url; a.download = `gridiron-dk-${format === 'showdown' ? 'captain-' : ''}lineups-${season}.csv`; a.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (error) { setGenError(msg(error)); }
   };
 
   const shown = result && result.key === key ? result.lineups : null;
-  const blocked = importing || !!c.storageError || saved.status === 'corrupt' || c.historyQuery.isLoading || c.historyQuery.isError;
+   const blocked = importing || !!storageError || saved.status === 'corrupt' || c.historyQuery.isLoading || c.historyQuery.isError;
 
   return <section className="dk lu" aria-label="Lineups">
     {c.historyQuery.isError && <div className="dk-err" role="alert">Current saved roster availability could not be checked. <button className="btn-secondary" onClick={c.refresh}>Retry roster check</button></div>}
     <div className="dk-head">
-      <h1>Lineups</h1>
-      <p>DraftKings Classic lineups, {season}.</p>
+      <h1>{forecastSource ? 'DraftKings Captain lineups' : 'Lineups'}</h1>
+      <p>DraftKings {format === 'showdown' ? 'Showdown Captain' : 'Classic'} lineups, {season}.{forecastSource && ' Choose one game from your saved weekly projections.'}</p>
     </div>
-    <div className="dk-note lu-warn" role="note"><strong>Import salaries for every contest slate.</strong> Upload the official DraftKings NFL Classic CSV for the exact weekly contest you are entering, then pair it with the forecast for the same games. Showdown files are rejected.</div>
-    {c.storageError && <div className="dk-err" role="alert">{c.storageError} <button className="btn-secondary" onClick={c.reloadArchive}>Retry</button></div>}
+    <div className="dk-note lu-warn" role="note"><strong>Import salaries for every contest.</strong> Upload the official DraftKings NFL {format === 'showdown' ? 'Showdown CSV with separate CPT and FLEX rows' : 'Classic CSV'}, then pair it with the forecast for the same matchup{format === 'classic' ? 's' : ''}. {format === 'classic' && 'Use Game Simulator for Captain contests.'}</div>
+    {storageError && <div className="dk-err" role="alert">{storageError}{!forecastSource && <button className="btn-secondary" onClick={c.reloadArchive}>Retry</button>}</div>}
+    {forecastSource && <details className="panel dk-panel lu-panel"><summary>Official Captain rules &amp; scoring</summary>
+      <p className="dk-muted">1 CPT + 5 FLEX, six different players from both teams in one game. $50,000 cap. Captain costs 1.5× FLEX salary and scores 1.5× all points, bonuses and penalties. QB/RB/WR/TE/K/DST are eligible.</p>
+      <p className="dk-muted">K: made extra point +1; 0–39 yard FG +3; 40–49 +4; 50+ +5. DST: sack +1; interception/recovered fumble +2; defensive or return TD +6; safety/blocked kick/conversion return +2.</p>
+      <p className="dk-muted">DST points allowed: 0 → +10; 1–6 → +7; 7–13 → +4; 14–20 → +1; 21–27 → 0; 28–34 → −1; 35+ → −4. Offense retains full PPR, yardage/TD scoring and yardage bonuses; fumbles lost −1.</p>
+      <a href={SHOWDOWN_RULES_URL} target="_blank" rel="noreferrer">DraftKings official rules</a>
+    </details>}
+    {forecastSource?.warnings.map((warning, i) => <div className="dk-note" key={i}>{warning}</div>)}
 
     <div className="panel dk-panel lu-panel">
       <h2 className="lu-h">1. Forecast</h2>
-      {c.slates.length === 0
-        ? <p className="dk-muted">No saved forecasts for {season}. You can upload salaries now. To generate lineups, run and save the matching Sunday on the DraftKings tab, then select it here.</p>
+      {slates.length === 0
+        ? <p className="dk-muted">No eligible saved forecasts for {season}. You can upload salaries now. To generate lineups, {forecastInstructions}, then select it here.</p>
         : <div className="field"><label htmlFor="lu-slate">Saved forecast slate</label>
-          <select id="lu-slate" value={slate?.id ?? ''} onChange={e => c.selectSlate(e.target.value)}>
-            {c.slates.map(s => <option key={s.id} value={s.id}>{s.sunday} · {s.forecasts.length} games · saved {new Date(s.createdAt).toLocaleString()}</option>)}
+          <select id="lu-slate" value={slate?.id ?? ''} onChange={e => selectSlate(e.target.value)}>
+            {slates.map(s => <option key={s.id} value={s.id}>{s.sunday} · {s.forecasts.length} games · saved {new Date(s.savedAt ?? s.createdAt).toLocaleString()}</option>)}
           </select></div>}
+      {format === 'showdown' && slate && <div className="field lu-gap"><label htmlFor="lu-game">Single game</label>
+        <select id="lu-game" data-testid="showdown-game" value={game?.gameId ?? ''} onChange={e => setSelectedGameId(e.target.value)}>
+          {slate.forecasts.map(g => <option key={g.gameId} value={g.gameId}>{g.awayTeam} at {g.homeTeam} · {new Date(g.kickoff).toLocaleString()}</option>)}
+        </select></div>}
     </div>
 
     <div className="panel dk-panel lu-panel">
@@ -181,10 +224,14 @@ export default function LineupsSection({ season }: { season: number }) {
       </div>
       {importing && <p className="dk-muted lu-gap" role="status">Reading and validating your salary file…</p>}
       {fileError && <div className="dk-err" role="alert">{fileError}</div>}
-      {record && !slate && <p className="dk-muted lu-gap">Your salaries are saved in this browser. Create the matching forecast on the DraftKings tab to continue; no need to upload this file again.</p>}
-      {record && slate && !linked && <div className="dk-err lu-mismatch" role="alert">
-        {record.slateId ? <>This salary file was imported against forecast {record.sunday}, not the selected {slate.sunday}. Results are paused.</> : <>Your salary file is ready. Confirm that the selected forecast ({slate.sunday}) covers the same contest games.</>}
-        {c.slates.some(s => s.id === record.slateId) && <button className="btn-secondary" onClick={() => c.selectSlate(record.slateId)}>Switch back</button>}
+      {record && !slate && <p className="dk-muted lu-gap">Your salaries are saved in this browser. To continue, {forecastInstructions}; no need to upload this file again.</p>}
+      {record && !sameFormat && <div className="dk-note lu-gap" role="status">The saved salary CSV is for {(record.format ?? 'classic') === 'showdown' ? 'Captain/Showdown' : 'Classic'}, not this {format === 'showdown' ? 'Captain' : 'Classic'} builder. It has not been changed. Upload the correct contest CSV to replace it.</div>}
+      {record && slate && sameFormat && !linked && <div className="dk-err lu-mismatch" role="alert">
+        {record.slateId ? format === 'showdown'
+          ? <>This salary file is paired to a different game or weekly forecast. Results are paused. Select its matching matchup and kickoff.</>
+          : <>This salary file was imported against forecast {record.sunday}, not the selected {slate.sunday}. Results are paused.</>
+          : <>Your salary file is ready. Confirm that the selected forecast ({slate.sunday}) covers the same contest games.</>}
+        {slates.some(s => s.id === record.slateId) && <button className="btn-secondary" onClick={() => { selectSlate(record.slateId); if (format === 'showdown' && record.gameId) setSelectedGameId(record.gameId); }}>Switch back</button>}
         <button className="btn-secondary" disabled={importing} onClick={relink}>{record.slateId ? 'Confirm same contest' : 'Use selected forecast'}</button></div>}
     </div>
 
@@ -192,7 +239,7 @@ export default function LineupsSection({ season }: { season: number }) {
       <h2 className="lu-h">3. Pool</h2>
       {pool.error ? <div className="dk-err" role="alert">{pool.error}</div> : <>
         <div className="lu-stats">
-          <div><span>Matched players</span><strong>{pool.players.length}</strong></div>
+          <div><span>{format === 'showdown' ? 'Matched salary rows' : 'Matched players'}</span><strong>{pool.players.length}</strong></div>
           <div><span>Excluded rows</span><strong>{pool.issues.length}</strong></div>
           <div><span>Games</span><strong>{new Set(pool.players.map(p => p.gameId)).size}</strong></div>
         </div>
@@ -219,19 +266,21 @@ export default function LineupsSection({ season }: { season: number }) {
       </div>
       <fieldset className="lu-mode" disabled={running}><legend>Strategy</legend>
         {([['tournament', 'Tournament upside', 'Looks for QB and receiver pairings with the best simulated high-end outcomes.'], ['average', 'Highest average', 'Maximizes the sum of saved mean projections.']] as const).map(([v, t, d]) =>
-          <label key={v} className={`lu-mode-opt${mode === v ? ' on' : ''}`}><input type="radio" name="lu-mode" checked={mode === v} onChange={() => setMode(v)} /><strong>{t}</strong><span>{d}</span></label>)}
+          <label key={v} className={`lu-mode-opt${mode === v ? ' on' : ''}`}><input type="radio" name="lu-mode" checked={mode === v} onChange={() => setMode(v)} /><strong>{t}</strong><span>{format === 'showdown' && v === 'tournament' ? 'Compares Captain choices and jointly simulated single-game outcomes.' : d}</span></label>)}
       </fieldset>
-      <p className="dk-muted lu-gap">{money(CAP)} Classic rules: QB, 2 RB, 3 WR, TE, FLEX, DST, players from at least 2 games. Salaries and eligibility come only from your salary file.</p>
+      <p className="dk-muted lu-gap">{money(CAP)} {format === 'showdown' ? 'Captain rules: 1 CPT + 5 FLEX, six different players from both teams in one game. Captain points shown already include 1.5×; do not multiply them again.' : 'Classic rules: QB, 2 RB, 3 WR, TE, FLEX, DST, players from at least 2 games.'} Salaries and eligibility come only from your salary file.</p>
       <div className="dk-note lu-gap" role="note">{mode === 'tournament'
-        ? <>Tournament mode searches for QB and receiver combinations with jointly simulated upside. Returned lineups differ by at least two players. It is a bounded candidate search, not a guaranteed global optimum. There is no ownership data and no guarantee of winning. Rare defense and special teams events are not fully modeled.</>
+        ? format === 'showdown'
+          ? <>Tournament mode compares jointly simulated outcomes for up to 20 high-average FLEX combinations per Captain. Captain/FLEX assignments can differ with the same six players. This bounded search is not a guaranteed global upside optimum; no ownership data or guarantee of winning.</>
+          : <>Tournament mode searches for QB and receiver combinations with jointly simulated upside. Returned lineups differ by at least two players. It is a bounded candidate search, not a guaranteed global optimum. There is no ownership data and no guarantee of winning. Rare defense and special teams events are not fully modeled.</>
         : <>Highest average finds the best total of saved mean projections under the cap. It does not consider upside or correlation.</>}</div>
       {running && <div role="status"><span className="dk-muted"><RotateCw size={12} className="spin-icon" /> {mode === 'tournament' ? 'Simulating candidate lineups' : 'Searching all legal lineups'}</span><div className="dk-bar"><i className="lu-indeterminate" /></div></div>}
       {genError && <div className="dk-err" role="alert">{genError} <button className="btn-secondary" onClick={generate}>Retry</button></div>}
     </div>
 
-    <DraftKingsAccuracy report={c.accuracy} season={season} loading={c.historyQuery.isLoading} failed={c.historyQuery.isError || !!c.storageError} refresh={c.storageError ? c.reloadArchive : c.refresh} />
+    {!forecastSource && <DraftKingsAccuracy report={c.accuracy} season={season} loading={c.historyQuery.isLoading} failed={c.historyQuery.isError || !!c.storageError} refresh={c.storageError ? c.reloadArchive : c.refresh} />}
 
-    {shown && mode === 'tournament' && shown.length < count && <div className="dk-note">Found {shown.length} lineup(s) with the required two-player variation. The search did not find {count}; it will not fill the list with near-duplicates.</div>}
+    {shown && mode === 'tournament' && shown.length < count && <div className="dk-note">Found {shown.length} lineup(s){format === 'classic' ? ' with the required two-player variation' : ''}. The search did not find {count}; it will not fill the list with duplicates.</div>}
     {shown && shown.map((l, i) => <article className="panel lu-card" key={i} data-testid={`lineup-${i + 1}`}>
       <header className="lu-card-head">
         <h3>Lineup {i + 1}</h3>
@@ -243,7 +292,7 @@ export default function LineupsSection({ season }: { season: number }) {
       </header>
       {l.tournament && <div className="lu-tour" data-testid={`lineup-${i + 1}-upside`}>
         <div><span>High-end modeled score</span><strong>{l.tournament.p90.toFixed(1)}</strong></div>
-        <div><span>Simulated 220+ frequency</span><strong>{l.tournament.chance220.toFixed(1)}%</strong></div>
+          <div><span>Simulated {l.tournament.targetScore ?? 220}+ frequency</span><strong>{(l.tournament.chanceTarget ?? l.tournament.chance220).toFixed(1)}%</strong></div>
         <div><span>Simulated mean</span><strong>{l.tournament.simulatedMean.toFixed(1)}</strong></div>
         <p>High-end score means the upper end of simulated outcomes, not the average or a guarantee. Modeled range {l.tournament.p10.toFixed(1)} to {l.tournament.p90.toFixed(1)}. {l.tournament.stackNames.length > 0 && <>Stack: {l.tournament.stackNames.join(', ')}. </>}{l.tournament.scenarios.toLocaleString('en-US')} scenarios, {l.tournament.candidates.toLocaleString('en-US')} candidates. Frequency from the model, not a chance of winning.</p>
       </div>}

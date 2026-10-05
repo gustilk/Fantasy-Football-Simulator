@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Activity, ArrowRight, ChevronDown, CloudRain, Crosshair, RotateCw, SlidersHorizontal, Trash2, Wind } from 'lucide-react';
 import { type WeatherSetup as Weather, type TeamSetup, type SimulationInput, type SimulationResult, type PlayerRecentStats, type DefenseRecentStats } from '@/lib/simulator';
 import { useListSeasonTeams, useGetNflDepthChart, getNflDepthChart, getGetNflDepthChartQueryKey, getListSeasonTeamsQueryKey, type TeamSeasonRecord, type NflScheduledGame } from '@workspace/api-client-react';
@@ -22,6 +22,7 @@ import { readSavedSimulations, saveSimulation, deleteSavedSimulation, type Saved
 import { runWeeklySimulations, type WeeklyProgress, type WeeklyRun } from '@/lib/weekly-simulations';
 import { readStandings, findStandings } from '@/lib/standings';
 import StandingsEditor from '@/components/StandingsEditor';
+import { simulatorLineupSource } from '@/lib/simulator-lineups';
 
 type PatchTeam = (side: 'away' | 'home', field: keyof TeamSetup, value: TeamSetup[keyof TeamSetup]) => void;
 
@@ -83,6 +84,11 @@ function App() {
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [standingsDirty, setStandingsDirty] = useState(false);
+  const [simulatorView, setSimulatorView] = useState<'projections' | 'lineups'>('projections');
+  const simulatorLineups = useMemo(() => {
+    try { return { ...simulatorLineupSource(readSavedSimulations(localStorage), season), preferredWeek: week }; }
+    catch { return { slates: [], warnings: [], error: 'Saved simulator projections could not be prepared for lineups. Existing results have not been changed.', preferredWeek: week }; }
+  }, [saved, season, week]);
   const changeTab = (value: typeof tab) => {
     if (tab === 'standings' && standingsDirty && !window.confirm('You have unsaved standings. Discard them and leave this section?')) return;
     setTab(value);
@@ -197,7 +203,12 @@ function App() {
           </div>
         </div>
 
-        <div className="main-grid">
+        <nav className="sim-position-tabs" aria-label="Game Simulator tools" style={{ gridTemplateColumns: 'repeat(2,minmax(0,1fr))' }}>
+          <button className={simulatorView === 'projections' ? 'on' : ''} disabled={busy} onClick={() => setSimulatorView('projections')} aria-pressed={simulatorView === 'projections'} data-testid="sim-view-projections">Game projections</button>
+          <button className={simulatorView === 'lineups' ? 'on' : ''} disabled={busy} onClick={() => setSimulatorView('lineups')} aria-pressed={simulatorView === 'lineups'} data-testid="sim-view-lineups">DraftKings Captain lineups</button>
+        </nav>
+        {tab === 'simulator' && simulatorView === 'lineups' && <LineupsSection season={season} forecastSource={simulatorLineups} />}
+        <div className="main-grid" style={{ display: simulatorView === 'lineups' ? 'none' : undefined }}>
           <section className="panel setup-panel" aria-labelledby="setup-title">
             <div className="panel-top">
                <div className="panel-title" id="setup-title">Choose your week</div>

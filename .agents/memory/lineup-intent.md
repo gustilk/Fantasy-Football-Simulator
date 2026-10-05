@@ -20,3 +20,9 @@ The user does not need Sunday night games in the DraftKings workflow because the
 **Why:** The user said, “I don't need the Sunday night game because that's not part of Draftkings classic.”
 
 **How to apply:** Exclude Sunday night from the DraftKings Sunday batch and displayed forecasts. Keep the selected-week Game Simulator scope unchanged, preserve archived inputs, and continue using the uploaded contest salary file as the authority for actual lineup eligibility.
+
+Keep Game Simulator for other games and provide single-game DraftKings Captain/Showdown lineup creation inside that section. The normal Lineups tab remains NFL Classic.
+
+**Why:** The user said, “Yes will keep game simulator for other games but I need Draftkings lineup in Game Simulator section,” then clarified, “The single game in game simulator is for Draftkings captain lineup.” They explicitly want Captain 1.5× points and kicker/defense scoring, including defensive TDs, sacks, fumbles, field goals and extra points.
+
+**How to apply:** Keep the separate Game Simulator and its whole-week simulation scope, but select one matchup for Captain lineups. Do not send this flow to Sunday-only forecasts or impose Classic's two-game minimum. Use the official Showdown rules and contest CSV for CPT/FLEX IDs, salaries and eligibility. Preserve Classic independently.

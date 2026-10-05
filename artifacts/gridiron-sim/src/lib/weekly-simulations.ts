@@ -35,6 +35,7 @@ export async function runWeeklySimulations(options: {
   if (standings) validateStandings(standings);
   const report: WeeklyRun = { season, week, total: games.length, saved: [], failures: [] };
   if (!games.length) throw new Error(`No announced games are available for week ${week}.`);
+  const weeklyRunId = crypto.randomUUID();
   const loadTeam = async (name: string) => {
     const team = teams.find(team => team.team === name && team.season === season);
     if (!team) throw new Error(`${name} is missing from the ${season} Team Library. Save its roster and history first.`);
@@ -57,6 +58,7 @@ export async function runWeeklySimulations(options: {
     try {
       const [away, home] = await Promise.all([loadTeam(game.awayTeam), loadTeam(game.homeTeam)]);
       const input: SimulationInput = {
+        showdownModel: 'showdown-v1',
         away: applyStandings(setupFromHistory(away, week, 'away', home.team), standings, season, week),
         home: applyStandings(setupFromHistory(home, week, 'home', away.team), standings, season, week),
         weather: { temperatureF: 68, windMph: 5, precipitation: 'none' },
@@ -69,6 +71,7 @@ export async function runWeeklySimulations(options: {
         },
         seed: Math.floor(Math.random() * 2_000_000_000) + 1,
       };
+      const generatedAt = new Date().toISOString();
       const result = (options.simulate ?? simulateEnsemble)(input, 200);
       if (!game.timeConfirmed || Date.parse(game.date) <= Date.now()) {
         result.overview.push('Historical/unconfirmed-kickoff simulation: not an eligible pregame forecast. Current roster/depth-chart data may differ from game-day roles.');
@@ -77,6 +80,7 @@ export async function runWeeklySimulations(options: {
       const { seed: _seed, ...setup } = input;
       const entry: SavedSimulation = {
         id: `${season}-${week}-${game.id}-${crypto.randomUUID()}`,
+        weeklyRunId, generatedAt,
         savedAt: new Date().toISOString(), awayName: game.awayTeam, homeName: game.homeTeam,
         result, setup,
       };

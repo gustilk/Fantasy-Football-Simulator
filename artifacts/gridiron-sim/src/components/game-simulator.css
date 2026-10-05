@@ -22,7 +22,7 @@
 .game-simulator .result-topline > div { min-width:0; }
 .game-simulator .icon-button { flex-shrink:0; width:44px; height:44px; }
 .sim-projections { padding:0 20px 20px; }
-.sim-position-tabs { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; margin:18px 0; }
+.sim-position-tabs { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:6px; margin:18px 0; }
 .sim-position-tabs button { min-height:44px; border:1px solid var(--app-border); border-radius:8px; color:var(--app-muted); background:var(--app-bg); font-weight:600; }
 .sim-position-tabs button.on { background:var(--app-away); color:var(--app-card); border-color:var(--app-away); }
 .sim-list-heading { display:flex; justify-content:space-between; gap:10px; padding-bottom:10px; color:var(--app-muted); font-size:12px; }

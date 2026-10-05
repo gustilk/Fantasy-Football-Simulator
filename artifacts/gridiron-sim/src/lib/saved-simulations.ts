@@ -3,9 +3,13 @@ import type { SimulationInput, SimulationResult, TeamSetup, WeatherSetup } from 
 export type StoredSetup = {
   away: TeamSetup; home: TeamSetup; weather: WeatherSetup;
   importance?: SimulationInput['importance']; market?: SimulationInput['market'];
+  showdownModel?: SimulationInput['showdownModel'];
 };
 export type SavedSimulation = {
   id: string; savedAt: string; awayName: string; homeName: string;
+  /** Captured for new weekly batches; absent on legacy archives. */
+  generatedAt?: string;
+  weeklyRunId?: string;
   result: SimulationResult; setup?: StoredSetup;
 };
 export const RESULTS_STORAGE_KEY = 'gridiron-sim-results-v1';
