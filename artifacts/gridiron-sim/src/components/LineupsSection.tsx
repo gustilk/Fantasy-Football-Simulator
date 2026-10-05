@@ -52,7 +52,7 @@ export default function LineupsSection({ season, forecastSource }: { season: num
     : c.activeSlate;
   const selectSlate = (id: string) => forecastSource ? setSelectedSimulatorSlate(id) : c.selectSlate(id);
   const storageError = forecastSource ? forecastSource.error : c.storageError;
-  const forecastInstructions = forecastSource ? 'run and save an upcoming week in Game Simulator' : 'run and save the matching Sunday on the DraftKings tab';
+  const forecastInstructions = forecastSource ? 'select, run and save the upcoming matchup in Game Simulator' : 'run and save the matching Sunday on the DraftKings tab';
   const [saved, setSaved] = useState<Saved>(() => loadSaved(season));
   const [fileError, setFileError] = useState('');
   const [importing, setImporting] = useState(false);
@@ -180,7 +180,7 @@ export default function LineupsSection({ season, forecastSource }: { season: num
     {c.historyQuery.isError && <div className="dk-err" role="alert">Current saved roster availability could not be checked. <button className="btn-secondary" onClick={c.refresh}>Retry roster check</button></div>}
     <div className="dk-head">
       <h1>{forecastSource ? 'DraftKings Captain lineups' : 'Lineups'}</h1>
-      <p>DraftKings {format === 'showdown' ? 'Showdown Captain' : 'Classic'} lineups, {season}.{forecastSource && ' Choose one game from your saved weekly projections.'}</p>
+      <p>DraftKings {format === 'showdown' ? 'Showdown Captain' : 'Classic'} lineups, {season}.{forecastSource && ' Choose your saved single-game forecast.'}</p>
     </div>
     <div className="dk-note lu-warn" role="note"><strong>Import salaries for every contest.</strong> Upload the official DraftKings NFL {format === 'showdown' ? 'Showdown CSV with separate CPT and FLEX rows' : 'Classic CSV'}, then pair it with the forecast for the same matchup{format === 'classic' ? 's' : ''}. {format === 'classic' && 'Use Game Simulator for Captain contests.'}</div>
     {storageError && <div className="dk-err" role="alert">{storageError}{!forecastSource && <button className="btn-secondary" onClick={c.reloadArchive}>Retry</button>}</div>}

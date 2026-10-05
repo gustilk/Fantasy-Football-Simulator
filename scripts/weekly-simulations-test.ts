@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { gamesForWeek, runWeeklySimulations } from '../artifacts/gridiron-sim/src/lib/weekly-simulations';
+import { gamesForWeek, runWeeklySimulations, runSingleGameSimulation } from '../artifacts/gridiron-sim/src/lib/weekly-simulations';
 import { RESULTS_STORAGE_KEY, readSavedSimulations, saveSimulation } from '../artifacts/gridiron-sim/src/lib/saved-simulations';
 import { simulateEnsemble } from '../artifacts/gridiron-sim/src/lib/ensemble';
 import { setupFromHistory } from '../artifacts/gridiron-sim/src/lib/season-model';
@@ -113,4 +113,26 @@ const all = parseUpcomingSchedule([...events, cancelled, wrongSeason], 2026, nam
 assert.equal(all.games.length, 3, 'Full schedule includes completed, live and upcoming games');
 const upcoming = parseUpcomingSchedule(events, 2026, names, Date.parse('2026-10-03T00:00:00Z'));
 assert.deepEqual(upcoming.games.map(game => game.id), ['sunday'], 'Sunday forecast schedule stays future-only');
-console.log('Weekly batch: all 16 games, independent inputs, prior-week-only history, progress, persistent saves, partial failures, role fallback, storage safety and schedule scope passed.');
+const singleSaves: typeof report.saved = [];
+const singleDepth: string[] = [];
+const selected = games[9]!;
+const single = await runSingleGameSimulation({
+  ...options, gameId: selected.id,
+  save: entry => { singleSaves.push(entry); },
+  loadDepth: async (_season, team) => { singleDepth.push(team); throw new Error('Use saved complete ranks'); },
+  onProgress: value => { assert.equal(value.total, 1); },
+});
+assert.equal(single.total, 1, 'Full schedule cannot expand the single-game selection');
+assert.equal(singleSaves.length, 1);
+assert.equal(single.saved[0]!.setup!.market!.gameId, selected.id);
+assert.equal(single.saved[0]!.awayName, selected.awayTeam);
+assert.equal(single.saved[0]!.homeName, selected.homeTeam);
+assert.equal(single.saved[0]!.setup!.showdownModel, 'showdown-v1');
+assert.ok(single.saved[0]!.weeklyRunId && single.saved[0]!.generatedAt, 'Keep frozen Captain-compatible metadata');
+assert.deepEqual(singleDepth.sort(), [selected.awayTeam, selected.homeTeam].sort(), 'Do not fetch unrelated teams');
+await assert.rejects(runSingleGameSimulation({ ...options, gameId: 'unknown-game' }), /selected game/);
+await assert.rejects(runSingleGameSimulation({ ...options, gameId: wrongWeek.id }), /selected game/);
+const singleQuota = await runSingleGameSimulation({ ...options, gameId: selected.id, save: () => { throw new Error('Storage full'); } });
+assert.equal(singleQuota.saved.length, 0);
+assert.equal(singleQuota.failures.length, 1);
+console.log('Single selection: only selected game/teams, one save, week validation, Captain metadata and explicit save failures passed. Legacy weekly pipeline checks passed.');

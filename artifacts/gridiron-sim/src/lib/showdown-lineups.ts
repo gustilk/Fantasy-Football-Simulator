@@ -12,7 +12,7 @@ const compare = (a: Lineup, b: Lineup) => b.points - a.points || a.salary - b.sa
 
 export function buildShowdownPool(salaries: SalaryPlayer[], slate: DKSlate, gameId: string, teams?: TeamSeasonRecord[], now = Date.now()) {
   const game = slate.forecasts.find(g => g.gameId === gameId);
-  if (!game || game.input.showdownModel !== 'showdown-v1') throw new Error('Run and save this week again to capture Captain scoring, kickers and defensive TDs. Existing saved results stay unchanged.');
+  if (!game || game.input.showdownModel !== 'showdown-v1') throw new Error('Select, run and save this game again to capture Captain scoring, kickers and defensive TDs. Existing saved results stay unchanged.');
   const players: LineupPlayer[] = [], issues: { player: SalaryPlayer; reason: string }[] = [];
   const defenses = defenseForecasts(game);
   for (const player of salaries) {

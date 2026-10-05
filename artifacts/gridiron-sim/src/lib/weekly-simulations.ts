@@ -76,7 +76,7 @@ export async function runWeeklySimulations(options: {
       if (!game.timeConfirmed || Date.parse(game.date) <= Date.now()) {
         result.overview.push('Historical/unconfirmed-kickoff simulation: not an eligible pregame forecast. Current roster/depth-chart data may differ from game-day roles.');
       }
-      result.overview.push('Weekly batch uses neutral weather (68°F, 5 mph wind, no precipitation) and no market-odds adjustment.');
+      result.overview.push(`${games.length === 1 ? 'Single-game simulation' : 'Weekly batch'} uses neutral weather (68°F, 5 mph wind, no precipitation) and no market-odds adjustment.`);
       const { seed: _seed, ...setup } = input;
       const entry: SavedSimulation = {
         id: `${season}-${week}-${game.id}-${crypto.randomUUID()}`,
@@ -94,4 +94,12 @@ export async function runWeeklySimulations(options: {
     await options.yieldUI();
   }
   return report;
+}
+
+/** Reuse the frozen-input/save pipeline, but never expand a selected matchup
+ * into its entire week. Retain batch metadata for existing Captain adapters. */
+export async function runSingleGameSimulation(options: Parameters<typeof runWeeklySimulations>[0] & { gameId: string }): Promise<WeeklyRun> {
+  const selected = gamesForWeek(options.games, options.week).find(game => game.id === options.gameId);
+  if (!selected) throw new Error('The selected game is not in this week’s schedule. Refresh and select a matchup.');
+  return runWeeklySimulations({ ...options, games: [selected] });
 }

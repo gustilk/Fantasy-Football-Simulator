@@ -7,7 +7,7 @@
 - [Lineup intent](lineup-intent.md) — NFL Classic optimizer with weekly contest salary CSVs and a $50,000 cap; all-Sunday forecasts are not contest slates.
 - [Defensive tier intent](defensive-tier-intent.md) — additive, role-weighted event bonuses; missing tags in frozen forecasts must stay neutral during DST replay.
 - [Backfield modeling](backfield-modeling.md) — separate rushing and receiving evidence; never tune to a desired winner or score, and preserve frozen-model replay.
-- [Weekly simulation intent](weekly-simulation-intent.md) — the selected NFL week is the batch scope, not Sunday-only games or a DraftKings contest slate.
+- [Game selection intent](weekly-simulation-intent.md) — Game Simulator selects and runs one matchup, not the whole week; older weekly-run instructions are superseded.
 - [Prior-season intent](prior-season-intent.md) — separate 2025 baseline and 2026 observations; current eligibility stays authoritative and overlapping sources must not be counted twice.
 - [DraftKings save integrity](draftkings-save-integrity.md) — preserve full frozen inputs; show failed-save results as unsaved rather than leaving stale coverage on screen.
 - [Standings intent](standings-intent.md) — user marks win pressure manually; division-only, team-specific strategy assumptions must preserve point-in-time forecasts.

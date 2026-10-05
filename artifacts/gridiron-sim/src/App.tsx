@@ -19,7 +19,7 @@ import './season.css';
 import './components/game-simulator.css';
 import { getEliteTier, ELITE_TIER_OPTIONS, type EliteTier } from '@/lib/elite-players';
 import { readSavedSimulations, saveSimulation, deleteSavedSimulation, type SavedSimulation, type StoredSetup } from '@/lib/saved-simulations';
-import { runWeeklySimulations, type WeeklyProgress, type WeeklyRun } from '@/lib/weekly-simulations';
+import { runSingleGameSimulation, type WeeklyProgress, type WeeklyRun } from '@/lib/weekly-simulations';
 import { readStandings, findStandings } from '@/lib/standings';
 import StandingsEditor from '@/components/StandingsEditor';
 import { simulatorLineupSource } from '@/lib/simulator-lineups';
@@ -107,19 +107,21 @@ function App() {
     setSeason(value);
     if (value !== season) setSetup(current => ({ ...current, market: undefined }));
   };
-  const runWeek = async (selectedWeek: number, games: NflScheduledGame[], fetchedAt: string) => {
+  const runGame = async (selectedWeek: number, game: NflScheduledGame, fetchedAt: string) => {
     if (running.current) return;
     setError('');
     if (history.isLoading || history.isError) {
-      setError('Load Team Library successfully before running the week.'); return;
+      setError('Load Team Library successfully before running the selected game.'); return;
     }
     running.current = true;
     setBusy(true);
     setWeeklyRun(null);
-    setWeeklyProgress({ completed: 0, total: games.length, matchup: '' });
+    setActive(null);
+    setActiveNames(null);
+    setWeeklyProgress({ completed: 0, total: 1, matchup: `${game.awayTeam} at ${game.homeTeam}` });
     try {
-      const report = await runWeeklySimulations({
-        season, week: selectedWeek, games, teams: storedTeams, fetchedAt,
+      const report = await runSingleGameSimulation({
+        season, week: selectedWeek, gameId: game.id, games: [game], teams: storedTeams, fetchedAt,
         standings: findStandings(readStandings(localStorage), season, selectedWeek),
         loadDepth: (year, name) => queryClient.fetchQuery({
           queryKey: getGetNflDepthChartQueryKey(year, name),
@@ -137,9 +139,9 @@ function App() {
         setSetup(normalizeSetup(first.setup!));
         setWeek(selectedWeek);
       }
-      setNotice(`Week ${selectedWeek}: ${report.saved.length} of ${report.total} games simulated and saved.`);
+      setNotice(first ? `${game.awayTeam} at ${game.homeTeam}: simulated and saved.` : 'The selected game could not be saved. See the issue below.');
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'The weekly simulations could not be completed.');
+      setError(cause instanceof Error ? cause.message : 'The selected game could not be simulated.');
     } finally { running.current = false; setBusy(false); }
   };
   const openSaved = (item: SavedSimulation) => {
@@ -199,7 +201,7 @@ function App() {
         <div className="page-heading">
           <div>
             <h1>Game Simulator</h1>
-             <p>Choose a week. Generate projected fantasy points for every game.</p>
+             <p>Select a specific matchup and generate its projected fantasy points.</p>
           </div>
         </div>
 
@@ -211,17 +213,17 @@ function App() {
         <div className="main-grid" style={{ display: simulatorView === 'lineups' ? 'none' : undefined }}>
           <section className="panel setup-panel" aria-labelledby="setup-title">
             <div className="panel-top">
-               <div className="panel-title" id="setup-title">Choose your week</div>
+               <div className="panel-title" id="setup-title">Choose your game</div>
             </div>
               <UpcomingGames key={season} season={season} enabled={tab === 'simulator'} busy={busy} teams={storedTeams.map(team => team.team)}
-               onRunWeek={(selectedWeek, games, fetchedAt) => void runWeek(selectedWeek, games, fetchedAt)} progress={weeklyProgress} />
+               onRunGame={(selectedWeek, game, fetchedAt) => void runGame(selectedWeek, game, fetchedAt)} progress={weeklyProgress} />
              {active && <div className="sim-matchup">
                <strong>Viewing: {currentAwayName} at {currentHomeName}</strong>
                <span>{season} · Week {week} · Saved result</span>
             </div>}
             <div className="config-bottom">
-               <p className="stats-help"><button className="text-button" onClick={() => setTab('library')}>Manage season, rosters and history in Team Library</button>. After running the week, open any game from the weekly results below.</p>
-               {error && <div role="alert" style={{marginTop:11,color:'var(--app-danger)',fontSize:12}}>{error} Select the week and use Run all games to retry.</div>}
+               <p className="stats-help"><button className="text-button" onClick={() => setTab('library')}>Manage season, rosters and history in Team Library</button>. Only your selected game is simulated and saved.</p>
+               {error && <div role="alert" style={{marginTop:11,color:'var(--app-danger)',fontSize:12}}>{error} Select the matchup and use Run selected game to retry.</div>}
             </div>
           </section>
 
@@ -230,20 +232,20 @@ function App() {
               {!active ? <div className="empty-result">
                 <div className="empty-orbit"><SlidersHorizontal size={30} strokeWidth={1.5}/></div>
                 <h3 id="results-title">Your projections appear here</h3>
-                 <p>Run all games for your selected week, then open a game's results to see its average DraftKings points.</p>
+                 <p>Select a game, then use Run selected game to see its average DraftKings points.</p>
                </div> : <GameProjections result={active} awayName={currentAwayName} homeName={currentHomeName}/>}
             </section>
             {weeklyRun && <section className="panel saved-panel" aria-labelledby="weekly-results-title" data-testid="weekly-results">
-              <div className="panel-top"><h3 id="weekly-results-title">{weeklyRun.season} · Week {weeklyRun.week} results</h3></div>
+              <div className="panel-top"><h3 id="weekly-results-title">{weeklyRun.season} · Week {weeklyRun.week} · Selected game result</h3></div>
               <div style={{ padding: 16 }}>
-                <p role="status">{weeklyRun.saved.length} / {weeklyRun.total} games simulated and saved{weeklyRun.failures.length > 0 ? ` · ${weeklyRun.failures.length} failed` : ''}.</p>
+                <p role="status">{weeklyRun.saved.length ? 'Selected game simulated and saved.' : 'Selected game was not saved.'}</p>
                 <div className="saved-list">{weeklyRun.saved.map(item => <button key={item.id} className="saved-open"
                   style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 0' }} disabled={busy}
                   onClick={() => openSaved(item)} data-testid={`weekly-game-${item.setup?.market?.gameId}`}>
                   <strong>{item.awayName} at {item.homeName}</strong><span> · View projections</span>
                 </button>)}</div>
                 {weeklyRun.failures.length > 0 && <div role="alert">
-                  <p>These games were not saved. Correct the issues in <button className="text-button" onClick={() => setTab('library')}>Team Library</button> and run the week again.</p>
+                  <p>This game was not saved. Correct the issues in <button className="text-button" onClick={() => setTab('library')}>Team Library</button> and run the selected game again.</p>
                   <ul>{weeklyRun.failures.map(failure => <li key={failure.gameId}><strong>{failure.matchup}:</strong> {failure.reason}</li>)}</ul>
                 </div>}
               </div>

@@ -67,7 +67,7 @@ export function simulatorLineupSource(entries: SavedSimulation[], season: number
   return {
     slates, error: '',
     warnings: [
-      ...(legacy ? [`${legacy} older saved simulation(s) lack complete weekly batch or generation timing. They remain available as results; rerun the week to use them for lineups.`] : []),
+      ...(legacy ? [`${legacy} older saved simulation(s) lack complete run identity or generation timing. They remain available as results; select and rerun the matching game to use it for lineups.`] : []),
       ...(excluded ? [`${excluded} simulation(s) were excluded because their frozen matchup, projections or pregame timing could not be verified.`] : []),
     ],
   };
