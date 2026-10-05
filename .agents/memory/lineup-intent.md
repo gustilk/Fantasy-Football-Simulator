@@ -9,6 +9,12 @@ The user wants a lineup section that maximizes projected DraftKings points witho
 
 **How to apply:** Treat the imported contest file as the authority for salaries, eligible positions, and its specific game set. Do not assume the app's all-Sunday forecast group is a real DraftKings contest or silently carry salaries to another week. Highest projected points does not mean guaranteed winnings.
 
+For direct Classic salary retrieval, the user wants the featured NFL Classic slate.
+
+**Why:** The user specified, “We need the featured classic.”
+
+**How to apply:** Verify the official featured Classic draft group and its game dates before retrieving its salary CSV. Do not substitute another Classic slate, Madden contests, Showdown, or the app's broader Sunday forecast group.
+
 Salary imports must not depend on a forecast already existing. Forecast pairing is required for generation, not for uploading and retaining the contest CSV.
 
 **Why:** The user reported that the lineup salary upload would not let them proceed and kept waiting; requiring a saved forecast blocked the independent salary-import step.

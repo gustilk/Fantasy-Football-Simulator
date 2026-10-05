@@ -14,3 +14,17 @@ mtime_ms = 1791053535142
 storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:1c3bd1a2-d51c-497b-9eb1-bd30c388c597/522dfbe7-b7f3-4345-8ee0-711174524c73/737aa3de-75b4-4dd0-8465-c692e867dd82"
 storage_version_token = "1791053623948679"
 content_type = "text/html"
+
+[[outputs]]
+id = "_Epi1vcy9lklWeTPLUUw7"
+uri = "file://downloads/DKSalaries-NFL-Featured-Classic-2026-10-11.csv"
+type = "table"
+title = "DraftKings NFL Featured Classic — October 11, 2026"
+description = "Official DraftKings salary CSV, verified against Featured Classic draft group 154468: 572 player/DST rows across 11 games, starting at noon Central. No Captain entries."
+logical_id = "6a91ad1a-3b8b-4baf-8445-ce02debe97ca"
+content_hash = "sha256:a8eda70dea19a1be8c0a20639da713e9b39a15a7a5a112b3aa6a6bae34568a25"
+size = 58204
+mtime_ms = 1791240962903
+storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:1c3bd1a2-d51c-497b-9eb1-bd30c388c597/6a91ad1a-3b8b-4baf-8445-ce02debe97ca/cb43146d-72e6-44e5-95c8-07ff3dff4116"
+storage_version_token = "1791240989218047"
+content_type = "text/csv"
