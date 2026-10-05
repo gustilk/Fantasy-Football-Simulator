@@ -1,6 +1,7 @@
 import type { NumericStats, TeamSeasonRecord, TeamWeek } from "@workspace/api-client-react";
 import type { PlayerRecentStats, SimulationRosterPlayer, TeamSetup } from "./simulator";
 import { availabilityForWeek, availabilityWarnings } from "./availability";
+import { captureQuarterbackStrategy } from "./quarterback-strategy";
 import { historyStrength, historyWarnings, playerUsage } from "./history-signals";
 import { getEliteTier } from "./elite-players";
 import { getDefenderTier, getTeamDefenseTier, isDefensivePosition } from "./defensive-tiers";
@@ -162,6 +163,7 @@ export function setupFromHistory(team: TeamSeasonRecord, week: number, venue: "h
     !(historicalDefense && warning.startsWith('Defensive strength has missing')));
   return {
     backfieldModel: "usage-v1",
+    quarterbackStrategy: captureQuarterbackStrategy(roster),
     name: team.team,
     qb: names("QB")[0]?.name ?? "",
     rb: names("RB")[0]?.name ?? "",

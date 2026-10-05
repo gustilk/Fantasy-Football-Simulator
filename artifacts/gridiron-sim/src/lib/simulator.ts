@@ -2,6 +2,7 @@ import { calculateDraftKings } from "./draftkings";
 import { defensiveEventPriorities, DEFENSE_TIER_WARNING, type TeamDefenseTier, type SimulationDefender } from "./defensive-tiers";
 import { getDivision, isDivisionGame } from "./nfl-divisions";
 import { passingStrategyAdjustment, standingsNotes, type StandingContext } from "./standings";
+import { quarterbackPassShare, quarterbackStrategyNotes, type QuarterbackStrategy } from "./quarterback-strategy";
 import type { AvailabilityCheck } from "./availability";
 import type { historyStrength, playerUsage } from "./history-signals";
 import type { PriorSeasonEvidence } from "./prior-season-baseline";
@@ -60,6 +61,8 @@ export interface SimulationRosterPlayer {
 export interface TeamSetup {
   /** Absent on older frozen forecasts: retain their original workload behavior. */
   backfieldModel?: "usage-v1";
+  /** New-input opt-in; absent on legacy forecasts to preserve their replay. */
+  quarterbackStrategy?: QuarterbackStrategy;
   name: string;
   qb: string;
   rb: string;
@@ -459,13 +462,13 @@ function simulateTeam(
     0.4,
     0.68,
   );
-  const passShare = clamp(
+  const passShare = quarterbackPassShare(clamp(
     recentPassingShare === undefined
       ? basePassShare
       : blend(basePassShare, recentPassingShare, 0.42 * reliability),
     0.4,
     0.68,
-  );
+  ), setup);
   const ratingEdge = setup.rushRating - defense.defenseRating;
   const passYardsPerAttempt =
     supplied(qbRecent?.passYards) && supplied(qbRecent?.passAttempts) &&
@@ -497,7 +500,8 @@ function simulateTeam(
     setup.recentStats?.rb?.rushTD,
   ]).filter(supplied).reduce((sum, value) => sum + value, 0);
   const knownRecentTouchdowns = passTouchdowns + rushTouchdowns;
-  const redZonePassShare =
+  const redZonePassShare = setup.quarterbackStrategy?.model === 'backup-run-v1' && setup.quarterbackStrategy.backup &&
+    setup.quarterbackStrategy.quarterback === setup.qb ? passShare :
     knownRecentTouchdowns > 0
       ? clamp(
           blend(
@@ -816,6 +820,7 @@ function makeOverview(
   }
   const awayDivision = getDivision(input.away.name), homeDivision = getDivision(input.home.name);
   overview.push(...standingsNotes(input.away, input.home));
+  overview.push(...quarterbackStrategyNotes(input.away), ...quarterbackStrategyNotes(input.home));
   overview.push(isDivisionGame(input.away.name, input.home.name)
     ? `Division game: both teams are in ${awayDivision}. Familiarity can matter, but no blanket difficulty, scoring or fantasy-point penalty is applied.`
     : `Non-division or unclassified matchup: ${input.away.name} (${awayDivision ?? "unknown division"}) vs ${input.home.name} (${homeDivision ?? "unknown division"}). Division labels use current NFL alignment.`);

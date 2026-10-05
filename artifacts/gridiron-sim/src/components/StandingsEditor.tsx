@@ -8,16 +8,16 @@ import {
 import './standings-editor.css';
 
 type Props = { season: number; onSeasonChange: (year: number) => void; onDirtyChange?: (dirty: boolean) => void };
-type Row = { w: string; l: string; t: string; needsWin: boolean };
+type Row = { w: string; l: string; t: string; needsWin: boolean; backupQb: boolean };
 type Draft = Record<string, Row>;
 type Status = { kind: 'ok' | 'err'; text: string } | null;
 
-const blankRow = (): Row => ({ w: '', l: '', t: '', needsWin: false });
+const blankRow = (): Row => ({ w: '', l: '', t: '', needsWin: false, backupQb: false });
 const toDraft = (snap: StandingsSnapshot | undefined): Draft => {
   const d: Draft = {};
   for (const team of NFL_TEAM_NAMES) {
     const e = snap?.entries.find(x => x.team === team);
-    d[team] = e ? { w: e.record ? String(e.record.wins) : '', l: e.record ? String(e.record.losses) : '', t: e.record ? String(e.record.ties) : '', needsWin: e.needsWin } : blankRow();
+    d[team] = e ? { w: e.record ? String(e.record.wins) : '', l: e.record ? String(e.record.losses) : '', t: e.record ? String(e.record.ties) : '', needsWin: e.needsWin, backupQb: e.backupQb === true } : blankRow();
   }
   return d;
 };
@@ -75,11 +75,11 @@ export default function StandingsEditor({ season, onSeasonChange, onDirtyChange 
       const r = draft[team];
       const vals = [r.w, r.l, r.t];
       const filled = vals.filter(v => v.trim() !== '').length;
-      if (filled === 0) return { team, needsWin: r.needsWin };
+      if (filled === 0) return { team, needsWin: r.needsWin, backupQb: r.backupQb };
       if (filled < 3) bad[team] = 'Enter wins, losses and ties (ties may be 0), or clear all three.';
       else if (!vals.every(isCount)) bad[team] = 'Use whole, nonnegative numbers.';
       else if (Number(r.w) + Number(r.l) + Number(r.t) > maxGames) bad[team] = `Total games must be at most ${maxGames} before week ${week}.`;
-      return { team, needsWin: r.needsWin, ...(bad[team] ? {} : { record: { wins: Number(r.w), losses: Number(r.l), ties: Number(r.t) } }) };
+      return { team, needsWin: r.needsWin, backupQb: r.backupQb, ...(bad[team] ? {} : { record: { wins: Number(r.w), losses: Number(r.l), ties: Number(r.t) } }) };
     });
     setProblems(bad);
     if (Object.keys(bad).length) { setStatus({ kind: 'err', text: 'Nothing was saved. Fix the highlighted teams.' }); return; }
@@ -139,6 +139,7 @@ export default function StandingsEditor({ season, onSeasonChange, onDirtyChange 
           <li>Each snapshot belongs to one season and week only. Nothing carries forward or is copied to another week; week 1 records are normally blank.</li>
           <li>Records exclude the target week&apos;s result. A complete record replaces the model&apos;s existing small record-strength prior. A blank row stays unknown and the prior is kept.</li>
           <li>Needs win affects only the marked team, only in division games, raising baseline pass share by up to 1.2 percentage points. It is an unvalidated strategy assumption, not an effort, efficiency, scoring or fantasy-point boost.</li>
+          <li>Backup QB marks a replacement starting this week, even if the depth chart lists him as QB1. Set the usual starter&apos;s weekly availability to Out in Team Library so the replacement is selected; this checkbox does not swap players. Available QB2 or deeper starters with known depth roles are also detected automatically. Unknown roles are not guessed. New simulations favor 58–72% rushing calls, including the red zone; the run-heavy rule takes priority over needs-win passing pressure. Unchecked means automatic detection, not a forced starter designation. Save and rerun to apply.</li>
           <li>There is no automatic playoff determination. Saved forecasts stay unchanged until you rerun them. Unsaved inputs never affect a simulation.</li>
         </ul>
       </div>
@@ -218,12 +219,19 @@ export default function StandingsEditor({ season, onSeasonChange, onDirtyChange 
                           </label>
                         ))}
                       </div>
+                      <div className="se-flags">
                       <label className="se-need">
                         <input type="checkbox" checked={r.needsWin} onChange={ev => set(team, { needsWin: ev.target.checked })}
                           aria-label={`${team} needs a win in division games`} data-testid={`check-needs-win-${team}`} />
                         Needs win
                         {(r.w || r.l || r.t) ? <button type="button" className="text-button" onClick={ev => { ev.preventDefault(); clearTeam(team); }} aria-label={`Clear ${team} record`}>clear</button> : null}
                       </label>
+                      <label className="se-need">
+                        <input type="checkbox" checked={r.backupQb} onChange={ev => set(team, { backupQb: ev.target.checked })}
+                          aria-label={`${team} starting backup QB this week`} data-testid={`check-backup-qb-${team}`} />
+                        Backup QB
+                      </label>
+                      </div>
                     </div>
                   );
                 })}

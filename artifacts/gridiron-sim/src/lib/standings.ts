@@ -5,6 +5,8 @@ export interface StandingEntry {
   team: string;
   record?: { wins: number; losses: number; ties: number };
   needsWin: boolean;
+  /** Optional for compatibility with existing browser snapshots; false means automatic detection. */
+  backupQb?: boolean;
 }
 export interface StandingsSnapshot {
   season: number;
@@ -32,7 +34,7 @@ export function validateStandings(snapshot: StandingsSnapshot): void {
   const maxGames = Math.min(snapshot.week - 1, snapshot.season >= 2021 ? 17 : 16);
   for (const entry of snapshot.entries) {
     if (!entry || !(NFL_TEAM_NAMES as readonly string[]).includes(entry.team) || seen.has(entry.team) ||
-        typeof entry.needsWin !== 'boolean') throw new Error('Standings contain an unknown or duplicate team, or an invalid needs-win flag.');
+        typeof entry.needsWin !== 'boolean' || (entry.backupQb !== undefined && typeof entry.backupQb !== 'boolean')) throw new Error('Standings contain an unknown or duplicate team, or an invalid strategy flag.');
     seen.add(entry.team);
     if (entry.record !== undefined) {
       const { wins, losses, ties } = entry.record;
@@ -96,6 +98,9 @@ export function applyStandings(team: TeamSetup, snapshot: StandingsSnapshot | un
   return {
     ...team,
     record: entry.record ? { ...entry.record } : team.record,
+    ...(entry.backupQb ? { quarterbackStrategy: {
+      model: 'backup-run-v1' as const, quarterback: team.qb, backup: true, basis: 'manual' as const,
+    } } : {}),
     standings: structuredClone({ ...entry, season, week, savedAt: snapshot.savedAt }),
   };
 }
