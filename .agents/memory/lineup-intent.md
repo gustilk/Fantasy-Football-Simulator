@@ -26,3 +26,9 @@ Keep Game Simulator for other games and provide single-game DraftKings Captain/S
 **Why:** The user said, “Yes will keep game simulator for other games but I need Draftkings lineup in Game Simulator section,” then clarified, “The single game in game simulator is for Draftkings captain lineup.” They explicitly want Captain 1.5× points and kicker/defense scoring, including defensive TDs, sacks, fumbles, field goals and extra points.
 
 **How to apply:** Select and simulate one specific matchup in Game Simulator, then use that saved forecast for Captain lineups. Do not send this flow to Sunday-only forecasts or impose Classic's two-game minimum. Use the official Showdown rules and contest CSV for CPT/FLEX IDs, salaries and eligibility. Preserve Classic independently.
+
+Classic and Captain CSV uploads must be independent, including retention and forecast pairing.
+
+**Why:** The user said, “I did not upload the captain mode CVs, the classic CVs and captain mode should be separate.”
+
+**How to apply:** A Classic upload must not appear as the Captain upload. Uploading, replacing or removing either file must not overwrite or delete the other's file. Without a Captain CSV, explain that it must be uploaded rather than displaying the Classic file.

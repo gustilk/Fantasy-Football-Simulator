@@ -12,37 +12,22 @@ import { readSalaryFile } from '@/lib/salary-file';
 import type { SimulatorLineupSource } from '@/lib/simulator-lineups';
 import { buildShowdownPool } from '@/lib/showdown-lineups';
 import { SHOWDOWN_RULES_URL } from '@/lib/showdown-scoring';
+import { LEGACY_SALARY_KEY, salaryStorageKey, loadSalaryFile, saveSalaryFile, removeSalaryFile,
+  type SavedSalaries, type SavedSalaryState } from '@/lib/salary-storage';
 
-const KEY = 'gridiron-dk-salaries-v1';
 const CAP = 50000;
 const money = (n: number) => `$${n.toLocaleString('en-US')}`;
 const msg = (e: unknown) => e instanceof Error ? e.message : 'The operation failed. Please retry.';
 
-interface SavedSalaries { version: 1; season: number; filename: string; importedAt: string; slateId: string; sunday: string; csv: string; format?: LineupFormat; gameId?: string }
-type Saved =
-  | { status: 'none' }
-  | { status: 'corrupt'; reason: string }
-  | { status: 'other-season'; record: SavedSalaries }
-  | { status: 'ok'; record: SavedSalaries };
-
-function loadSaved(season: number): Saved {
-  let raw: string | null;
-  try { raw = localStorage.getItem(KEY); } catch (e) { return { status: 'corrupt', reason: `Browser storage is unreadable: ${msg(e)}` }; }
-  if (raw === null) return { status: 'none' };
-  try {
-    const r = JSON.parse(raw) as Partial<SavedSalaries>;
-    if (!r || r.version !== 1 || typeof r.season !== 'number' || typeof r.csv !== 'string' || typeof r.filename !== 'string'
-      || typeof r.importedAt !== 'string' || typeof r.slateId !== 'string' || typeof r.sunday !== 'string') throw new Error('Unrecognized format or version.');
-    if ((r.format !== undefined && r.format !== 'classic' && r.format !== 'showdown') || (r.gameId !== undefined && typeof r.gameId !== 'string')) throw new Error('Unrecognized contest format.');
-    parseSalaryCsv(r.csv, r.format ?? 'classic');
-    const record = r as SavedSalaries;
-    return record.season === season ? { status: 'ok', record } : { status: 'other-season', record };
-  } catch (e) { return { status: 'corrupt', reason: msg(e) }; }
+function loadSaved(season: number, format: LineupFormat): SavedSalaryState {
+  try { return loadSalaryFile(localStorage, season, format); }
+  catch (e) { return { status: 'corrupt', reason: `Browser storage is unreadable: ${msg(e)}` }; }
 }
 
 export default function LineupsSection({ season, forecastSource }: { season: number; forecastSource?: SimulatorLineupSource }) {
   const c = useDraftKingsBoard(season);
   const format: LineupFormat = forecastSource ? 'showdown' : 'classic';
+  const formatLabel = format === 'showdown' ? 'Captain/Showdown' : 'Classic';
   const [selectedGameId, setSelectedGameId] = useState('');
   const [selectedSimulatorSlate, setSelectedSimulatorSlate] = useState('');
   const slates = forecastSource ? forecastSource.slates : c.slates;
@@ -53,7 +38,7 @@ export default function LineupsSection({ season, forecastSource }: { season: num
   const selectSlate = (id: string) => forecastSource ? setSelectedSimulatorSlate(id) : c.selectSlate(id);
   const storageError = forecastSource ? forecastSource.error : c.storageError;
   const forecastInstructions = forecastSource ? 'select, run and save the upcoming matchup in Game Simulator' : 'run and save the matching Sunday on the DraftKings tab';
-  const [saved, setSaved] = useState<Saved>(() => loadSaved(season));
+  const [saved, setSaved] = useState<SavedSalaryState>(() => loadSaved(season, format));
   const [fileError, setFileError] = useState('');
   const [importing, setImporting] = useState(false);
   const importAttempt = useRef(0);
@@ -70,15 +55,17 @@ export default function LineupsSection({ season, forecastSource }: { season: num
     importAttempt.current++;
     setSelectedSimulatorSlate('');
     setSelectedGameId('');
-    setImporting(false); setSaved(loadSaved(season)); setFileError('');
+    setImporting(false); setSaved(loadSaved(season, format)); setFileError('');
     return () => { importAttempt.current++; };
-  }, [season]);
+  }, [season, format]);
   useEffect(() => {
     const timer = window.setInterval(() => setClock(Date.now()), 15000);
-    const listener = (event: StorageEvent) => { if (event.key === KEY) setSaved(loadSaved(season)); };
+    const listener = (event: StorageEvent) => {
+      if (event.key === null || event.key === LEGACY_SALARY_KEY || event.key === salaryStorageKey(format)) setSaved(loadSaved(season, format));
+    };
     window.addEventListener('storage', listener);
     return () => { window.clearInterval(timer); window.removeEventListener('storage', listener); };
-  }, [season]);
+  }, [season, format]);
 
   const record = saved.status === 'ok' ? saved.record : null;
   const salaryRows = useMemo(() => record ? parseSalaryCsv(record.csv, record.format ?? 'classic') : [], [record]);
@@ -111,7 +98,7 @@ export default function LineupsSection({ season, forecastSource }: { season: num
       const next: SavedSalaries = { version: 1, season, filename: file.name, importedAt: new Date().toISOString(),
         slateId: format === 'showdown' && !importGame ? '' : slate?.id ?? '', sunday: slate?.sunday ?? '', csv, format,
         ...(format === 'showdown' ? { gameId: importGame?.gameId ?? '' } : {}) };
-      localStorage.setItem(KEY, JSON.stringify(next));
+      saveSalaryFile(localStorage, next, format);
       setSaved({ status: 'ok', record: next });
     } catch (e) {
       if (attempt === importAttempt.current) setFileError(`Salary file was not imported: ${msg(e)}`);
@@ -121,7 +108,7 @@ export default function LineupsSection({ season, forecastSource }: { season: num
   };
   const discard = () => {
     importAttempt.current++; setImporting(false);
-    try { localStorage.removeItem(KEY); setSaved({ status: 'none' }); setFileError(''); }
+    try { removeSalaryFile(localStorage, format); setSaved({ status: 'none' }); setFileError(''); }
     catch (e) { setFileError(msg(e)); }
   };
   const relink = () => {
@@ -132,7 +119,7 @@ export default function LineupsSection({ season, forecastSource }: { season: num
     try {
       const next = { ...record, slateId: slate.id, sunday: slate.sunday, importedAt: new Date().toISOString(),
         ...(format === 'showdown' ? { gameId: game!.gameId } : {}) };
-      localStorage.setItem(KEY, JSON.stringify(next));
+      saveSalaryFile(localStorage, next, format);
       setSaved({ status: 'ok', record: next });
     } catch (e) { setFileError(msg(e)); }
   };
@@ -207,7 +194,9 @@ export default function LineupsSection({ season, forecastSource }: { season: num
     </div>
 
     <div className="panel dk-panel lu-panel">
-      <h2 className="lu-h">2. Salaries</h2>
+      <h2 className="lu-h">2. {formatLabel} salaries</h2>
+      <p className="dk-muted">Classic and Captain salary files are saved separately. Uploading, replacing or removing this file will not change the other format.</p>
+      {saved.status === 'none' && <p className="dk-note" role="status">No {formatLabel} salary CSV uploaded. {format === 'showdown' ? 'Upload the official single-game Showdown CSV with CPT and FLEX rows; your Classic CSV stays in Lineups.' : 'Upload your NFL Classic contest CSV; Captain files stay in Game Simulator.'}</p>}
       {saved.status === 'corrupt' && <div className="dk-err" role="alert">Saved salary data could not be read: {saved.reason}
         <button className="btn-secondary" onClick={discard}><Trash2 size={14} /> Discard saved data</button></div>}
       {saved.status === 'other-season' && <div className="dk-note">A salary file from season {saved.record.season} ({saved.record.filename}) is stored but is not used for {season}. Import this season's file to replace it.</div>}
@@ -215,12 +204,12 @@ export default function LineupsSection({ season, forecastSource }: { season: num
         <div><strong>{record.filename}</strong>
           <span className="dk-muted">Imported {new Date(record.importedAt).toLocaleString()}{record.slateId && <> · forecast {record.sunday} <span className="lu-mono">({record.slateId.slice(0, 8)})</span></>}</span>
           <span className="dk-muted" role="status" data-testid="lineups-import-status">{salaryRows.length} salary rows imported successfully.{!record.slateId && ' Not yet paired with a forecast.'}</span></div>
-        <button className="btn-secondary" onClick={discard}><Trash2 size={14} /> Remove</button>
+        <button className="btn-secondary" aria-label={`Remove ${formatLabel} salary CSV`} onClick={discard}><Trash2 size={14} /> Remove</button>
       </div>}
       <div className="lu-actions">
         <input ref={fileRef} type="file" accept=".csv,text/csv" hidden data-testid="lineups-file"
           onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void importFile(f); }} />
-        <button className="btn-secondary" data-testid="lineups-upload" disabled={saved.status === 'corrupt' || importing} onClick={() => fileRef.current?.click()}>{importing ? <><RotateCw size={14} className="spin-icon" /> Reading salary CSV…</> : <><Upload size={14} /> {record ? 'Replace salary CSV' : 'Upload salary CSV'}</>}</button>
+        <button className="btn-secondary" data-testid="lineups-upload" disabled={saved.status === 'corrupt' || importing} onClick={() => fileRef.current?.click()}>{importing ? <><RotateCw size={14} className="spin-icon" /> Reading {formatLabel} salary CSV…</> : <><Upload size={14} /> {record ? `Replace ${formatLabel} salary CSV` : `Upload ${formatLabel} salary CSV`}</>}</button>
       </div>
       {importing && <p className="dk-muted lu-gap" role="status">Reading and validating your salary file…</p>}
       {fileError && <div className="dk-err" role="alert">{fileError}</div>}
