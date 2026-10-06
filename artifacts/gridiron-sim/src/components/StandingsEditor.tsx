@@ -8,6 +8,7 @@ import {
 import './standings-editor.css';
 import { useQuery } from '@tanstack/react-query';
 import { getNflStandings, type NflStandings } from '@workspace/api-client-react';
+import { standingsErrorMessage } from '@/lib/standings-error';
 
 type Props = { season: number; onSeasonChange: (year: number) => void; onDirtyChange?: (dirty: boolean) => void };
 type Row = { w: string; l: string; t: string; pf: string; pa: string; home: string; away: string; streak: string; needsWin: boolean; backupQb: boolean };
@@ -217,7 +218,7 @@ export default function StandingsEditor({ season, onSeasonChange, onDirtyChange 
       </div>
 
       {official.isPending && <p role="status">Loading verified ESPN standings…</p>}
-      {official.isError && <div className="se-banner err" role="alert">ESPN standings could not be loaded: {official.error.message} Saved standings are unchanged. <button className="btn-secondary" onClick={() => void official.refetch()}>Retry ESPN</button></div>}
+      {official.isError && <div className="se-banner err" role="alert">{standingsErrorMessage(official.error)} <button className="btn-secondary" onClick={() => void official.refetch()}>Retry standings</button></div>}
       {official.data && <p className="tl-note"><a href={official.data.sourceUrl} target="_blank" rel="noreferrer">ESPN source</a> · Final games only · As of {new Date(official.data.fetchedAt).toLocaleString()}</p>}
       {official.data?.warnings.map(warning => <p className="se-banner warn" role="note" key={warning}>{warning}</p>)}
       <details className="se-explain">
