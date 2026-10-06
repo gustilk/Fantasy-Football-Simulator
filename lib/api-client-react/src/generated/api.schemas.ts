@@ -5,6 +5,56 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export type NflStandingEntryRecord = {
+  /** @minimum 0 */
+  wins: number;
+  /** @minimum 0 */
+  losses: number;
+  /** @minimum 0 */
+  ties: number;
+};
+
+export type NflStandingEntryTableStats = {
+  /** @minimum 0 */
+  pointsFor: number;
+  /** @minimum 0 */
+  pointsAgainst: number;
+  home: string;
+  away: string;
+  streak?: string;
+};
+
+export interface NflStandingEntry {
+  team: string;
+  needsWin: boolean;
+  record: NflStandingEntryRecord;
+  tableStats: NflStandingEntryTableStats;
+}
+
+export interface NflStandings {
+  season: number;
+  /**
+     * @minimum 1
+     * @maximum 18
+     */
+  week: number;
+  /**
+     * @minimum 1
+     * @maximum 18
+     */
+  currentWeek: number;
+  fetchedAt: string;
+  sourceUrl: string;
+  /** @minimum 0 */
+  completedGames: number;
+  /**
+     * @minItems 32
+     * @maxItems 32
+     */
+  entries: NflStandingEntry[];
+  warnings: string[];
+}
+
 export interface CaptainSalary {
   /** @minimum 1 */
   draftGroupId: number;
@@ -586,6 +636,14 @@ export interface NflImportPreview {
   weeks: TeamWeek[];
   warnings: string[];
 }
+
+export type GetNflStandingsParams = {
+/**
+ * @minimum 1
+ * @maximum 18
+ */
+week?: number;
+};
 
 export type GetCaptainSalaryParams = {
 /**

@@ -9,6 +9,74 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary All 32 NFL records and standings statistics entering the selected week
+ */
+export const getNflStandingsPathSeasonMin = 2002;
+export const getNflStandingsPathSeasonMax = 2100;
+
+
+
+export const GetNflStandingsParams = zod.object({
+  "season": zod.coerce.number().int().min(getNflStandingsPathSeasonMin).max(getNflStandingsPathSeasonMax)
+})
+
+export const getNflStandingsQueryWeekMax = 18;
+
+
+
+export const GetNflStandingsQueryParams = zod.object({
+  "week": zod.coerce.number().int().min(1).max(getNflStandingsQueryWeekMax).optional()
+})
+
+export const getNflStandingsResponseWeekMax = 18;
+
+export const getNflStandingsResponseCurrentWeekMax = 18;
+
+export const getNflStandingsResponseCompletedGamesMin = 0;
+
+export const getNflStandingsResponseEntriesItemRecordWinsMin = 0;
+
+export const getNflStandingsResponseEntriesItemRecordLossesMin = 0;
+
+export const getNflStandingsResponseEntriesItemRecordTiesMin = 0;
+
+export const getNflStandingsResponseEntriesItemTableStatsPointsForMin = 0;
+
+export const getNflStandingsResponseEntriesItemTableStatsPointsAgainstMin = 0;
+
+export const getNflStandingsResponseEntriesMin = 32;
+export const getNflStandingsResponseEntriesMax = 32;
+
+
+
+export const GetNflStandingsResponse = zod.object({
+  "season": zod.number().int(),
+  "week": zod.number().int().min(1).max(getNflStandingsResponseWeekMax),
+  "currentWeek": zod.number().int().min(1).max(getNflStandingsResponseCurrentWeekMax),
+  "fetchedAt": zod.coerce.date(),
+  "sourceUrl": zod.string().url(),
+  "completedGames": zod.number().int().min(getNflStandingsResponseCompletedGamesMin),
+  "entries": zod.array(zod.object({
+  "team": zod.string(),
+  "needsWin": zod.boolean(),
+  "record": zod.object({
+  "wins": zod.number().int().min(getNflStandingsResponseEntriesItemRecordWinsMin),
+  "losses": zod.number().int().min(getNflStandingsResponseEntriesItemRecordLossesMin),
+  "ties": zod.number().int().min(getNflStandingsResponseEntriesItemRecordTiesMin)
+}),
+  "tableStats": zod.object({
+  "pointsFor": zod.number().int().min(getNflStandingsResponseEntriesItemTableStatsPointsForMin),
+  "pointsAgainst": zod.number().int().min(getNflStandingsResponseEntriesItemTableStatsPointsAgainstMin),
+  "home": zod.string(),
+  "away": zod.string(),
+  "streak": zod.string().optional()
+})
+})).min(getNflStandingsResponseEntriesMin).max(getNflStandingsResponseEntriesMax),
+  "warnings": zod.array(zod.string())
+})
+
+
+/**
  * @summary Retrieve official full-game Captain salaries for the selected NFL matchup
  */
 export const getCaptainSalaryPathSeasonMin = 2000;

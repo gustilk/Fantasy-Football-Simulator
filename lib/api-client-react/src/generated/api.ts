@@ -24,12 +24,14 @@ import type {
   FeaturedClassicSalary,
   GetCaptainSalaryParams,
   GetNflScheduleParams,
+  GetNflStandingsParams,
   HealthStatus,
   ListSeasonTeamsParams,
   NflAdvancedReport,
   NflDepthChart,
   NflImportPreview,
   NflSchedule,
+  NflStandings,
   PreviewNflTeamParams,
   SalaryDeletionInput,
   SalaryUploadInput,
@@ -65,6 +67,95 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetNflStandingsUrl = (season: number,
+    params?: GetNflStandingsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/nfl-standings/${season}?${stringifiedParams}` : `/api/nfl-standings/${season}`
+}
+
+/**
+ * @summary All 32 NFL records and standings statistics entering the selected week
+ */
+export const getNflStandings = async (season: number,
+    params?: GetNflStandingsParams, options?: Parameters<typeof customFetch>[1]): Promise<NflStandings> => {
+
+  return customFetch<NflStandings>(getGetNflStandingsUrl(season,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetNflStandingsQueryKey = (season: number,
+    params?: GetNflStandingsParams,) => {
+    return [
+    `/api/nfl-standings/${season}`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetNflStandingsQueryOptions = <TData = Awaited<ReturnType<typeof getNflStandings>>, TError = ErrorType<SeasonError>>(season: number,
+    params?: GetNflStandingsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNflStandings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetNflStandingsQueryKey(season,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getNflStandings>>> = ({ signal }) => getNflStandings(season,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: season !== null && season !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getNflStandings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetNflStandingsQueryResult = NonNullable<Awaited<ReturnType<typeof getNflStandings>>>
+export type GetNflStandingsQueryError = ErrorType<SeasonError>
+
+
+/**
+ * @summary All 32 NFL records and standings statistics entering the selected week
+ */
+
+export function useGetNflStandings<TData = Awaited<ReturnType<typeof getNflStandings>>, TError = ErrorType<SeasonError>>(
+ season: number,
+    params?: GetNflStandingsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNflStandings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetNflStandingsQueryOptions(season,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetCaptainSalaryUrl = (season: number,
     params: GetCaptainSalaryParams,) => {

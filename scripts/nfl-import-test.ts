@@ -55,3 +55,10 @@ assert.equal(mergeNflImport(edited, partial, { ...keep, replaceStats: true }).dr
 const manualPartial = structuredClone(edited); manualPartial.weeks[2]!.playerStats.manual = { passCompletions: 60 };
 assert.equal(mergeNflImport(manualPartial, preview, keep).draft.weeks[2]!.playerStats.manual!.passAttempts, undefined);
 console.log("NFL import parsing and safe-merge regressions passed.");
+const scheduled = structuredClone(current);
+scheduled.weeks[2] = { ...scheduled.weeks[2]!, status: "upcoming", opponent: "Stale scheduled opponent",
+  result: "none", teamScore: null, opponentScore: null, teamDefense: {}, playerStats: {} };
+const completedSchedule = mergeNflImport(scheduled, preview, keep);
+assert.equal(completedSchedule.draft.weeks[2]!.status, "played", "completed games replace empty upcoming schedule placeholders");
+assert.equal(completedSchedule.draft.weeks[2]!.opponent, "Opponent");
+assert.deepEqual(completedSchedule.skippedWeeks, []);

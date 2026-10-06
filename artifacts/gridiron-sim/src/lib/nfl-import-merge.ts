@@ -70,7 +70,9 @@ export function mergeNflImport(current: ImportDraft, preview: NflImportPreview, 
     incoming.playerStats = Object.fromEntries(Object.entries(incoming.playerStats).map(([id, stats]) => [ids.get(id)!, stats]));
     const index = draft.weeks.findIndex(w => w.week === incoming.week);
     const old = draft.weeks[index];
-    const pristine = !old || (old.status === "upcoming" && !old.opponent && old.result === "none" && old.teamScore === null &&
+    // A scheduled opponent is not a played result. Final source games can replace
+    // empty upcoming placeholders, even when an old schedule had the wrong opponent.
+    const pristine = !old || (old.status === "upcoming" && old.result === "none" && old.teamScore === null &&
       old.opponentScore === null && !Object.keys(old.teamDefense).length && !Object.keys(old.playerStats).length);
     const sameGame = old && old.status !== "bye" && old.opponent === incoming.opponent && old.venue === incoming.venue;
     if (!pristine && !sameGame && !options.replaceStats) {

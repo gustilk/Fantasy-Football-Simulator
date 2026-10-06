@@ -6,6 +6,7 @@ import nflImportRouter from "./nfl-import";
 import salaryFilesRouter from "./salary-files";
 import featuredClassicRouter from "./featured-classic";
 import captainSalariesRouter from "./captain-salaries";
+import nflStandingsRouter from "./nfl-standings";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(nflImportRouter);
 router.use(salaryFilesRouter);
 router.use(featuredClassicRouter);
 router.use(captainSalariesRouter);
+router.use(nflStandingsRouter);
 
 export default router;

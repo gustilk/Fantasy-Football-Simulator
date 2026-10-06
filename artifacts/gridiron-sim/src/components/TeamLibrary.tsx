@@ -13,6 +13,7 @@ import { getDefenderTier, getTeamDefenseTier, isDefensivePosition, DEFENDER_TIER
 import PlayerStatsTable, { type StatRow } from './PlayerStatsTable';
 import PlayerAvailabilityEditor from './PlayerAvailabilityEditor';
 import './team-library.css';
+import LeagueStatsRefresh from './LeagueStatsRefresh';
 
 type Position = (typeof positions)[number];
 type Side = 'offense' | 'defense';
@@ -172,6 +173,8 @@ export default function TeamLibrary({ season, onSeasonChange, teams, loading, er
         </select>
         <p className="tl-hint">Team and active-player bonuses add to role-weighted defensive tendencies, not fantasy points. Defensive players have separate None / 1x / 2x tags in the roster. Unknown event histories use role priors. Save team, then rerun and save forecasts; existing forecasts are unchanged.</p>
       </div>
+      <LeagueStatsRefresh season={season} disabled={dirty || save.isPending || importBusy || loading || !!error}
+        onSaved={onSaved} onBusyChange={setImportBusy} />
       <NflImportPanel season={season} team={team} draft={draft}
         disabled={save.isPending || loading || !ctx || !!ctxMismatch}
         onBusyChange={setImportBusy}

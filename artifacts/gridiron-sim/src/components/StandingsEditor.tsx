@@ -6,6 +6,8 @@ import {
   type StandingsSnapshot, type StandingEntry,
 } from '@/lib/standings';
 import './standings-editor.css';
+import { useQuery } from '@tanstack/react-query';
+import { getNflStandings, type NflStandings } from '@workspace/api-client-react';
 
 type Props = { season: number; onSeasonChange: (year: number) => void; onDirtyChange?: (dirty: boolean) => void };
 type Row = { w: string; l: string; t: string; pf: string; pa: string; home: string; away: string; streak: string; needsWin: boolean; backupQb: boolean };
@@ -50,7 +52,7 @@ const toDraft = (snap: StandingsSnapshot | undefined): Draft => {
 const store = (): Storage => window.localStorage;
 const initialWeek = () => {
   const n = Number(new URLSearchParams(window.location.search).get('week'));
-  return Number.isInteger(n) && n >= 1 && n <= 18 ? n : 1;
+  return Number.isInteger(n) && n >= 1 && n <= 18 ? n : 0;
 };
 const isCount = (s: string) => /^\d+$/.test(s.trim());
 
@@ -63,6 +65,13 @@ export default function StandingsEditor({ season, onSeasonChange, onDirtyChange 
   const [status, setStatus] = useState<Status>(null);
   const [problems, setProblems] = useState<Record<string, string>>({});
   const [conf, setConf] = useState<'AFC' | 'NFC'>('AFC');
+  const [refreshing, setRefreshing] = useState(false);
+  const official = useQuery({ queryKey: ['espn-standings', season, week],
+    queryFn: () => getNflStandings(season, week ? { week } : undefined),
+    staleTime: 60000, retry: false });
+  const autoImported = useRef(new Set<string>());
+  const scopeRef = useRef(''); scopeRef.current = `${season}:${week}`;
+  const draftRef = useRef(draft); draftRef.current = draft;
 
   const dirty = JSON.stringify(draft) !== base;
   const dirtyRef = useRef(dirty); dirtyRef.current = dirty;
@@ -78,6 +87,39 @@ export default function StandingsEditor({ season, onSeasonChange, onDirtyChange 
   const adopt = (snap: StandingsSnapshot | undefined) => { const d = toDraft(snap); setDraft(d); setBase(JSON.stringify(d)); setProblems({}); };
   // Re-adopt when the scope or the stored snapshot changes (guards already confirmed discards).
   useEffect(() => { adopt(saved); }, [season, week, saved]);
+  const importOfficial = (data: NflStandings) => {
+    if (data.season !== season || data.week !== week || scopeRef.current !== `${data.season}:${data.week}`) return;
+    const entries: StandingEntry[] = data.entries.map(entry => ({ ...entry,
+      needsWin: draftRef.current[entry.team]?.needsWin ?? false,
+      backupQb: draftRef.current[entry.team]?.backupQb ?? false }));
+    const next = saveStandings(store(), { season, week, savedAt: new Date().toISOString(), entries });
+    setSnaps(next);
+    setStatus({ kind: 'ok', text: `Loaded all 32 teams from ESPN, entering week ${week}, using ${data.completedGames} final games. Manual strategy flags and saved forecasts are unchanged.` });
+  };
+  useEffect(() => {
+    if (!official.data || !snaps || loadError) return;
+    if (!week) { setWeek(official.data.week); return; }
+    const key = `${season}:${week}`;
+    if (official.data.season !== season || official.data.week !== week || dirtyRef.current
+      || autoImported.current.has(key) || saved?.entries.some(e => e.record)) return;
+    autoImported.current.add(key);
+    try { importOfficial(official.data); }
+    catch (error) { setStatus({ kind: 'err', text: error instanceof Error ? error.message : 'ESPN standings could not be saved.' }); }
+  }, [official.data, snaps, loadError, season, week, saved]);
+  const refreshOfficial = async () => {
+    if (!snaps || loadError || !week || refreshing) return;
+    if ((dirty || saved?.entries.some(e => e.record)) && !window.confirm('Refresh W/L/T and table statistics from ESPN? Your needs-win and backup-QB flags will be kept. Saved forecasts will not change.')) return;
+    const scope = `${season}:${week}`;
+    autoImported.current.add(scope); setRefreshing(true);
+    try {
+      const fresh = await official.refetch();
+      if (scopeRef.current !== scope) return;
+      if (fresh.error || !fresh.data) throw fresh.error ?? new Error('ESPN did not return standings.');
+      importOfficial(fresh.data);
+    } catch (error) {
+      if (scopeRef.current === scope) setStatus({ kind: 'err', text: error instanceof Error ? error.message : 'Saved standings are unchanged.' });
+    } finally { setRefreshing(false); }
+  };
 
   useEffect(() => {
     if (!dirty) return;
@@ -87,10 +129,10 @@ export default function StandingsEditor({ season, onSeasonChange, onDirtyChange 
   }, [dirty]);
 
   const guard = () => !dirtyRef.current || window.confirm('You have unsaved standings. Discard them?');
-  const changeWeek = (n: number) => { if (n !== week && guard()) { setStatus(null); setWeek(n); } };
-  const changeSeason = (n: number) => { if (n !== season && guard()) { setStatus(null); onSeasonChange(n); } };
+  const changeWeek = (n: number) => { if (!refreshing && n !== week && guard()) { setStatus(null); setWeek(n); } };
+  const changeSeason = (n: number) => { if (!refreshing && n !== season && guard()) { setStatus(null); onSeasonChange(n); } };
 
-  const maxGames = Math.min(week - 1, season >= 2021 ? 17 : 16);
+  const maxGames = Math.max(0, Math.min(week - 1, season >= 2021 ? 17 : 16));
   const set = (team: string, patch: Partial<Row>) => setDraft(d => ({ ...d, [team]: { ...d[team], ...patch } }));
   const clearTeam = (team: string) => set(team, { w: '', l: '', t: '', pf: '', pa: '', home: '', away: '', streak: '' });
 
@@ -128,6 +170,7 @@ export default function StandingsEditor({ season, onSeasonChange, onDirtyChange 
     if (!saved || !window.confirm(`Remove the saved ${season} week ${week} standings snapshot from this browser? Saved forecasts are unchanged. Other weeks are not affected.`)) return;
     try {
       const next = deleteStandings(store(), season, week);
+      autoImported.current.add(`${season}:${week}`);
       setSnaps(next);
       setStatus({ kind: 'ok', text: `Removed the ${season} week ${week} snapshot.` });
     } catch (e) {
@@ -146,7 +189,7 @@ export default function StandingsEditor({ season, onSeasonChange, onDirtyChange 
     const top = new Date().getFullYear() + 1;
     return Array.from({ length: top - 2002 + 1 }, (_, i) => top - i);
   }, []);
-  const ready = !!snaps && !loadError;
+  const ready = !!snaps && !loadError && week > 0 && !refreshing;
   const savedEntry = (team: string) => saved?.entries.find(e => e.team === team);
   const savedAtText = saved ? new Date(saved.savedAt).toLocaleString() : '';
 
@@ -155,8 +198,8 @@ export default function StandingsEditor({ season, onSeasonChange, onDirtyChange 
       <div className="se-head">
         <div>
           <div className="eyebrow">Standings / this browser only</div>
-          <h2 id="se-title">Manual standings</h2>
-          <p>Records entering the selected week, typed by you. Unknown values stay blank.</p>
+          <h2 id="se-title">NFL standings</h2>
+          <p>ESPN records and statistics entering the selected week. You control the strategy flags and can edit records manually.</p>
         </div>
         <div className="se-pickers">
           <label>Season
@@ -166,16 +209,21 @@ export default function StandingsEditor({ season, onSeasonChange, onDirtyChange 
           </label>
           <label>Records entering week
             <select value={week} onChange={e => changeWeek(Number(e.target.value))} data-testid="select-standings-week">
+              {!week && <option value={0}>Loading current week…</option>}
               {Array.from({ length: 18 }, (_, i) => <option key={i + 1} value={i + 1}>Week {i + 1}</option>)}
             </select>
           </label>
         </div>
       </div>
 
+      {official.isPending && <p role="status">Loading verified ESPN standings…</p>}
+      {official.isError && <div className="se-banner err" role="alert">ESPN standings could not be loaded: {official.error.message} Saved standings are unchanged. <button className="btn-secondary" onClick={() => void official.refetch()}>Retry ESPN</button></div>}
+      {official.data && <p className="tl-note"><a href={official.data.sourceUrl} target="_blank" rel="noreferrer">ESPN source</a> · Final games only · As of {new Date(official.data.fetchedAt).toLocaleString()}</p>}
+      {official.data?.warnings.map(warning => <p className="se-banner warn" role="note" key={warning}>{warning}</p>)}
       <details className="se-explain">
         <summary data-testid="toggle-standings-help">How the simulator uses this</summary>
         <ul>
-          <li>Each snapshot belongs to one season and week only. Nothing carries forward or is copied to another week; week 1 records are normally blank.</li>
+          <li>Each snapshot belongs to one season and week only. ESPN records use final regular-season games before that week, not later results. Week 1 starts at 0–0–0.</li>
           <li>Records exclude the target week&apos;s result. A complete record replaces the model&apos;s existing small record-strength prior. A blank row stays unknown and the prior is kept.</li>
           <li>Pct is calculated from W/L/T (ties count as half a win). Rows sort by saved win percentage, then alphabetically, not official NFL tiebreakers. PF, PA, Home, Away and Strk are optional display-only entries, not extra simulation boosts. Home/Away use W-L or W-L-T; Strk uses W1, L3 or T1. Leave unknown values blank.</li>
           <li>Needs win affects only the marked team, only in division games, raising baseline pass share by up to 1.2 percentage points. It is an unvalidated strategy assumption, not an effort, efficiency, scoring or fantasy-point boost.</li>
@@ -211,6 +259,7 @@ export default function StandingsEditor({ season, onSeasonChange, onDirtyChange 
           <button className="btn-primary" onClick={doSave} disabled={!ready || (!dirty && !!saved)} data-testid="button-standings-save">
             <Save size={15} /> {saved ? 'Save changes' : 'Save snapshot'}
           </button>
+          <button className="btn-secondary" onClick={() => void refreshOfficial()} disabled={!ready || official.isFetching} data-testid="button-standings-espn"><RotateCw size={14} /> Refresh from ESPN</button>
           <button className="btn-secondary" onClick={() => { adopt(saved); setStatus(null); }} disabled={!dirty} data-testid="button-standings-revert">Discard edits</button>
           <button className="btn-secondary btn-danger" onClick={doDelete} disabled={!ready || !saved} data-testid="button-standings-delete">
             <Trash2 size={14} /> Remove this week

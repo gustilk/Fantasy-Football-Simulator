@@ -11,6 +11,34 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /nfl-standings/{season}:
+    get:
+      operationId: getNflStandings
+      summary: All 32 NFL records and standings statistics entering the selected week
+      parameters:
+        - in: path
+          name: season
+          required: true
+          schema: { type: integer, minimum: 2002, maximum: 2100 }
+        - in: query
+          name: week
+          schema: { type: integer, minimum: 1, maximum: 18 }
+      responses:
+        "200":
+          description: Verified ESPN standings based on completed regular-season games
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NflStandings" }
+        "400":
+          description: Invalid season or week
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeasonError" }
+        "502":
+          description: ESPN unavailable or season/score validation failed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeasonError" }
   /draftkings/captain/{season}:
     get:
       operationId: getCaptainSalary
@@ -364,6 +392,46 @@ paths:
               schema: { $ref: "#/components/schemas/SeasonError" }
 components:
   schemas:
+    NflStandingEntry:
+      type: object
+      required: [team, record, needsWin, tableStats]
+      properties:
+        team: { type: string }
+        needsWin: { type: boolean }
+        record:
+          type: object
+          required: [wins, losses, ties]
+          properties:
+            wins: { type: integer, minimum: 0 }
+            losses: { type: integer, minimum: 0 }
+            ties: { type: integer, minimum: 0 }
+        tableStats:
+          type: object
+          required: [pointsFor, pointsAgainst, home, away]
+          properties:
+            pointsFor: { type: integer, minimum: 0 }
+            pointsAgainst: { type: integer, minimum: 0 }
+            home: { type: string }
+            away: { type: string }
+            streak: { type: string }
+    NflStandings:
+      type: object
+      required: [season, week, currentWeek, fetchedAt, sourceUrl, completedGames, entries, warnings]
+      properties:
+        season: { type: integer }
+        week: { type: integer, minimum: 1, maximum: 18 }
+        currentWeek: { type: integer, minimum: 1, maximum: 18 }
+        fetchedAt: { type: string, format: date-time }
+        sourceUrl: { type: string, format: uri }
+        completedGames: { type: integer, minimum: 0 }
+        entries:
+          type: array
+          minItems: 32
+          maxItems: 32
+          items: { $ref: "#/components/schemas/NflStandingEntry" }
+        warnings:
+          type: array
+          items: { type: string }
     CaptainSalary:
       type: object
       required: [draftGroupId, startTime, awayTeam, homeTeam, filename, csv, sourceUrl]
