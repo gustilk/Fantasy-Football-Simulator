@@ -878,6 +878,7 @@ export const ListSeasonTeamsResponseItem = zod.object({
   "season": zod.number().int(),
   "team": zod.string(),
   "version": zod.number().int(),
+  "offensiveLineTier": zod.union([zod.literal(0),zod.literal(1.5),zod.literal(null)]).nullish(),
   "defenseTier": zod.union([zod.literal(0),zod.literal(1),zod.literal(null)]).nullish(),
   "players": zod.array(zod.object({
   "id": zod.string().min(1).max(listSeasonTeamsResponsePlayersItemIdMax),
@@ -993,6 +994,7 @@ export const saveSeasonTeamBodyWeeksMax = 18;
 
 export const SaveSeasonTeamBody = zod.object({
   "expectedVersion": zod.number().int().min(saveSeasonTeamBodyExpectedVersionMin),
+  "offensiveLineTier": zod.union([zod.literal(0),zod.literal(1.5),zod.literal(null)]).nullish().describe('Manual pass-protection preference. 0 disables; 1.5 reduces matchup-adjusted sack probability by 30%; null uses approved team defaults. An omitted update preserves the stored preference. No run-blocking or fantasy-point multiplier.'),
   "defenseTier": zod.union([zod.literal(0),zod.literal(1),zod.literal(null)]).nullish().describe('Team defensive priority. 0 disables, 1 adds 20%; null uses approved team defaults. An omitted update preserves the saved preference.'),
   "players": zod.array(zod.object({
   "id": zod.string().min(1).max(saveSeasonTeamBodyPlayersItemIdMax),
@@ -1087,6 +1089,7 @@ export const SaveSeasonTeamResponse = zod.object({
   "season": zod.number().int(),
   "team": zod.string(),
   "version": zod.number().int(),
+  "offensiveLineTier": zod.union([zod.literal(0),zod.literal(1.5),zod.literal(null)]).nullish(),
   "defenseTier": zod.union([zod.literal(0),zod.literal(1),zod.literal(null)]).nullish(),
   "players": zod.array(zod.object({
   "id": zod.string().min(1).max(saveSeasonTeamResponsePlayersItemIdMax),

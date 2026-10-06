@@ -13,13 +13,14 @@ import { getDefenderTier, getTeamDefenseTier, isDefensivePosition, DEFENDER_TIER
 import PlayerStatsTable, { type StatRow } from './PlayerStatsTable';
 import PlayerAvailabilityEditor from './PlayerAvailabilityEditor';
 import './team-library.css';
+import { getOffensiveLineTier, type OffensiveLineTier } from '@/lib/offensive-line';
 import LeagueStatsRefresh from './LeagueStatsRefresh';
 
 type Position = (typeof positions)[number];
 type Side = 'offense' | 'defense';
 type Player = RosterPlayer;
 type Week = TeamWeek;
-type Draft = { players: Player[]; weeks: Week[]; defenseTier?: TeamDefenseTier | null };
+type Draft = { players: Player[]; weeks: Week[]; defenseTier?: TeamDefenseTier | null; offensiveLineTier?: OffensiveLineTier | null };
 type Props = {
   season: number; onSeasonChange: (n: number) => void; teams: TeamSeasonRecord[]; loading: boolean; error: string;
   onReload: () => void; onSaved: (team: TeamSeasonRecord) => void; teamNames: string[];
@@ -36,7 +37,7 @@ function normalize(rec: TeamSeasonRecord | undefined): Draft {
     const found = rec?.weeks.find(x => x.week === w);
     weeks.push(found ? structuredClone(found) as Week : blankWeek(w));
   }
-  return { players: rec ? (structuredClone(rec.players) as Player[]) : [], weeks, defenseTier: rec?.defenseTier ?? null };
+  return { players: rec ? (structuredClone(rec.players) as Player[]) : [], weeks, defenseTier: rec?.defenseTier ?? null, offensiveLineTier: rec?.offensiveLineTier ?? null };
 }
 const snap = (d: Draft) => JSON.stringify(d);
 
@@ -100,7 +101,7 @@ export default function TeamLibrary({ season, onSeasonChange, teams, loading, er
     try {
       const res = await save.mutateAsync({
         season: ctx.season, team: encodeURIComponent(ctx.team),
-        data: { expectedVersion: base.version || 0, players: draft.players.map(p => ({ ...p, name: p.name.trim() })), weeks: draft.weeks, defenseTier: draft.defenseTier },
+        data: { expectedVersion: base.version || 0, players: draft.players.map(p => ({ ...p, name: p.name.trim() })), weeks: draft.weeks, defenseTier: draft.defenseTier, offensiveLineTier: draft.offensiveLineTier },
       });
       const d = normalize(res);
       setDraft(d); setBase({ version: res.version, snap: snap(d) });
@@ -172,6 +173,16 @@ export default function TeamLibrary({ season, onSeasonChange, teams, loading, er
           <option value={0}>None</option><option value={1}>1x · +20%</option>
         </select>
         <p className="tl-hint">Team and active-player bonuses add to role-weighted defensive tendencies, not fantasy points. Defensive players have separate None / 1x / 2x tags in the roster. Unknown event histories use role priors. Save team, then rerun and save forecasts; existing forecasts are unchanged.</p>
+      </div>
+      <div className="field">
+        <label htmlFor="team-offensive-line-tier">O-line pass protection</label>
+        <select id="team-offensive-line-tier" data-testid="team-offensive-line-tier"
+          value={getOffensiveLineTier({ team, offensiveLineTier: draft.offensiveLineTier })}
+          disabled={!ctx || importBusy || save.isPending}
+          onChange={e => setDraft(d => ({ ...d, offensiveLineTier: Number(e.target.value) as OffensiveLineTier }))}>
+          <option value={0}>None</option><option value={1.5}>1.5x · 30% lower sack risk</option>
+        </select>
+        <p className="tl-hint">Manual pass-protection adjustment after the defensive matchup. Does not boost run blocking or multiply fantasy points. Save team, then rerun forecasts; older saved results stay unchanged.</p>
       </div>
       <LeagueStatsRefresh season={season} disabled={dirty || save.isPending || importBusy || loading || !!error}
         onSaved={onSaved} onBusyChange={setImportBusy} />

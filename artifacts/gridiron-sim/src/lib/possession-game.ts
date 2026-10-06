@@ -5,6 +5,7 @@ import { passingStrategyAdjustment } from './standings';
 import { quarterbackPassShare } from './quarterback-strategy';
 import { backfieldEfficiency } from './backfield-workload';
 import { secondaryMatchup, secondaryNotes } from './secondary-matchup';
+import { protectedSackProbability } from './offensive-line';
 
 type Random = () => number;
 interface Helpers {
@@ -44,8 +45,8 @@ export function simulatePossessionGame(input: SimulationInput, random: Random, a
       passShare: share,
       interceptionRate: bound(((recentInts ?? 0.022 - qbEdge * 0.00038) +
         ((defense.defenseRecent?.interceptions ?? 0.8) - 0.8) * 0.006) * priorities.interceptions, 0.006, 0.075),
-      sackRate: bound((defense.footballEvidence?.sackRate ?? 0.047 +
-        ((defense.footballEvidence?.passDefenseRating ?? defense.defenseRating) - setup.passRating) * 0.001) * priorities.sacks, 0.015, 0.13),
+      sackRate: protectedSackProbability(bound((defense.footballEvidence?.sackRate ?? 0.047 +
+        ((defense.footballEvidence?.passDefenseRating ?? defense.defenseRating) - setup.passRating) * 0.001) * priorities.sacks, 0.015, 0.13), setup.offensiveLineTier),
       fumbleRate: bound((0.012 + wet * 0.04) * priorities.fumblesForced, 0.003, 0.04),
       fieldGoalPenalty: wind * 0.4 + wet * 0.2,
       // Incompletions stop the clock, so use a modest pace normalization.

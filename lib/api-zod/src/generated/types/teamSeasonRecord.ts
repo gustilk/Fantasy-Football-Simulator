@@ -7,12 +7,15 @@
  */
 import type { RosterPlayer } from './rosterPlayer';
 import type { TeamSeasonRecordDefenseTier } from './teamSeasonRecordDefenseTier';
+import type { TeamSeasonRecordOffensiveLineTier } from './teamSeasonRecordOffensiveLineTier';
 import type { TeamWeek } from './teamWeek';
 
 export interface TeamSeasonRecord {
   season: number;
   team: string;
   version: number;
+  /** @nullable */
+  offensiveLineTier?: TeamSeasonRecordOffensiveLineTier;
   /** @nullable */
   defenseTier?: TeamSeasonRecordDefenseTier;
   players: RosterPlayer[];

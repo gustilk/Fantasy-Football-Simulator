@@ -19,8 +19,9 @@ router.put("/season-teams/:season/:team", async (req, res): Promise<void> => {
     res.status(400).json({ error: "Invalid team data. Check names, season, weeks, and numeric stats." }); return;
   }
   const { season, team } = params.data;
-  const { players, weeks, expectedVersion, defenseTier } = body.data;
-  const defensePreference = defenseTier === undefined ? {} : { defenseTier };
+  const { players, weeks, expectedVersion, defenseTier, offensiveLineTier } = body.data;
+  const defensePreference = { ...(defenseTier === undefined ? {} : { defenseTier }),
+    ...(offensiveLineTier === undefined ? {} : { offensiveLineTier }) };
   const fail = (message: string) => { res.status(400).json({ error: message }); };
   if (!team.trim() || players.some(p => !p.name.trim())) { fail("Team and player names cannot be blank."); return; }
   const ids = new Set(players.map(p => p.id));

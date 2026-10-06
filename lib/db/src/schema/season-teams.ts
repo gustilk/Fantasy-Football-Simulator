@@ -1,4 +1,4 @@
-import { integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { integer, jsonb, pgTable, real, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 
 export const seasonTeamsTable = pgTable("season_teams", {
@@ -7,6 +7,7 @@ export const seasonTeamsTable = pgTable("season_teams", {
   team: text("team").notNull(),
   version: integer("version").notNull().default(1),
   defenseTier: integer("defense_tier"),
+  offensiveLineTier: real("offensive_line_tier"),
   players: jsonb("players").notNull(),
   weeks: jsonb("weeks").notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

@@ -7,11 +7,17 @@
  */
 import type { RosterPlayer } from './rosterPlayer';
 import type { TeamSeasonInputDefenseTier } from './teamSeasonInputDefenseTier';
+import type { TeamSeasonInputOffensiveLineTier } from './teamSeasonInputOffensiveLineTier';
 import type { TeamWeek } from './teamWeek';
 
 export interface TeamSeasonInput {
   /** @minimum 0 */
   expectedVersion: number;
+  /**
+     * Manual pass-protection preference. 0 disables; 1.5 reduces matchup-adjusted sack probability by 30%; null uses approved team defaults. An omitted update preserves the stored preference. No run-blocking or fantasy-point multiplier.
+     * @nullable
+     */
+  offensiveLineTier?: TeamSeasonInputOffensiveLineTier;
   /**
      * Team defensive priority. 0 disables, 1 adds 20%; null uses approved team defaults. An omitted update preserves the saved preference.
      * @nullable

@@ -11,6 +11,7 @@ import type { PriorSeasonEvidence } from "./prior-season-baseline";
 import type { FootballEvidence, FootballPlayerEvidence } from "./football-evidence";
 import type { MarketOdds, MarketEvidence } from "./market-odds";
 import { getEliteTier, eliteOpportunityWeight, type EliteTier } from "./elite-players";
+import { protectedSackProbability, type OffensiveLineTier } from "./offensive-line";
 import { backfieldOpportunityWeight, backfieldReceivingPrior, backfieldEfficiency, type BackfieldEvidence } from "./backfield-workload";
 import { simulatePossessionGame } from "./possession-game";
 
@@ -95,6 +96,8 @@ export interface TeamSetup {
   };
   defenseRecent?: DefenseRecentStats;
   defenseTier?: TeamDefenseTier;
+  /** Frozen manual pass protection: 1.5x means 30% lower sack risk. */
+  offensiveLineTier?: OffensiveLineTier;
   defenders?: SimulationDefender[];
   roster?: SimulationRosterPlayer[];
   record?: { wins: number; losses: number; ties: number };
@@ -622,7 +625,7 @@ function simulateTeam(
         const unboostedSackChance = clamp(!supplied(defense.footballEvidence?.sackRate) && supplied(defenseRecent?.sacks)
           ? blend(baseSackChance, defenseRecent.sacks / 35, 0.4 * defenseReliability)
           : baseSackChance, 0.015, 0.13);
-        const sackChance = clamp(unboostedSackChance * defensePriority.sacks, 0.015, 0.13);
+        const sackChance = protectedSackProbability(clamp(unboostedSackChance * defensePriority.sacks, 0.015, 0.13), setup.offensiveLineTier);
 
         if (random() < interceptionChance) {
           qb.interceptions += 1;
@@ -918,6 +921,7 @@ function makeOverview(
   }
   let defensiveTagsApplied = false;
   for (const setup of [input.away, input.home]) {
+    if (setup.offensiveLineTier === 1.5) overview.push(`${setup.name}: manual O-line protection 1.5x reduces matchup-adjusted sack probability by 30%. No direct run-blocking or fantasy-point bonus. This preference is not a verified sack-free-game claim or a guarantee of zero sacks.`);
     const priorities = defensiveEventPriorities(setup);
     if (Object.values(priorities).some(value => value > 1)) {
       defensiveTagsApplied = true;
@@ -931,6 +935,7 @@ function makeOverview(
 }
 
 export function simulateGame(input: SimulationInput): SimulationResult {
+  for (const team of [input.away, input.home]) protectedSackProbability(0.047, team.offensiveLineTier);
   if (input.driveModel !== undefined && input.driveModel !== 'possession-v1') throw new Error('Unsupported possession model. Saved forecasts must use their frozen model version.');
   if (input.secondaryModel !== undefined && (input.secondaryModel !== 'secondary-v1' || input.driveModel !== 'possession-v1')) throw new Error('Unsupported secondary model. Deep-pass matchups require their frozen possession model.');
   if (input.away.name === input.home.name) {

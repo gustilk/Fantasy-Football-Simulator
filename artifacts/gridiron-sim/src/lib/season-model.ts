@@ -4,6 +4,7 @@ import { availabilityForWeek, availabilityWarnings } from "./availability";
 import { captureQuarterbackStrategy } from "./quarterback-strategy";
 import { historyStrength, historyWarnings, playerUsage } from "./history-signals";
 import { getEliteTier } from "./elite-players";
+import { getOffensiveLineTier } from "./offensive-line";
 import { getDefenderTier, getTeamDefenseTier, isDefensivePosition } from "./defensive-tiers";
 import { PRIOR_GAMES, baseline2025, priorTeam, priorPlayer, priorWeight, blendPriorStats, blendPriorUsage,
   priorBackfieldEvidence, priorTeamStrength, priorDefenseRecord, priorDefenderRecord, type PriorSeasonEvidence } from "./prior-season-baseline";
@@ -180,6 +181,7 @@ export function setupFromHistory(team: TeamSeasonRecord, week: number, venue: "h
       ? Math.round(blendedDefense.reduce((sum, value) => sum + value, 0) / blendedDefense.length) : strength.defenseRating,
     roster,
     defenseTier: getTeamDefenseTier(team),
+    offensiveLineTier: getOffensiveLineTier(team),
     defenders: team.players.filter(p => p.side === "defense" && isDefensivePosition(p.position) && availabilityForWeek(p, week).included)
       .map(p => ({
         id: p.id, name: p.name, position: p.position as import("./defensive-tiers").DefensivePosition,

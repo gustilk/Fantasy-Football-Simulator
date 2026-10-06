@@ -684,6 +684,18 @@ export interface TeamWeek {
 }
 
 /**
+ * Manual pass-protection preference. 0 disables; 1.5 reduces matchup-adjusted sack probability by 30%; null uses approved team defaults. An omitted update preserves the stored preference. No run-blocking or fantasy-point multiplier.
+ * @nullable
+ */
+export type TeamSeasonInputOffensiveLineTier = typeof TeamSeasonInputOffensiveLineTier[keyof typeof TeamSeasonInputOffensiveLineTier] | null;
+
+
+export const TeamSeasonInputOffensiveLineTier = {
+  NUMBER_0: 0,
+  '15': 1.5,
+} as const;
+
+/**
  * Team defensive priority. 0 disables, 1 adds 20%; null uses approved team defaults. An omitted update preserves the saved preference.
  * @nullable
  */
@@ -699,6 +711,11 @@ export interface TeamSeasonInput {
   /** @minimum 0 */
   expectedVersion: number;
   /**
+     * Manual pass-protection preference. 0 disables; 1.5 reduces matchup-adjusted sack probability by 30%; null uses approved team defaults. An omitted update preserves the stored preference. No run-blocking or fantasy-point multiplier.
+     * @nullable
+     */
+  offensiveLineTier?: TeamSeasonInputOffensiveLineTier;
+  /**
      * Team defensive priority. 0 disables, 1 adds 20%; null uses approved team defaults. An omitted update preserves the saved preference.
      * @nullable
      */
@@ -708,6 +725,17 @@ export interface TeamSeasonInput {
   /** @maxItems 18 */
   weeks: TeamWeek[];
 }
+
+/**
+ * @nullable
+ */
+export type TeamSeasonRecordOffensiveLineTier = typeof TeamSeasonRecordOffensiveLineTier[keyof typeof TeamSeasonRecordOffensiveLineTier] | null;
+
+
+export const TeamSeasonRecordOffensiveLineTier = {
+  NUMBER_0: 0,
+  '15': 1.5,
+} as const;
 
 /**
  * @nullable
@@ -724,6 +752,8 @@ export interface TeamSeasonRecord {
   season: number;
   team: string;
   version: number;
+  /** @nullable */
+  offensiveLineTier?: TeamSeasonRecordOffensiveLineTier;
   /** @nullable */
   defenseTier?: TeamSeasonRecordDefenseTier;
   players: RosterPlayer[];
