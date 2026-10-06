@@ -68,3 +68,9 @@ Shared salary data does not automatically imply shared forecast pairing.
 **Why:** Simulation archives remain device-specific; copying a desktop forecast reference to a fresh phone would link to a forecast that the phone cannot access.
 
 **How to apply:** Preserve each device's pairing for unchanged contest data. Synchronizing forecast archives is a separate feature; until that exists, require a matching forecast on the current device rather than silently importing another device's forecast reference.
+
+The user also wants a separate manual lineup section: “I will select the players … I will add their Fantasy points” and generate the highest-point lineup from that list under $50,000, still using DraftKings salaries.
+
+**Why:** They want to optimize their own player expectations rather than relying only on simulator forecasts.
+
+**How to apply:** Treat selected players as the candidate pool, not mandatory locks. Use only their entered point estimates and the current imported Classic contest's salaries and eligibility. Keep manual estimates separate from actual statistics and simulator forecasts; do not silently replace blank estimates with model values or carry them into another salary contest.

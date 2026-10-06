@@ -10,7 +10,7 @@ const scoreSchema = z.object({
 });
 const forecastSchema = z.object({
   gameId: z.string(), generatedAt: z.string().optional(), week: z.number().int(), kickoff: z.string(), awayTeam: z.string(), homeTeam: z.string(),
-  seed: z.number(), runs: z.number().int().positive(), input: z.object({}).passthrough(),
+  seed: z.number(), runs: z.number().int().positive(), input: z.object({ highScoring: z.boolean().optional() }).passthrough(),
   players: z.array(z.object({
     playerId: z.string(), name: z.string(), team: z.string(), position: z.enum(['QB', 'RB', 'WR', 'TE']),
     mean: z.number(), p10: z.number(), p90: z.number(), elite1x: z.boolean().optional(),
@@ -22,7 +22,7 @@ const forecastSchema = z.object({
 const archiveSchema = z.object({
   version: z.literal(1), official: z.array(scoreSchema),
   marketDrafts: z.record(z.string(), z.object({
-    enabled: z.boolean(), homeSpread: z.string(), total: z.string(), recordedAt: z.string(), manual: z.boolean(),
+    enabled: z.boolean(), homeSpread: z.string(), total: z.string(), recordedAt: z.string(), manual: z.boolean(), highScoring: z.boolean().optional(),
   })).optional(),
   slates: z.array(z.object({
     id: z.string(), season: z.number().int(), sunday: z.string(), createdAt: z.string(), savedAt: z.string().optional(),

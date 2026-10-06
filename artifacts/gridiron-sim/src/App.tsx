@@ -15,6 +15,7 @@ import MarketOddsInputs from '@/components/MarketOddsInputs';
 import { withDepthChart } from '@/lib/depth-chart';
 import DraftKingsBoard from '@/components/DraftKingsBoard';
 import LineupsSection from '@/components/LineupsSection';
+import ManualLineupsSection from '@/components/ManualLineupsSection';
 import './season.css';
 import './components/game-simulator.css';
 import { getEliteTier, ELITE_TIER_OPTIONS, type EliteTier } from '@/lib/elite-players';
@@ -67,7 +68,7 @@ function formatSavedDate(value: string) {
   return Number.isNaN(date.getTime()) ? 'Saved matchup' : date.toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
 }
 function App() {
-  const [tab, setTab] = useState<'library' | 'simulator' | 'draftkings' | 'lineups' | 'standings'>(() => { const v = new URLSearchParams(window.location.search).get('view'); return v === 'library' || v === 'simulator' || v === 'lineups' || v === 'standings' ? v : 'draftkings'; });
+  const [tab, setTab] = useState<'library' | 'simulator' | 'draftkings' | 'lineups' | 'manual' | 'standings'>(() => { const v = new URLSearchParams(window.location.search).get('view'); return v === 'library' || v === 'simulator' || v === 'lineups' || v === 'manual' || v === 'standings' ? v : 'draftkings'; });
   const [season, setSeason] = useState(() => readSetup().market?.season ?? new Date().getFullYear());
   const [week, setWeek] = useState(() => readSetup().market?.week ?? 2);
   const queryClient = useQueryClient();
@@ -184,6 +185,7 @@ function App() {
         <nav className="section-tabs" aria-label="App sections">
           <button disabled={busy} className={tab === 'draftkings' ? 'selected' : ''} onClick={() => changeTab('draftkings')} data-testid="tab-draftkings">DraftKings</button>
           <button disabled={busy} className={tab === 'lineups' ? 'selected' : ''} onClick={() => changeTab('lineups')} data-testid="tab-lineups">Lineups</button>
+          <button disabled={busy} className={tab === 'manual' ? 'selected' : ''} onClick={() => changeTab('manual')} data-testid="tab-manual">My Picks</button>
           <button disabled={busy} className={tab === 'library' ? 'selected' : ''} onClick={() => changeTab('library')} data-testid="tab-library">Team Library</button>
           <button disabled={busy} className={tab === 'standings' ? 'selected' : ''} onClick={() => changeTab('standings')} data-testid="tab-standings">Standings</button>
           <button disabled={busy} className={tab === 'simulator' ? 'selected' : ''} onClick={() => changeTab('simulator')} data-testid="tab-simulator">Game Simulator</button>
@@ -196,6 +198,7 @@ function App() {
         </div>
         <div style={{ display: tab === 'draftkings' ? undefined : 'none' }}><DraftKingsBoard season={season} /></div>
         {tab === 'lineups' && <LineupsSection season={season} />}
+        {tab === 'manual' && <ManualLineupsSection season={season} />}
         {tab === 'standings' && <StandingsEditor season={season} onSeasonChange={changeSeason} onDirtyChange={setStandingsDirty} />}
         <div className="game-simulator" style={{ display: tab === 'simulator' ? undefined : 'none' }}>
         <div className="page-heading">

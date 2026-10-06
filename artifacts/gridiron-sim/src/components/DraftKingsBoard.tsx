@@ -15,6 +15,8 @@ function MarketRow({ c, game }: { c: DraftKingsBoardController; game: NflSchedul
   const id = game.id;
   return <div className="dk-game" data-testid={`dk-game-${id}`}>
     <div className="dk-game-head"><strong>{game.awayTeam} at {game.homeTeam}</strong><span>{game.timeConfirmed ? when(game.date) : 'Kickoff unconfirmed'} · Week {game.week}</span></div>
+    <label className="chk"><input type="checkbox" disabled={c.busy || c.savingSettings || c.archiveLoading || !!c.storageError} checked={m.highScoring === true} onChange={e => { void c.updateMarket(game, { highScoring: e.target.checked }); }} data-testid={`dk-high-scoring-${id}`} /> High-scoring game · +20% expected total target</label>
+    <p className="dk-muted">Manual assumption for both teams. Applies to the next run, not this saved forecast. Player boosts vary; no equal point multiplier or guaranteed score.</p>
     <div className="dk-mkt">
       <label className="chk"><input type="checkbox" disabled={c.busy} checked={m.enabled} onChange={e => c.updateMarket(game, { enabled: e.target.checked })} data-testid={`dk-weight-${id}`} /> Weight with market</label>
       <div className="field"><label htmlFor={`sp-${id}`}>Home spread</label><input id={`sp-${id}`} disabled={c.busy} type="number" step="0.5" value={m.homeSpread} placeholder="optional" onChange={e => c.updateMarket(game, { homeSpread: e.target.value })} /></div>
@@ -92,13 +94,13 @@ export default function DraftKingsBoard({ season }: { season: number }) {
         <div className="dk-row">
           <div className="field dk-date-field"><label htmlFor="dk-sunday">Sunday daytime · NFL week (Central)</label>
             <select id="dk-sunday" disabled={c.busy} value={c.sunday} onChange={e => c.setSunday(e.target.value)} data-testid="select-dk-sunday">{c.sundayOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>
-          <button className="btn-primary" disabled={c.busy || !!c.unsavedSlate || !c.games.length} onClick={() => { void c.runSlate(); }} data-testid="button-dk-run">
+          <button className="btn-primary" disabled={c.busy || c.savingSettings || !!c.unsavedSlate || !c.games.length} onClick={() => { void c.runSlate(); }} data-testid="button-dk-run">
             {c.busy ? <><RotateCw size={15} className="spin-icon" /> Simulating</> : <><Play size={15} /> Run and save {c.games.length} games</>}</button>
         </div>
         {c.busy && <div role="status"><span className="dk-muted">{c.progress.completed} of {c.progress.total} {c.progress.matchup}</span>
           <div className="dk-bar"><i style={{ width: `${c.progress.total ? c.progress.completed / c.progress.total * 100 : 0}%` }} /></div></div>}
         {c.games.length === 0 ? <p className="dk-muted">No upcoming games remain on this Sunday.</p> :
-          <details key={slate?.id ?? 'initial-games'} open={c.busy}><summary>Matchup odds ({c.games.length} games, optional)</summary>
+          <details open><summary>High-scoring games &amp; matchup odds ({c.games.length} games, optional)</summary>
             <div className="dk-row"><button className="btn-secondary" disabled={c.busy} onClick={c.refresh}><RotateCw size={14} /> Refresh schedule and history</button></div>
             {c.games.map(g => <MarketRow key={g.id} c={c} game={g} />)}</details>}
       </>}
@@ -116,6 +118,13 @@ export default function DraftKingsBoard({ season }: { season: number }) {
     {view === 'projected' ? (!slate ? <p className="dk-muted">Run a Sunday to see projections.</p> :
       <div className="dk-list">
         <p className="dk-muted">Saved Sunday {slate.sunday} · {slate.forecasts.length} games</p>
+        {slate.forecasts.some(g => g.input.highScoring) && <div className="dk-note" data-testid="dk-high-scoring-saved">
+          <strong>High-scoring assumptions in this saved forecast</strong>
+          {slate.forecasts.filter(g => g.input.highScoring).map(g => <div key={g.gameId}>
+            <p>{g.awayTeam} at {g.homeTeam} · manual +20% target{g.highScoring && ` · baseline ${g.highScoring.baselineTotal.toFixed(1)} → adjusted ${g.highScoring.adjustedTotal.toFixed(1)} combined points (target ${g.highScoring.targetTotal.toFixed(1)})`}</p>
+            {g.highScoring?.warnings.map((warning, i) => <p className="dk-muted" key={i}>{warning}</p>)}
+          </div>)}
+        </div>}
         <details className="dk-gap"><summary>Football stats used &amp; missing data</summary>
           <p className="dk-muted">New forecasts combine season history, last-four-game trends and a separate prior-season baseline. Verified PBP adds passing/rushing efficiency and matchups, play volume, workload shares, red-zone/goal-line roles, snap support, air-yard upside, sacks and hits. Downfield coverage uses 10–19 and 20+ air-yard completions/efficiency, passing-only 15+ gains and YAC, with sample-weighted adjustments and no team-name bonuses. Missing metrics add no secondary-specific adjustment. Fantasy totals and overlapping scoring summaries are comparisons, not additional point boosts.</p>
           {slate.forecasts.flatMap(g => [g.input.away, g.input.home]).map((team, i) =>

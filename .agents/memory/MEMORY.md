@@ -11,6 +11,7 @@
 - [Game selection intent](weekly-simulation-intent.md) — Game Simulator selects and runs one matchup, not the whole week; older weekly-run instructions are superseded.
 - [Prior-season intent](prior-season-intent.md) — separate 2025 baseline and 2026 observations; current eligibility stays authoritative and overlapping sources must not be counted twice.
 - [DraftKings save integrity](draftkings-save-integrity.md) — preserve full frozen inputs; show failed-save results as unsaved rather than leaving stale coverage on screen.
+- [High-scoring intent](high-scoring-intent.md) — manual matchup checkboxes target +20% combined score in new DraftKings forecasts, not equal player-point multipliers.
 - [Standings intent](standings-intent.md) — user marks win pressure manually; division-only, team-specific strategy assumptions must preserve point-in-time forecasts.
 - [Backup QB intent](quarterback-strategy-intent.md) — backup starters should favor rushing; distinguish known depth roles from unknowns and support promoted replacements.
 - [API path validation](api-path-validation.md) — generated numeric-enum path literals do not coerce HTTP strings; validate and convert at the route boundary.

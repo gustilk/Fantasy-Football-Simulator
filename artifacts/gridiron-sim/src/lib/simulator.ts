@@ -121,6 +121,8 @@ export interface SimulationInput {
   importance?: "regular" | "must-win" | "playoff";
   /** Optional market weighting is applied to ensemble summaries, not a single game's raw stats. */
   market?: MarketOdds;
+  /** Manual +20% combined-score expectation, applied only to ensemble weights. */
+  highScoring?: boolean;
   /** Opt-in so legacy frozen forecasts retain their original scoring/replay. */
   showdownModel?: 'showdown-v1';
   /** Absence preserves the old engine and its exact random sequence. */
@@ -182,6 +184,7 @@ export interface SimulationResult {
     defenseFantasy?: { team: string; mean: number; p10: number; p90: number }[];
     kickerFantasy?: { team: string; name: string; mean: number; p10: number; p90: number }[];
     market?: MarketEvidence;
+    highScoring?: import('./high-scoring').HighScoringEvidence;
   };
 }
 

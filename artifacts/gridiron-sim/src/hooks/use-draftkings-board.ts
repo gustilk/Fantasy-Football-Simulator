@@ -40,6 +40,8 @@ export function useDraftKingsBoard(season: number) {
   const [selectedSunday, setSelectedSunday] = useState('');
   const [selectedSlateId, setSelectedSlateId] = useState('');
   const [busy, setBusy] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const settingsWrites = useRef(0);
   const [progress, setProgress] = useState({ completed: 0, total: 0, matchup: '' });
   const running = useRef(false);
   useEffect(() => { setSelectedSunday(''); setSelectedSlateId(''); }, [season]);
@@ -84,6 +86,8 @@ export function useDraftKingsBoard(season: number) {
     total: game.odds ? String(game.odds.total) : '', recordedAt: schedule.data?.fetchedAt ?? new Date().toISOString(),
   };
   const updateMarket = async (game: NflScheduledGame, patch: Partial<DKMarketDraft>) => {
+    if (running.current) return;
+    settingsWrites.current++; setSavingSettings(true);
     setError('');
     const changesLine = patch.homeSpread !== undefined || patch.total !== undefined;
     const recordedAt = new Date().toISOString();
@@ -92,17 +96,25 @@ export function useDraftKingsBoard(season: number) {
         ...(changesLine ? { manual: true, recordedAt } : {}) };
       return { ...archive, marketDrafts: { ...archive.marketDrafts, [`${season}:${game.id}`]: value } };
     }); }
-    catch (error) { setError(`Odds were not saved: ${message(error)}`); }
+    catch (error) { setError(`Matchup settings were not saved: ${message(error)}`); }
+    finally { settingsWrites.current--; setSavingSettings(settingsWrites.current > 0); }
   };
   const usePublicMarket = async (game: NflScheduledGame) => {
+    if (running.current) return;
+    settingsWrites.current++; setSavingSettings(true);
     try {
       await commit(archive => {
         const drafts = { ...archive.marketDrafts };
-        delete drafts[`${season}:${game.id}`];
+        drafts[`${season}:${game.id}`] = {
+          enabled: false, manual: false, homeSpread: game.odds ? String(game.odds.homeSpread) : '',
+          total: game.odds ? String(game.odds.total) : '', recordedAt: schedule.data?.fetchedAt ?? new Date().toISOString(),
+          highScoring: drafts[`${season}:${game.id}`]?.highScoring ?? false,
+        };
         return { ...archive, marketDrafts: drafts };
       });
       setError('');
     } catch (error) { setError(message(error)); }
+    finally { settingsWrites.current--; setSavingSettings(settingsWrites.current > 0); }
   };
   const loadTeam = async (name: string, week: number, savedTeams: TeamSeasonRecord[]) => {
     const team = savedTeams.find(team => team.team === name);
@@ -118,6 +130,7 @@ export function useDraftKingsBoard(season: number) {
   };
   const runSlate = async () => {
     if (running.current) return;
+    if (settingsWrites.current) { setError('Wait for matchup settings to finish saving before running.'); return; }
     setError(''); setNotice('');
     if (schedule.isError || historyQuery.isError || schedule.isLoading || historyQuery.isLoading) {
       setError('Load the schedule and Team Library successfully before running.'); return;
@@ -160,6 +173,7 @@ export function useDraftKingsBoard(season: number) {
             weather: { temperatureF: 68, windMph: 5, precipitation: 'none' },
             importance: game.seasonType === 'postseason' ? 'playoff' : 'regular',
             seed: crypto.getRandomValues(new Uint32Array(1))[0],
+            ...(draft.highScoring ? { highScoring: true } : {}),
             market: draft.enabled ? {
               enabled: true, homeSpread: draft.homeSpread.trim() ? Number(draft.homeSpread) : undefined,
               total: draft.total.trim() ? Number(draft.total) : undefined, recordedAt: draft.recordedAt,
@@ -232,7 +246,7 @@ export function useDraftKingsBoard(season: number) {
   return {
     season, schedule, historyQuery, sundays, sundayOptions, sunday, setSunday: setSelectedSunday, games, slates,
     activeSlate, selectSlate: setSelectedSlateId, actualHistory, projections, accuracy, busy, progress, archiveLoading, unsavedSlate, retrySave,
-    error, notice, storageError: stored.storageError, runSlate, getMarket, updateMarket, usePublicMarket,
+    error, notice, storageError: stored.storageError, runSlate, getMarket, updateMarket, usePublicMarket, savingSettings,
     saveOfficial, removeOfficial, deleteSlate, exportArchive, reloadArchive,
     refresh: () => { void schedule.refetch(); void historyQuery.refetch(); },
   };

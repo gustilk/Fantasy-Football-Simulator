@@ -42,6 +42,7 @@ export interface DKGameForecast {
   kickers?: { team: string; name: string; mean: number; p10: number; p90: number }[];
   input: SimulationInput;
   market?: NonNullable<SimulationResult['ensemble']>['market'];
+  highScoring?: NonNullable<SimulationResult['ensemble']>['highScoring'];
   warnings: string[];
 }
 export interface DKSlate {
@@ -63,6 +64,7 @@ export interface DKOfficialScore {
   enteredAt: string;
 }
 export interface DKMarketDraft {
+  highScoring?: boolean;
   enabled: boolean;
   homeSpread: string;
   total: string;
@@ -173,9 +175,10 @@ export function gameForecast(game: Pick<NflScheduledGame, 'id' | 'week' | 'date'
   return {
     gameId: game.id, week: game.week, kickoff: game.date, awayTeam: game.awayTeam, homeTeam: game.homeTeam,
     seed: result.seed, runs: ensemble.runs, players, input: structuredClone(input), market: ensemble.market,
+    ...(ensemble.highScoring ? { highScoring: ensemble.highScoring } : {}),
     defenses: ensemble.defenseFantasy,
     ...(ensemble.kickerFantasy ? { kickers: ensemble.kickerFantasy } : {}),
-    warnings: [...(input.away.modelEvidence?.warnings ?? []), ...(input.home.modelEvidence?.warnings ?? []), ...(ensemble.market?.warnings ?? []), ...standingsNotes(input.away, input.home), ...quarterbackStrategyNotes(input.away), ...quarterbackStrategyNotes(input.home)],
+    warnings: [...(input.away.modelEvidence?.warnings ?? []), ...(input.home.modelEvidence?.warnings ?? []), ...(ensemble.market?.warnings ?? []), ...(ensemble.highScoring?.warnings ?? []), ...standingsNotes(input.away, input.home), ...quarterbackStrategyNotes(input.away), ...quarterbackStrategyNotes(input.home)],
   };
 }
 

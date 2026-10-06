@@ -1,5 +1,6 @@
-.dk{display:grid;gap:18px}
-.dk .player-table-wrap{max-height:520px;overflow:auto}
+.dk{display:grid;grid-template-columns:minmax(0,1fr);min-width:0;gap:18px}
+.dk>*{min-width:0}
+.dk .player-table-wrap{min-width:0;max-height:520px;overflow:auto}
 .dk .player-table thead{position:sticky;top:0;z-index:1;background:var(--app-card)}
 .dk details>summary{cursor:pointer;font-size:12px;color:var(--app-muted);padding:9px 0}
 .dk h2,.dk h3{font-family:var(--app-font-display);letter-spacing:.04em;margin:0}
@@ -12,7 +13,7 @@
 .dk-row .btn-primary{flex:0 0 auto;min-height:37px}
 .dk-bar{height:6px;border-radius:3px;background:var(--app-bg);overflow:hidden;margin-top:10px}
 .dk-bar i{display:block;height:100%;background:var(--app-away);transition:width .2s}
-.dk-game{padding:12px 0;border-bottom:1px solid var(--app-border);display:grid;gap:8px;font-size:12px}
+.dk-game{padding:12px 0;border-bottom:1px solid var(--app-border);display:grid;grid-template-columns:minmax(0,1fr);min-width:0;gap:8px;font-size:12px;overflow-wrap:anywhere}
 .dk-game:last-child{border-bottom:0}
 .dk-game-head{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
 .dk-game-head span{color:var(--app-muted);font:11px var(--app-font-mono)}
