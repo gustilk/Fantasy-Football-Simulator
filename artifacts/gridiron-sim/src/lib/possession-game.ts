@@ -4,6 +4,7 @@ import { defensiveEventPriorities } from './defensive-tiers';
 import { passingStrategyAdjustment } from './standings';
 import { quarterbackPassShare } from './quarterback-strategy';
 import { backfieldEfficiency } from './backfield-workload';
+import { secondaryMatchup, secondaryNotes } from './secondary-matchup';
 
 type Random = () => number;
 interface Helpers {
@@ -21,6 +22,8 @@ const precipitationImpact = { none: 0, light: 0.025, moderate: 0.06, heavy: 0.10
  * position, rather than merging two independently generated game logs. */
 export function simulatePossessionGame(input: SimulationInput, random: Random, awayPace: number, homePace: number, h: Helpers) {
   const away = h.makeTeam(input.away), home = h.makeTeam(input.home);
+  const secondaries = input.secondaryModel === 'secondary-v1' ? [away, home].map((team, i) =>
+    secondaryMatchup(team.setup.footballEvidence?.secondaryOffense, (i === 0 ? home : away).setup.footballEvidence?.secondaryDefense)) : undefined;
   const wet = precipitationImpact[input.weather.precipitation], wind = bound(input.weather.windMph * 0.0018, 0, 0.19);
   const profiles = [away, home].map((team, i): DriveProfile => {
     const defense = (i === 0 ? home : away).setup, setup = team.setup;
@@ -63,6 +66,11 @@ export function simulatePossessionGame(input: SimulationInput, random: Random, a
     }).join('; ')}.`);
   }
   const drives: SimulatedDrive[] = [];
+  if (secondaries) {
+    notes.push('Secondary method: 10–19 and 20+ air-yard completion/efficiency evidence, passing-only 15+ gains and YAC. Current last-four completed games are primary; any prior-season evidence is capped and separately identified. Changes affect pass outcomes and route depth, not fantasy-point multipliers. Missing metrics add no secondary-specific adjustment.');
+    notes.push(secondaryNotes(home.setup.name, home.setup.footballEvidence?.secondaryDefense, secondaries[0]!),
+      secondaryNotes(away.setup.name, away.setup.footballEvidence?.secondaryDefense, secondaries[1]!));
+  }
   let elapsed = 0, yardsToGoal = 75, awayBall = random() < 0.5;
   while (elapsed < 3600) {
     const team = awayBall ? away : home, profile = profiles[awayBall ? 0 : 1]!, qb = team.players[0]!;
@@ -81,9 +89,12 @@ export function simulatePossessionGame(input: SimulationInput, random: Random, a
         const qbStats = h.recent(team, qb);
         const qbCompletion = qbStats?.passAttempts && qbStats.passCompletions !== undefined ? qbStats.passCompletions / qbStats.passAttempts : 0.645;
         const catchRate = recent?.targets && recent.receptions !== undefined ? recent.receptions / recent.targets : qbCompletion;
+        const completionRate = bound((qbCompletion * 0.75 + catchRate * 0.25 - wind - wet * 0.65) / priorities.passesDefended, 0.25, 0.9);
+        const secondary = secondaries?.[awayBall ? 0 : 1];
+        const passing = kind === 'pass' ? secondary?.sample(random, distance, completionRate, actor.football?.airYardsPerTarget) : undefined;
         return {
           efficiency: bound(efficiency, 0.65, 1.4),
-          completionRate: bound((qbCompletion * 0.75 + catchRate * 0.25 - wind - wet * 0.65) / priorities.passesDefended, 0.25, 0.9),
+          completionRate, passing,
           fumbleRate: bound((h.fumbleChance(team.setup, actor, recent, kind === 'pass' ? 0.009 : 0.012) + wet * 0.04 +
             ((defense.defenseRecent?.fumblesForced ?? 0.7) - 0.7) * 0.004) * priorities.fumblesForced, 0.002, 0.04),
         };
@@ -99,6 +110,7 @@ export function simulatePossessionGame(input: SimulationInput, random: Random, a
             actor.played = true; qb.completions++; qb.passYards += play.gain; actor.receptions++; actor.receivingYards += play.gain;
             if (play.touchdown) { qb.passTD++; actor.receivingTD++; }
             text = `${qb.name} to ${actor.name} for ${play.gain} yards`;
+            if (play.airYards !== undefined) text += ` (${play.airYards} air yards, ${play.yardsAfterCatch} YAC)`;
           } else text = `${qb.name} pass incomplete`;
         } else {
           actor.played = true; actor.rushYards += play.gain;

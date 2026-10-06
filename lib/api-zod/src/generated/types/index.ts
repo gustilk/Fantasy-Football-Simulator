@@ -32,6 +32,7 @@ export * from './nflDepthRole';
 export * from './nflDepthRolePosition';
 export * from './nflImportPreview';
 export * from './nflMarketQuote';
+export * from './nflPassingDepth';
 export * from './nflSchedule';
 export * from './nflScheduledGame';
 export * from './nflScheduledGameSeasonType';

@@ -2,6 +2,7 @@ import type { NflAdvancedPlayer, NflAdvancedReport, TeamSeasonRecord } from '@wo
 import { setupFromHistory } from './season-model';
 import type { TeamSetup } from './simulator';
 import type { PossessionRates } from './possession-drive';
+import type { SecondaryEvidence } from './secondary-matchup';
 
 export interface FootballPlayerEvidence {
   targetShare?: number; carryShare?: number; snapShare?: number; airYardsPerTarget?: number;
@@ -12,6 +13,7 @@ export interface FootballEvidence {
   passDefenseRating: number; rushDefenseRating: number;
   dropbackShare?: number; playsPerGame?: number;
   driveOffense?: PossessionRates; driveDefense?: PossessionRates;
+  secondaryOffense?: SecondaryEvidence; secondaryDefense?: SecondaryEvidence;
   passEpaAllowed?: number; rushEpaAllowed?: number; sackRate?: number; nonSackHitRate?: number;
   passSamples: number; rushSamples: number;
   positionMatchups: Record<string, { delta: number; samples: number }>;
@@ -52,6 +54,11 @@ export function footballSetup(team: TeamSeasonRecord, week: number, venue: 'home
   const current = eligible(reports.current, team.season, week, 4);
   const prior = eligible(reports.prior, team.season - 1, 19, 18);
   const n = current?.games ?? 0, p = prior?.games ?? 0;
+  const secondaryEvidence = (side: 'offense' | 'defense'): SecondaryEvidence => ({
+    current: current?.[side]?.passingDepth, prior: prior?.[side]?.passingDepth,
+    season: team.season, weeks: current ? [...current.sampleWeeks!] : [],
+    priorSeason: prior?.season,
+  });
   const driveEvidence = (side: 'offense' | 'defense'): PossessionRates => {
     const result: PossessionRates = {};
     for (const key of ['successRate', 'explosivePlayRate', 'redZoneTdRate'] as const) {
@@ -118,6 +125,7 @@ export function footballSetup(team: TeamSeasonRecord, week: number, venue: 'home
     passSamples, rushSamples, positionMatchups, dropbackShare: blend(current?.offense?.dropbackShare, prior?.offense?.dropbackShare),
     playsPerGame: blend(current?.offense?.playsPerGame, prior?.offense?.playsPerGame),
     driveOffense: driveEvidence('offense'), driveDefense: driveEvidence('defense'),
+    secondaryOffense: secondaryEvidence('offense'), secondaryDefense: secondaryEvidence('defense'),
     sources: [current, prior].filter((r): r is NflAdvancedReport => !!r).map(r => ({
       season: r.season, games: r.games, weeks: [...r.sampleWeeks!], fetchedAt: r.fetchedAt, status: r.status, urls: r.sources.map(s => s.url),
     })), warnings, matchedPlayers };

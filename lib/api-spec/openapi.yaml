@@ -536,6 +536,7 @@ components:
       type: object
       required: [passPlays, rushPlays, passEpaPlays, rushEpaPlays, passEpaAllowed, rushEpaAllowed, sackHitPlays, sackHitRate, pressureRate, offensePlaysPerGame]
       properties:
+        passingDepth: { $ref: "#/components/schemas/NflPassingDepth" }
         passPlays: { type: integer }
         rushPlays: { type: integer }
         passEpaPlays: { type: integer }
@@ -564,6 +565,7 @@ components:
       type: object
       required: [dropbackShare, passEpa, rushEpa, passSamples, rushSamples, playsPerGame]
       properties:
+        passingDepth: { $ref: "#/components/schemas/NflPassingDepth" }
         dropbackShare: { type: ["number", "null"] }
         passEpa: { type: ["number", "null"] }
         rushEpa: { type: ["number", "null"] }
@@ -576,6 +578,27 @@ components:
         explosiveSamples: { type: integer, minimum: 0 }
         redZoneTdRate: { type: ["number", "null"], minimum: 0, maximum: 1 }
         redZoneTrips: { type: integer, minimum: 0 }
+    NflPassingDepth:
+      type: object
+      description: Actual throws only, excluding sacks and scrambles. Depth is air yards, not total gain. Defense values describe throws allowed.
+      properties:
+        shortAttempts: { type: integer, minimum: 0 }
+        shortCompletionRate: { type: ["number", "null"], minimum: 0, maximum: 1 }
+        shortEpa: { type: ["number", "null"] }
+        shortEpaSamples: { type: integer, minimum: 0 }
+        intermediateAttempts: { type: integer, minimum: 0 }
+        intermediateCompletionRate: { type: ["number", "null"], minimum: 0, maximum: 1 }
+        intermediateEpa: { type: ["number", "null"] }
+        intermediateEpaSamples: { type: integer, minimum: 0 }
+        deepAttempts: { type: integer, minimum: 0 }
+        deepCompletionRate: { type: ["number", "null"], minimum: 0, maximum: 1 }
+        deepEpa: { type: ["number", "null"] }
+        deepEpaSamples: { type: integer, minimum: 0 }
+        unknownDepthAttempts: { type: integer, minimum: 0 }
+        passExplosiveRate: { type: ["number", "null"], minimum: 0, maximum: 1 }
+        passExplosiveSamples: { type: integer, minimum: 0 }
+        yacPerCompletion: { type: ["number", "null"] }
+        yacSamples: { type: integer, minimum: 0 }
     NflAdvancedReport:
       type: object
       required: [season, team, beforeWeek, fetchedAt, status, games, dataThroughWeek, unmatchedPlayers, sources, warnings, players, defense]

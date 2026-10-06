@@ -121,6 +121,8 @@ export interface SimulationInput {
   showdownModel?: 'showdown-v1';
   /** Absence preserves the old engine and its exact random sequence. */
   driveModel?: 'possession-v1';
+  /** Separate opt-in preserves already-frozen possession-v1 forecasts. */
+  secondaryModel?: 'secondary-v1';
 }
 
 export interface SimulatedDrive {
@@ -930,6 +932,7 @@ function makeOverview(
 
 export function simulateGame(input: SimulationInput): SimulationResult {
   if (input.driveModel !== undefined && input.driveModel !== 'possession-v1') throw new Error('Unsupported possession model. Saved forecasts must use their frozen model version.');
+  if (input.secondaryModel !== undefined && (input.secondaryModel !== 'secondary-v1' || input.driveModel !== 'possession-v1')) throw new Error('Unsupported secondary model. Deep-pass matchups require their frozen possession model.');
   if (input.away.name === input.home.name) {
     throw new Error("Choose different teams for the away and home sides.");
   }

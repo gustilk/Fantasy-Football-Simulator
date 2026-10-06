@@ -162,6 +162,36 @@ export const GetNflMatchupEvidenceParams = zod.object({
   "window": zod.union([zod.literal(4),zod.literal(18)])
 })
 
+export const getNflMatchupEvidenceResponseDefensePassingDepthShortAttemptsMin = 0;
+
+export const getNflMatchupEvidenceResponseDefensePassingDepthShortCompletionRateMin = 0;
+export const getNflMatchupEvidenceResponseDefensePassingDepthShortCompletionRateMax = 1;
+
+export const getNflMatchupEvidenceResponseDefensePassingDepthShortEpaSamplesMin = 0;
+
+export const getNflMatchupEvidenceResponseDefensePassingDepthIntermediateAttemptsMin = 0;
+
+export const getNflMatchupEvidenceResponseDefensePassingDepthIntermediateCompletionRateMin = 0;
+export const getNflMatchupEvidenceResponseDefensePassingDepthIntermediateCompletionRateMax = 1;
+
+export const getNflMatchupEvidenceResponseDefensePassingDepthIntermediateEpaSamplesMin = 0;
+
+export const getNflMatchupEvidenceResponseDefensePassingDepthDeepAttemptsMin = 0;
+
+export const getNflMatchupEvidenceResponseDefensePassingDepthDeepCompletionRateMin = 0;
+export const getNflMatchupEvidenceResponseDefensePassingDepthDeepCompletionRateMax = 1;
+
+export const getNflMatchupEvidenceResponseDefensePassingDepthDeepEpaSamplesMin = 0;
+
+export const getNflMatchupEvidenceResponseDefensePassingDepthUnknownDepthAttemptsMin = 0;
+
+export const getNflMatchupEvidenceResponseDefensePassingDepthPassExplosiveRateMin = 0;
+export const getNflMatchupEvidenceResponseDefensePassingDepthPassExplosiveRateMax = 1;
+
+export const getNflMatchupEvidenceResponseDefensePassingDepthPassExplosiveSamplesMin = 0;
+
+export const getNflMatchupEvidenceResponseDefensePassingDepthYacSamplesMin = 0;
+
 export const getNflMatchupEvidenceResponseDefenseSuccessRateAllowedMin = 0;
 export const getNflMatchupEvidenceResponseDefenseSuccessRateAllowedMax = 1;
 
@@ -176,6 +206,36 @@ export const getNflMatchupEvidenceResponseDefenseRedZoneTdRateAllowedMin = 0;
 export const getNflMatchupEvidenceResponseDefenseRedZoneTdRateAllowedMax = 1;
 
 export const getNflMatchupEvidenceResponseDefenseRedZoneTripsMin = 0;
+
+export const getNflMatchupEvidenceResponseOffensePassingDepthShortAttemptsMin = 0;
+
+export const getNflMatchupEvidenceResponseOffensePassingDepthShortCompletionRateMin = 0;
+export const getNflMatchupEvidenceResponseOffensePassingDepthShortCompletionRateMax = 1;
+
+export const getNflMatchupEvidenceResponseOffensePassingDepthShortEpaSamplesMin = 0;
+
+export const getNflMatchupEvidenceResponseOffensePassingDepthIntermediateAttemptsMin = 0;
+
+export const getNflMatchupEvidenceResponseOffensePassingDepthIntermediateCompletionRateMin = 0;
+export const getNflMatchupEvidenceResponseOffensePassingDepthIntermediateCompletionRateMax = 1;
+
+export const getNflMatchupEvidenceResponseOffensePassingDepthIntermediateEpaSamplesMin = 0;
+
+export const getNflMatchupEvidenceResponseOffensePassingDepthDeepAttemptsMin = 0;
+
+export const getNflMatchupEvidenceResponseOffensePassingDepthDeepCompletionRateMin = 0;
+export const getNflMatchupEvidenceResponseOffensePassingDepthDeepCompletionRateMax = 1;
+
+export const getNflMatchupEvidenceResponseOffensePassingDepthDeepEpaSamplesMin = 0;
+
+export const getNflMatchupEvidenceResponseOffensePassingDepthUnknownDepthAttemptsMin = 0;
+
+export const getNflMatchupEvidenceResponseOffensePassingDepthPassExplosiveRateMin = 0;
+export const getNflMatchupEvidenceResponseOffensePassingDepthPassExplosiveRateMax = 1;
+
+export const getNflMatchupEvidenceResponseOffensePassingDepthPassExplosiveSamplesMin = 0;
+
+export const getNflMatchupEvidenceResponseOffensePassingDepthYacSamplesMin = 0;
 
 export const getNflMatchupEvidenceResponseOffenseSuccessRateMin = 0;
 export const getNflMatchupEvidenceResponseOffenseSuccessRateMax = 1;
@@ -233,6 +293,25 @@ export const GetNflMatchupEvidenceResponse = zod.object({
   "goalLineCarryShare": zod.number().nullish()
 })),
   "defense": zod.object({
+  "passingDepth": zod.object({
+  "shortAttempts": zod.number().int().min(getNflMatchupEvidenceResponseDefensePassingDepthShortAttemptsMin).optional(),
+  "shortCompletionRate": zod.number().min(getNflMatchupEvidenceResponseDefensePassingDepthShortCompletionRateMin).max(getNflMatchupEvidenceResponseDefensePassingDepthShortCompletionRateMax).nullish(),
+  "shortEpa": zod.number().nullish(),
+  "shortEpaSamples": zod.number().int().min(getNflMatchupEvidenceResponseDefensePassingDepthShortEpaSamplesMin).optional(),
+  "intermediateAttempts": zod.number().int().min(getNflMatchupEvidenceResponseDefensePassingDepthIntermediateAttemptsMin).optional(),
+  "intermediateCompletionRate": zod.number().min(getNflMatchupEvidenceResponseDefensePassingDepthIntermediateCompletionRateMin).max(getNflMatchupEvidenceResponseDefensePassingDepthIntermediateCompletionRateMax).nullish(),
+  "intermediateEpa": zod.number().nullish(),
+  "intermediateEpaSamples": zod.number().int().min(getNflMatchupEvidenceResponseDefensePassingDepthIntermediateEpaSamplesMin).optional(),
+  "deepAttempts": zod.number().int().min(getNflMatchupEvidenceResponseDefensePassingDepthDeepAttemptsMin).optional(),
+  "deepCompletionRate": zod.number().min(getNflMatchupEvidenceResponseDefensePassingDepthDeepCompletionRateMin).max(getNflMatchupEvidenceResponseDefensePassingDepthDeepCompletionRateMax).nullish(),
+  "deepEpa": zod.number().nullish(),
+  "deepEpaSamples": zod.number().int().min(getNflMatchupEvidenceResponseDefensePassingDepthDeepEpaSamplesMin).optional(),
+  "unknownDepthAttempts": zod.number().int().min(getNflMatchupEvidenceResponseDefensePassingDepthUnknownDepthAttemptsMin).optional(),
+  "passExplosiveRate": zod.number().min(getNflMatchupEvidenceResponseDefensePassingDepthPassExplosiveRateMin).max(getNflMatchupEvidenceResponseDefensePassingDepthPassExplosiveRateMax).nullish(),
+  "passExplosiveSamples": zod.number().int().min(getNflMatchupEvidenceResponseDefensePassingDepthPassExplosiveSamplesMin).optional(),
+  "yacPerCompletion": zod.number().nullish(),
+  "yacSamples": zod.number().int().min(getNflMatchupEvidenceResponseDefensePassingDepthYacSamplesMin).optional()
+}).optional().describe('Actual throws only, excluding sacks and scrambles. Depth is air yards, not total gain. Defense values describe throws allowed.'),
   "passPlays": zod.number().int(),
   "rushPlays": zod.number().int(),
   "passEpaPlays": zod.number().int(),
@@ -255,6 +334,25 @@ export const GetNflMatchupEvidenceResponse = zod.object({
   "redZoneTrips": zod.number().int().min(getNflMatchupEvidenceResponseDefenseRedZoneTripsMin).optional()
 }),
   "offense": zod.object({
+  "passingDepth": zod.object({
+  "shortAttempts": zod.number().int().min(getNflMatchupEvidenceResponseOffensePassingDepthShortAttemptsMin).optional(),
+  "shortCompletionRate": zod.number().min(getNflMatchupEvidenceResponseOffensePassingDepthShortCompletionRateMin).max(getNflMatchupEvidenceResponseOffensePassingDepthShortCompletionRateMax).nullish(),
+  "shortEpa": zod.number().nullish(),
+  "shortEpaSamples": zod.number().int().min(getNflMatchupEvidenceResponseOffensePassingDepthShortEpaSamplesMin).optional(),
+  "intermediateAttempts": zod.number().int().min(getNflMatchupEvidenceResponseOffensePassingDepthIntermediateAttemptsMin).optional(),
+  "intermediateCompletionRate": zod.number().min(getNflMatchupEvidenceResponseOffensePassingDepthIntermediateCompletionRateMin).max(getNflMatchupEvidenceResponseOffensePassingDepthIntermediateCompletionRateMax).nullish(),
+  "intermediateEpa": zod.number().nullish(),
+  "intermediateEpaSamples": zod.number().int().min(getNflMatchupEvidenceResponseOffensePassingDepthIntermediateEpaSamplesMin).optional(),
+  "deepAttempts": zod.number().int().min(getNflMatchupEvidenceResponseOffensePassingDepthDeepAttemptsMin).optional(),
+  "deepCompletionRate": zod.number().min(getNflMatchupEvidenceResponseOffensePassingDepthDeepCompletionRateMin).max(getNflMatchupEvidenceResponseOffensePassingDepthDeepCompletionRateMax).nullish(),
+  "deepEpa": zod.number().nullish(),
+  "deepEpaSamples": zod.number().int().min(getNflMatchupEvidenceResponseOffensePassingDepthDeepEpaSamplesMin).optional(),
+  "unknownDepthAttempts": zod.number().int().min(getNflMatchupEvidenceResponseOffensePassingDepthUnknownDepthAttemptsMin).optional(),
+  "passExplosiveRate": zod.number().min(getNflMatchupEvidenceResponseOffensePassingDepthPassExplosiveRateMin).max(getNflMatchupEvidenceResponseOffensePassingDepthPassExplosiveRateMax).nullish(),
+  "passExplosiveSamples": zod.number().int().min(getNflMatchupEvidenceResponseOffensePassingDepthPassExplosiveSamplesMin).optional(),
+  "yacPerCompletion": zod.number().nullish(),
+  "yacSamples": zod.number().int().min(getNflMatchupEvidenceResponseOffensePassingDepthYacSamplesMin).optional()
+}).optional().describe('Actual throws only, excluding sacks and scrambles. Depth is air yards, not total gain. Defense values describe throws allowed.'),
   "dropbackShare": zod.number().nullable(),
   "passEpa": zod.number().nullable(),
   "rushEpa": zod.number().nullable(),
@@ -479,6 +577,36 @@ export const GetNflAdvancedStatsParams = zod.object({
   "beforeWeek": zod.coerce.number().int().min(1).max(getNflAdvancedStatsPathBeforeWeekMax)
 })
 
+export const getNflAdvancedStatsResponseDefensePassingDepthShortAttemptsMin = 0;
+
+export const getNflAdvancedStatsResponseDefensePassingDepthShortCompletionRateMin = 0;
+export const getNflAdvancedStatsResponseDefensePassingDepthShortCompletionRateMax = 1;
+
+export const getNflAdvancedStatsResponseDefensePassingDepthShortEpaSamplesMin = 0;
+
+export const getNflAdvancedStatsResponseDefensePassingDepthIntermediateAttemptsMin = 0;
+
+export const getNflAdvancedStatsResponseDefensePassingDepthIntermediateCompletionRateMin = 0;
+export const getNflAdvancedStatsResponseDefensePassingDepthIntermediateCompletionRateMax = 1;
+
+export const getNflAdvancedStatsResponseDefensePassingDepthIntermediateEpaSamplesMin = 0;
+
+export const getNflAdvancedStatsResponseDefensePassingDepthDeepAttemptsMin = 0;
+
+export const getNflAdvancedStatsResponseDefensePassingDepthDeepCompletionRateMin = 0;
+export const getNflAdvancedStatsResponseDefensePassingDepthDeepCompletionRateMax = 1;
+
+export const getNflAdvancedStatsResponseDefensePassingDepthDeepEpaSamplesMin = 0;
+
+export const getNflAdvancedStatsResponseDefensePassingDepthUnknownDepthAttemptsMin = 0;
+
+export const getNflAdvancedStatsResponseDefensePassingDepthPassExplosiveRateMin = 0;
+export const getNflAdvancedStatsResponseDefensePassingDepthPassExplosiveRateMax = 1;
+
+export const getNflAdvancedStatsResponseDefensePassingDepthPassExplosiveSamplesMin = 0;
+
+export const getNflAdvancedStatsResponseDefensePassingDepthYacSamplesMin = 0;
+
 export const getNflAdvancedStatsResponseDefenseSuccessRateAllowedMin = 0;
 export const getNflAdvancedStatsResponseDefenseSuccessRateAllowedMax = 1;
 
@@ -493,6 +621,36 @@ export const getNflAdvancedStatsResponseDefenseRedZoneTdRateAllowedMin = 0;
 export const getNflAdvancedStatsResponseDefenseRedZoneTdRateAllowedMax = 1;
 
 export const getNflAdvancedStatsResponseDefenseRedZoneTripsMin = 0;
+
+export const getNflAdvancedStatsResponseOffensePassingDepthShortAttemptsMin = 0;
+
+export const getNflAdvancedStatsResponseOffensePassingDepthShortCompletionRateMin = 0;
+export const getNflAdvancedStatsResponseOffensePassingDepthShortCompletionRateMax = 1;
+
+export const getNflAdvancedStatsResponseOffensePassingDepthShortEpaSamplesMin = 0;
+
+export const getNflAdvancedStatsResponseOffensePassingDepthIntermediateAttemptsMin = 0;
+
+export const getNflAdvancedStatsResponseOffensePassingDepthIntermediateCompletionRateMin = 0;
+export const getNflAdvancedStatsResponseOffensePassingDepthIntermediateCompletionRateMax = 1;
+
+export const getNflAdvancedStatsResponseOffensePassingDepthIntermediateEpaSamplesMin = 0;
+
+export const getNflAdvancedStatsResponseOffensePassingDepthDeepAttemptsMin = 0;
+
+export const getNflAdvancedStatsResponseOffensePassingDepthDeepCompletionRateMin = 0;
+export const getNflAdvancedStatsResponseOffensePassingDepthDeepCompletionRateMax = 1;
+
+export const getNflAdvancedStatsResponseOffensePassingDepthDeepEpaSamplesMin = 0;
+
+export const getNflAdvancedStatsResponseOffensePassingDepthUnknownDepthAttemptsMin = 0;
+
+export const getNflAdvancedStatsResponseOffensePassingDepthPassExplosiveRateMin = 0;
+export const getNflAdvancedStatsResponseOffensePassingDepthPassExplosiveRateMax = 1;
+
+export const getNflAdvancedStatsResponseOffensePassingDepthPassExplosiveSamplesMin = 0;
+
+export const getNflAdvancedStatsResponseOffensePassingDepthYacSamplesMin = 0;
 
 export const getNflAdvancedStatsResponseOffenseSuccessRateMin = 0;
 export const getNflAdvancedStatsResponseOffenseSuccessRateMax = 1;
@@ -550,6 +708,25 @@ export const GetNflAdvancedStatsResponse = zod.object({
   "goalLineCarryShare": zod.number().nullish()
 })),
   "defense": zod.object({
+  "passingDepth": zod.object({
+  "shortAttempts": zod.number().int().min(getNflAdvancedStatsResponseDefensePassingDepthShortAttemptsMin).optional(),
+  "shortCompletionRate": zod.number().min(getNflAdvancedStatsResponseDefensePassingDepthShortCompletionRateMin).max(getNflAdvancedStatsResponseDefensePassingDepthShortCompletionRateMax).nullish(),
+  "shortEpa": zod.number().nullish(),
+  "shortEpaSamples": zod.number().int().min(getNflAdvancedStatsResponseDefensePassingDepthShortEpaSamplesMin).optional(),
+  "intermediateAttempts": zod.number().int().min(getNflAdvancedStatsResponseDefensePassingDepthIntermediateAttemptsMin).optional(),
+  "intermediateCompletionRate": zod.number().min(getNflAdvancedStatsResponseDefensePassingDepthIntermediateCompletionRateMin).max(getNflAdvancedStatsResponseDefensePassingDepthIntermediateCompletionRateMax).nullish(),
+  "intermediateEpa": zod.number().nullish(),
+  "intermediateEpaSamples": zod.number().int().min(getNflAdvancedStatsResponseDefensePassingDepthIntermediateEpaSamplesMin).optional(),
+  "deepAttempts": zod.number().int().min(getNflAdvancedStatsResponseDefensePassingDepthDeepAttemptsMin).optional(),
+  "deepCompletionRate": zod.number().min(getNflAdvancedStatsResponseDefensePassingDepthDeepCompletionRateMin).max(getNflAdvancedStatsResponseDefensePassingDepthDeepCompletionRateMax).nullish(),
+  "deepEpa": zod.number().nullish(),
+  "deepEpaSamples": zod.number().int().min(getNflAdvancedStatsResponseDefensePassingDepthDeepEpaSamplesMin).optional(),
+  "unknownDepthAttempts": zod.number().int().min(getNflAdvancedStatsResponseDefensePassingDepthUnknownDepthAttemptsMin).optional(),
+  "passExplosiveRate": zod.number().min(getNflAdvancedStatsResponseDefensePassingDepthPassExplosiveRateMin).max(getNflAdvancedStatsResponseDefensePassingDepthPassExplosiveRateMax).nullish(),
+  "passExplosiveSamples": zod.number().int().min(getNflAdvancedStatsResponseDefensePassingDepthPassExplosiveSamplesMin).optional(),
+  "yacPerCompletion": zod.number().nullish(),
+  "yacSamples": zod.number().int().min(getNflAdvancedStatsResponseDefensePassingDepthYacSamplesMin).optional()
+}).optional().describe('Actual throws only, excluding sacks and scrambles. Depth is air yards, not total gain. Defense values describe throws allowed.'),
   "passPlays": zod.number().int(),
   "rushPlays": zod.number().int(),
   "passEpaPlays": zod.number().int(),
@@ -572,6 +749,25 @@ export const GetNflAdvancedStatsResponse = zod.object({
   "redZoneTrips": zod.number().int().min(getNflAdvancedStatsResponseDefenseRedZoneTripsMin).optional()
 }),
   "offense": zod.object({
+  "passingDepth": zod.object({
+  "shortAttempts": zod.number().int().min(getNflAdvancedStatsResponseOffensePassingDepthShortAttemptsMin).optional(),
+  "shortCompletionRate": zod.number().min(getNflAdvancedStatsResponseOffensePassingDepthShortCompletionRateMin).max(getNflAdvancedStatsResponseOffensePassingDepthShortCompletionRateMax).nullish(),
+  "shortEpa": zod.number().nullish(),
+  "shortEpaSamples": zod.number().int().min(getNflAdvancedStatsResponseOffensePassingDepthShortEpaSamplesMin).optional(),
+  "intermediateAttempts": zod.number().int().min(getNflAdvancedStatsResponseOffensePassingDepthIntermediateAttemptsMin).optional(),
+  "intermediateCompletionRate": zod.number().min(getNflAdvancedStatsResponseOffensePassingDepthIntermediateCompletionRateMin).max(getNflAdvancedStatsResponseOffensePassingDepthIntermediateCompletionRateMax).nullish(),
+  "intermediateEpa": zod.number().nullish(),
+  "intermediateEpaSamples": zod.number().int().min(getNflAdvancedStatsResponseOffensePassingDepthIntermediateEpaSamplesMin).optional(),
+  "deepAttempts": zod.number().int().min(getNflAdvancedStatsResponseOffensePassingDepthDeepAttemptsMin).optional(),
+  "deepCompletionRate": zod.number().min(getNflAdvancedStatsResponseOffensePassingDepthDeepCompletionRateMin).max(getNflAdvancedStatsResponseOffensePassingDepthDeepCompletionRateMax).nullish(),
+  "deepEpa": zod.number().nullish(),
+  "deepEpaSamples": zod.number().int().min(getNflAdvancedStatsResponseOffensePassingDepthDeepEpaSamplesMin).optional(),
+  "unknownDepthAttempts": zod.number().int().min(getNflAdvancedStatsResponseOffensePassingDepthUnknownDepthAttemptsMin).optional(),
+  "passExplosiveRate": zod.number().min(getNflAdvancedStatsResponseOffensePassingDepthPassExplosiveRateMin).max(getNflAdvancedStatsResponseOffensePassingDepthPassExplosiveRateMax).nullish(),
+  "passExplosiveSamples": zod.number().int().min(getNflAdvancedStatsResponseOffensePassingDepthPassExplosiveSamplesMin).optional(),
+  "yacPerCompletion": zod.number().nullish(),
+  "yacSamples": zod.number().int().min(getNflAdvancedStatsResponseOffensePassingDepthYacSamplesMin).optional()
+}).optional().describe('Actual throws only, excluding sacks and scrambles. Depth is air yards, not total gain. Defense values describe throws allowed.'),
   "dropbackShare": zod.number().nullable(),
   "passEpa": zod.number().nullable(),
   "rushEpa": zod.number().nullable(),

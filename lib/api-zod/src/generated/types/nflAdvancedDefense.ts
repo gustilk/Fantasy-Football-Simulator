@@ -7,8 +7,10 @@
  */
 import type { NflAdvancedDefensePositionEpaAllowed } from './nflAdvancedDefensePositionEpaAllowed';
 import type { NflAdvancedDefensePositionEpaSamples } from './nflAdvancedDefensePositionEpaSamples';
+import type { NflPassingDepth } from './nflPassingDepth';
 
 export interface NflAdvancedDefense {
+  passingDepth?: NflPassingDepth;
   passPlays: number;
   rushPlays: number;
   passEpaPlays: number;

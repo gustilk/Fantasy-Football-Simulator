@@ -1,5 +1,6 @@
 import type { NflAdvancedDefense, NflAdvancedPlayer, NflAdvancedReport, NflAdvancedSource } from '@workspace/api-zod';
 import { csvRecords, sourceNumber as number } from './nfl-advanced-csv';
+import { newPassingCounters, recordPassingDepth, passingDepthReport, type PassingCounters } from './nfl-passing-depth';
 
 export const NFL_TEAM_CODES: Record<string, string> = {
   ARI: 'Arizona Cardinals', ATL: 'Atlanta Falcons', BAL: 'Baltimore Ravens', BUF: 'Buffalo Bills',
@@ -18,6 +19,7 @@ const round = (value: number) => Math.round(value * 10000) / 10000;
 interface Identity { key: string; playerId: string | null; name: string; position: NflAdvancedPlayer['position'] }
 interface PlayerGame extends Identity { targets: number; carries: number; airYards: number; airTargets: number; redZoneTargets: number; goalLineCarries: number; snaps: number | null; snapShare: number | null; participated: boolean }
 interface TeamGame {
+  passing: PassingCounters; passingAllowed: PassingCounters;
   successes: number; successSamples: number; explosives: number; explosiveSamples: number; redZoneTrips: number; redZoneTDs: number;
   successesAllowed: number; successAllowedSamples: number; explosivesAllowed: number; explosiveAllowedSamples: number; redZoneTripsAllowed: number; redZoneTDsAllowed: number;
   players: Map<string, PlayerGame>; targets: number; carries: number; offensePlays: number;
@@ -27,7 +29,7 @@ interface TeamGame {
 }
 interface Game { week: number; date: string; endedAt: number | null; complete: boolean; teams: Map<string, TeamGame> }
 export interface AdvancedSeason { season: number; games: Map<string, Game>; hasPbp: boolean; hasSnaps: boolean; hasIdentities: boolean }
-const newTeam = (): TeamGame => ({ players: new Map(), targets: 0, carries: 0, offensePlays: 0, passPlays: 0, rushPlays: 0, passEpaSum: 0, rushEpaSum: 0, passEpaPlays: 0, rushEpaPlays: 0, hits: 0, hitSamples: 0, dropbacks: 0, offRushes: 0, offPassEpaSum: 0, offRushEpaSum: 0, offPassSamples: 0, offRushSamples: 0, sacks: 0, redZoneTargets: 0, goalLineCarries: 0, rbEpa: 0, wrEpa: 0, teEpa: 0, rbTargets: 0, wrTargets: 0, teTargets: 0,
+const newTeam = (): TeamGame => ({ passing: newPassingCounters(), passingAllowed: newPassingCounters(), players: new Map(), targets: 0, carries: 0, offensePlays: 0, passPlays: 0, rushPlays: 0, passEpaSum: 0, rushEpaSum: 0, passEpaPlays: 0, rushEpaPlays: 0, hits: 0, hitSamples: 0, dropbacks: 0, offRushes: 0, offPassEpaSum: 0, offRushEpaSum: 0, offPassSamples: 0, offRushSamples: 0, sacks: 0, redZoneTargets: 0, goalLineCarries: 0, rbEpa: 0, wrEpa: 0, teEpa: 0, rbTargets: 0, wrTargets: 0, teTargets: 0,
   successes: 0, successSamples: 0, explosives: 0, explosiveSamples: 0, redZoneTrips: 0, redZoneTDs: 0,
   successesAllowed: 0, successAllowedSamples: 0, explosivesAllowed: 0, explosiveAllowedSamples: 0, redZoneTripsAllowed: 0, redZoneTDsAllowed: 0 });
 const newPlayer = (identity: Identity): PlayerGame => ({ ...identity, targets: 0, carries: 0, airYards: 0, airTargets: 0, redZoneTargets: 0, goalLineCarries: 0, snaps: null, snapShare: null, participated: false });
@@ -86,6 +88,7 @@ export function parseAdvancedSeason(season: number, pbp?: string, snaps?: string
     if (!dropback && !rush) continue;
     if (!game.teams.has(code(row.posteam!)) || !game.teams.has(code(row.defteam!)) || code(row.posteam!) === code(row.defteam!)) throw new Error('Mismatched offense/defense in advanced source.');
     const offense = teamGame(game, row.posteam!), defense = teamGame(game, row.defteam!);
+    recordPassingDepth(row, offense.passing, defense.passingAllowed);
     offense.offensePlays++;
     const gain = number(row.yards_gained), down = number(row.down), toGo = number(row.ydstogo);
     // Yardage-based success: 40%/60%/100% of yards to go on downs 1/2/3–4.
@@ -210,9 +213,10 @@ export function advancedReport(data: AdvancedSeason, teamName: string, beforeWee
   }).filter(p => p.position !== 'unknown' || (p.targets ?? 0) > 0 || (p.carries ?? 0) > 0)
     .sort((a, b) => (b.offenseSnaps ?? 0) - (a.offenseSnaps ?? 0) || a.name.localeCompare(b.name));
   const teams = selected.map(g => g.teams.get(teamCode)!);
-  const sum = (field: keyof Omit<TeamGame, 'players'>) => teams.reduce((total, row) => total + row[field], 0);
+  const sum = (field: keyof Omit<TeamGame, 'players' | 'passing' | 'passingAllowed'>) => teams.reduce((total, row) => total + row[field], 0);
   const passEpaPlays = sum('passEpaPlays'), rushEpaPlays = sum('rushEpaPlays'), hitSamples = sum('hitSamples');
   const defense: NflAdvancedDefense = { passPlays: sum('passPlays'), rushPlays: sum('rushPlays'), passEpaPlays, rushEpaPlays,
+    passingDepth: passingDepthReport(teams.map(t => t.passingAllowed)),
     successRateAllowed: sum('successAllowedSamples') ? round(sum('successesAllowed') / sum('successAllowedSamples')) : null,
     successSamples: sum('successAllowedSamples'),
     explosivePlayRateAllowed: sum('explosiveAllowedSamples') ? round(sum('explosivesAllowed') / sum('explosiveAllowedSamples')) : null,
@@ -239,6 +243,7 @@ export function advancedReport(data: AdvancedSeason, teamName: string, beforeWee
     'Target/carry shares are averages across verified participation games; absent players are not assigned zero. Targets require an identified receiver; carries exclude kneels. Scrambles count as dropbacks for EPA.',
     'Only completed regular-season games before the cutoff are included. Fetch time is not independent proof of historical pregame publication.',
     'Drive metrics: success requires 40%/60%/100% of yards to go on downs 1/2/3–4, with turnovers unsuccessful; explosiveness is gains of at least 15 yards. Red-zone efficiency is offensive TDs per drive reaching the opponent’s 20. Missing fields are excluded, not assigned zero.',
+    'Passing depth uses air yards: short <10, intermediate 10–19, deep 20+. Actual throws exclude sacks and scrambles. Passing explosiveness uses total gain >=15; YAC averages known completed catches only. Depth/EPA/YAC denominators are separate; these statistics are not secondary player grades or blitz rates.',
   ];
   if (!data.hasSnaps) warnings.push('Snap counts are unavailable. Without snaps, opportunity shares may miss games where a player had no recorded opportunity.');
   if (unmatchedPlayers) warnings.push(`${unmatchedPlayers} players lack a unique ESPN identity; they are not matched to saved rosters by name.`);
@@ -252,6 +257,7 @@ export function advancedReport(data: AdvancedSeason, teamName: string, beforeWee
     dataThroughWeek: selected.length ? Math.max(...selected.map(g => g.week)) : null, unmatchedPlayers, sources, warnings, players, defense,
     sampleWeeks: selected.map(g => g.week),
     offense: { dropbackShare: sum('offensePlays') ? round(sum('dropbacks') / sum('offensePlays')) : null,
+      passingDepth: passingDepthReport(teams.map(t => t.passing)),
       successRate: sum('successSamples') ? round(sum('successes') / sum('successSamples')) : null,
       successSamples: sum('successSamples'),
       explosivePlayRate: sum('explosiveSamples') ? round(sum('explosives') / sum('explosiveSamples')) : null,

@@ -5,8 +5,10 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { NflPassingDepth } from './nflPassingDepth';
 
 export interface NflAdvancedOffense {
+  passingDepth?: NflPassingDepth;
   /** @nullable */
   dropbackShare: number | null;
   /** @nullable */

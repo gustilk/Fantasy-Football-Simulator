@@ -215,6 +215,7 @@ function App() {
             <div className="panel-top">
                <div className="panel-title" id="setup-title">Choose your game</div>
             </div>
+              <p className="stats-help">New runs include downfield coverage matchups from the last four completed games, with a separately capped prior-season baseline. Air-yard depth, explosive passes and YAC affect pass outcomes—not direct fantasy-point bonuses. Sample details appear in the result’s assumptions; saved forecasts stay unchanged.</p>
               <UpcomingGames key={season} season={season} enabled={tab === 'simulator'} busy={busy} teams={storedTeams}
                historyReady={!history.isLoading && !history.isError}
                loadDepth={(year, name) => queryClient.fetchQuery({

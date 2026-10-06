@@ -247,7 +247,64 @@ export type NflAdvancedDefensePositionEpaAllowed = {[key: string]: number};
 
 export type NflAdvancedDefensePositionEpaSamples = {[key: string]: number};
 
+/**
+ * Actual throws only, excluding sacks and scrambles. Depth is air yards, not total gain. Defense values describe throws allowed.
+ */
+export interface NflPassingDepth {
+  /** @minimum 0 */
+  shortAttempts?: number;
+  /**
+     * @minimum 0
+     * @maximum 1
+     * @nullable
+     */
+  shortCompletionRate?: number | null;
+  /** @nullable */
+  shortEpa?: number | null;
+  /** @minimum 0 */
+  shortEpaSamples?: number;
+  /** @minimum 0 */
+  intermediateAttempts?: number;
+  /**
+     * @minimum 0
+     * @maximum 1
+     * @nullable
+     */
+  intermediateCompletionRate?: number | null;
+  /** @nullable */
+  intermediateEpa?: number | null;
+  /** @minimum 0 */
+  intermediateEpaSamples?: number;
+  /** @minimum 0 */
+  deepAttempts?: number;
+  /**
+     * @minimum 0
+     * @maximum 1
+     * @nullable
+     */
+  deepCompletionRate?: number | null;
+  /** @nullable */
+  deepEpa?: number | null;
+  /** @minimum 0 */
+  deepEpaSamples?: number;
+  /** @minimum 0 */
+  unknownDepthAttempts?: number;
+  /**
+     * @minimum 0
+     * @maximum 1
+     * @nullable
+     */
+  passExplosiveRate?: number | null;
+  /** @minimum 0 */
+  passExplosiveSamples?: number;
+  /** @nullable */
+  yacPerCompletion?: number | null;
+  /** @minimum 0 */
+  yacSamples?: number;
+}
+
 export interface NflAdvancedDefense {
+  passingDepth?: NflPassingDepth;
   passPlays: number;
   rushPlays: number;
   passEpaPlays: number;
@@ -296,6 +353,7 @@ export interface NflAdvancedDefense {
 }
 
 export interface NflAdvancedOffense {
+  passingDepth?: NflPassingDepth;
   /** @nullable */
   dropbackShare: number | null;
   /** @nullable */

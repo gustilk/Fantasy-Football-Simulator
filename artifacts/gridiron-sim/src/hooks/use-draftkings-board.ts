@@ -153,6 +153,7 @@ export function useDraftKingsBoard(season: number) {
           if (Date.parse(game.date) <= Date.now()) throw new Error('Kickoff passed while football evidence was loading. This game was not forecast.');
           const input: SimulationInput = {
             driveModel: 'possession-v1',
+            secondaryModel: 'secondary-v1',
             away: applyStandings(footballSetup(awayTeam, game.week, 'away', game.homeTeam, awayEvidence), findStandings(frozenStandings, season, game.week), season, game.week),
             home: applyStandings(footballSetup(homeTeam, game.week, 'home', game.awayTeam, homeEvidence), findStandings(frozenStandings, season, game.week), season, game.week),
             // No game-day weather feed exists. These assumptions are explicit in the UI and snapshot.

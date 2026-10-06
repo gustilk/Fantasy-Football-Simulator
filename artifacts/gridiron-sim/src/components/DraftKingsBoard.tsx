@@ -117,7 +117,7 @@ export default function DraftKingsBoard({ season }: { season: number }) {
       <div className="dk-list">
         <p className="dk-muted">Saved Sunday {slate.sunday} · {slate.forecasts.length} games</p>
         <details className="dk-gap"><summary>Football stats used &amp; missing data</summary>
-          <p className="dk-muted">New forecasts combine season history, last-four-game trends and a separate prior-season baseline. Verified PBP adds passing/rushing efficiency and matchups, play volume, workload shares, red-zone/goal-line roles, snap support, air-yard upside, sacks and hits. Fantasy totals and overlapping scoring summaries are comparisons, not additional point boosts.</p>
+          <p className="dk-muted">New forecasts combine season history, last-four-game trends and a separate prior-season baseline. Verified PBP adds passing/rushing efficiency and matchups, play volume, workload shares, red-zone/goal-line roles, snap support, air-yard upside, sacks and hits. Downfield coverage uses 10–19 and 20+ air-yard completions/efficiency, passing-only 15+ gains and YAC, with sample-weighted adjustments and no team-name bonuses. Missing metrics add no secondary-specific adjustment. Fantasy totals and overlapping scoring summaries are comparisons, not additional point boosts.</p>
           {slate.forecasts.flatMap(g => [g.input.away, g.input.home]).map((team, i) =>
             <div key={`${team.name}-${i}`} className="dk-gap"><strong>{team.name}</strong>
               {team.footballEvidence ? <>

@@ -1,3 +1,4 @@
+import type { SecondaryPass } from './secondary-matchup';
 export type DriveOutcome = 'TD' | 'FG' | 'Punt' | 'Turnover' | 'End';
 export type DriveTurnover = 'interception' | 'fumble' | 'downs' | 'missed-fg';
 export interface PossessionRates {
@@ -11,6 +12,7 @@ export interface DriveProfile {
   fieldGoalPenalty: number; secondsPerPlay: number;
 }
 export interface PossessionPlay {
+  airYards?: number; yardsAfterCatch?: number;
   kind: 'pass' | 'run' | 'sack'; completed: boolean; gain: number; touchdown: boolean;
   turnover?: 'interception' | 'fumble'; explosive: boolean; successful: boolean;
 }
@@ -44,7 +46,7 @@ export function matchupDriveRates(offense: PossessionRates = {}, defense: Posses
  * These mappings are heuristics, not an accuracy-calibrated football model. */
 export function simulatePossessionDrive(options: {
   profile: DriveProfile; random: () => number; startYardsToGoal?: number; secondsAvailable: number;
-  opportunity?: (kind: 'pass' | 'run', yardsToGoal: number) => { efficiency: number; completionRate: number; fumbleRate: number };
+  opportunity?: (kind: 'pass' | 'run', yardsToGoal: number) => { efficiency: number; completionRate: number; fumbleRate: number; passing?: SecondaryPass };
   onPlay?: (play: PossessionPlay, yardsToGoal: number) => void;
 }): PossessionDrive {
   const { profile: p, random } = options;
@@ -84,6 +86,22 @@ export function simulatePossessionDrive(options: {
     const play: PossessionPlay = { kind: pass ? 'pass' : 'run', completed: false, gain: 0, touchdown: false, explosive: false, successful: false };
     if (pass && random() < p.interceptionRate) play.turnover = 'interception';
     else if (pass && random() < p.sackRate) { play.kind = 'sack'; play.gain = -integer(random, 3, 9); }
+    else if (pass && opportunity?.passing) {
+      const context = opportunity.passing;
+      if (!Number.isFinite(context.completionRate) || context.completionRate < 0 || context.completionRate > 1
+        || !Number.isFinite(context.airYards) || !Number.isFinite(context.yacMean) || context.yacMean < 0) throw new Error('Invalid passing-depth context.');
+      play.airYards = context.airYards;
+      play.completed = random() < context.completionRate;
+      if (play.completed) {
+        const finishes = inRedZone && random() < 1 - Math.pow(1 - p.redZoneTdRate, 1 / 4);
+        const yac = integer(random, 0, Math.round(context.yacMean * efficiency * 2));
+        play.gain = finishes ? drive.endYardsToGoal : Math.min(context.airYards + yac, drive.endYardsToGoal - (inRedZone ? 1 : 0));
+        play.yardsAfterCatch = play.gain - context.airYards;
+        if (random() < fumbleRate) play.turnover = 'fumble';
+      }
+      // No second generic explosive roll: air depth + YAC determine the
+      // actual 15+ gain, avoiding duplicate big-play bonuses from shared data.
+    }
     else {
       const finishes = inRedZone && random() < 1 - Math.pow(1 - p.redZoneTdRate, 1 / 4);
       const explosive = random() < (pass ? Math.min(p.explosivePlayRate, completionRate) : p.explosivePlayRate);
@@ -107,6 +125,7 @@ export function simulatePossessionDrive(options: {
       if ((!pass || play.completed) && random() < fumbleRate) play.turnover = 'fumble';
     }
     play.gain = Math.max(play.gain, drive.endYardsToGoal - 99);
+    if (play.completed && play.airYards !== undefined) play.yardsAfterCatch = play.gain - play.airYards;
     const startYards = drive.endYardsToGoal;
     drive.endYardsToGoal = bound(drive.endYardsToGoal - play.gain, 0, 99);
     play.touchdown = drive.endYardsToGoal === 0 && !play.turnover;
