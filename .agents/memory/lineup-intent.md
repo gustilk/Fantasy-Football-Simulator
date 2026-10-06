@@ -49,7 +49,13 @@ Classic and Captain CSV uploads must be independent, including retention and for
 
 **Why:** The user said, “I did not upload the captain mode CVs, the classic CVs and captain mode should be separate.”
 
-**How to apply:** A Classic upload must not appear as the Captain upload. Uploading, replacing or removing either file must not overwrite or delete the other's file. Without a Captain CSV, explain that it must be uploaded rather than displaying the Classic file.
+**How to apply:** A Classic upload must not appear as the Captain upload. Uploading, replacing or removing either file must not overwrite or delete the other's file. Without Captain salaries, offer direct Captain import or manual Showdown CSV upload rather than displaying the Classic file.
+
+Direct Captain salary import is wanted for the selected saved Game Simulator matchup, without phone download/re-upload.
+
+**Why:** The user approved adding direct Captain import for the selected game after the missing Captain salary file blocked lineup generation.
+
+**How to apply:** Match official full-game NFL Captain salaries to both selected teams and the confirmed kickoff. Do not substitute a different game, Madden, or a partial-game contest when that matchup is unpublished. Direct import may pair the exact verified forecast; manual CSV upload remains available without a forecast.
 
 Salary uploads must be available across desktop and mobile browsers without uploading again.
 

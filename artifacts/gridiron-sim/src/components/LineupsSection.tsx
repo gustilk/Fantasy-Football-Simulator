@@ -14,7 +14,7 @@ import { buildShowdownPool } from '@/lib/showdown-lineups';
 import { SHOWDOWN_RULES_URL } from '@/lib/showdown-scoring';
 import type { SavedSalaries } from '@/lib/salary-storage';
 import { useSyncedSalaries } from '@/hooks/use-synced-salaries';
-import { getFeaturedClassicSalary } from '@workspace/api-client-react';
+import { getCaptainSalary, getFeaturedClassicSalary } from '@workspace/api-client-react';
 import { useLineupExclusions } from '@/hooks/use-lineup-exclusions';
 import { applyLineupExclusions } from '@/lib/lineup-exclusions';
 import LineupExclusions from './LineupExclusions';
@@ -127,6 +127,36 @@ export default function LineupsSection({ season, forecastSource }: { season: num
       if (attempt === importAttempt.current) setImporting(false);
     }
   };
+  const importCaptain = async () => {
+    if (format !== 'showdown' || saved.status === 'corrupt' || !slate || !game) return;
+    const attempt = ++importAttempt.current;
+    setImporting(true); setFileError(''); setFileNotice('');
+    try {
+      const captain = await getCaptainSalary(season, {
+        awayTeam: game.awayTeam, homeTeam: game.homeTeam, kickoff: game.kickoff,
+      }, { signal: AbortSignal.timeout(45000) });
+      if (attempt !== importAttempt.current) return;
+      const players = parseSalaryCsv(captain.csv, 'showdown');
+      if (captain.awayTeam !== game.awayTeam || captain.homeTeam !== game.homeTeam
+        || Date.parse(captain.startTime) !== Date.parse(game.kickoff)
+        || !players.every(p => matchesGameInfo(p, game))) {
+        throw new Error('The returned Captain salaries do not match your selected forecast.');
+      }
+      if (Date.parse(game.kickoff) <= Date.now()) throw new Error('This game has started. Salaries were not imported.');
+      if (record && !window.confirm(`Replace "${record.filename}" with official Captain salaries for ${game.awayTeam} at ${game.homeTeam}, ${new Date(game.kickoff).toLocaleString()}? Classic salaries will not change.`)) return;
+      await salarySync.save({
+        version: 1, season, filename: captain.filename, importedAt: new Date().toISOString(),
+        slateId: slate.id, sunday: slate.sunday, gameId: game.gameId, csv: captain.csv, format: 'showdown',
+      });
+      if (attempt === importAttempt.current) {
+        setFileNotice(`Imported ${players.length} official Captain salary rows for ${game.awayTeam} at ${game.homeTeam} and paired them with your selected forecast. Saved across devices; Classic salaries are unchanged.`);
+      }
+    } catch (e) {
+      if (attempt === importAttempt.current) setFileError(`Captain salaries were not imported: ${msg(e)} You can still upload the official Showdown CSV manually.`);
+    } finally {
+      if (attempt === importAttempt.current) setImporting(false);
+    }
+  };
   const discard = async () => {
     importAttempt.current++; setImporting(false); setFileNotice('');
     try { await salarySync.remove(); setFileError(''); }
@@ -191,7 +221,7 @@ export default function LineupsSection({ season, forecastSource }: { season: num
       <h1>{forecastSource ? 'DraftKings Captain lineups' : 'Lineups'}</h1>
       <p>DraftKings {format === 'showdown' ? 'Showdown Captain' : 'Classic'} lineups, {season}.{forecastSource && ' Choose your saved single-game forecast.'}</p>
     </div>
-    <div className="dk-note lu-warn" role="note"><strong>Import salaries for every contest.</strong> Upload the official DraftKings NFL {format === 'showdown' ? 'Showdown CSV with separate CPT and FLEX rows' : 'Classic CSV'}, then pair it with the forecast for the same matchup{format === 'classic' ? 's' : ''}. {format === 'classic' && 'Use Game Simulator for Captain contests.'}</div>
+    <div className="dk-note lu-warn" role="note"><strong>Import salaries for every contest.</strong> {format === 'showdown' ? 'Select your saved matchup and use Import Captain salaries, or upload the official Showdown CSV with separate CPT and FLEX rows.' : 'Import Featured Classic or upload the official DraftKings NFL Classic CSV, then pair it with the forecast for the same matchups. Use Game Simulator for Captain contests.'}</div>
     {storageError && <div className="dk-err" role="alert">{storageError}{!forecastSource && <button className="btn-secondary" onClick={c.reloadArchive}>Retry</button>}</div>}
     {forecastSource && <details className="panel dk-panel lu-panel"><summary>Official Captain rules &amp; scoring</summary>
       <p className="dk-muted">1 CPT + 5 FLEX, six different players from both teams in one game. $50,000 cap. Captain costs 1.5× FLEX salary and scores 1.5× all points, bonuses and penalties. QB/RB/WR/TE/K/DST are eligible.</p>
@@ -206,11 +236,11 @@ export default function LineupsSection({ season, forecastSource }: { season: num
       {slates.length === 0
         ? <p className="dk-muted">No eligible saved forecasts for {season}. You can upload salaries now. To generate lineups, {forecastInstructions}, then select it here.</p>
         : <div className="field"><label htmlFor="lu-slate">Saved forecast slate</label>
-          <select id="lu-slate" value={slate?.id ?? ''} onChange={e => selectSlate(e.target.value)}>
+          <select id="lu-slate" disabled={importing} value={slate?.id ?? ''} onChange={e => selectSlate(e.target.value)}>
             {slates.map(s => <option key={s.id} value={s.id}>{s.sunday} · {s.forecasts.length} games · saved {new Date(s.savedAt ?? s.createdAt).toLocaleString()}</option>)}
           </select></div>}
       {format === 'showdown' && slate && <div className="field lu-gap"><label htmlFor="lu-game">Single game</label>
-        <select id="lu-game" data-testid="showdown-game" value={game?.gameId ?? ''} onChange={e => setSelectedGameId(e.target.value)}>
+        <select id="lu-game" disabled={importing} data-testid="showdown-game" value={game?.gameId ?? ''} onChange={e => setSelectedGameId(e.target.value)}>
           {slate.forecasts.map(g => <option key={g.gameId} value={g.gameId}>{g.awayTeam} at {g.homeTeam} · {new Date(g.kickoff).toLocaleString()}</option>)}
         </select></div>}
     </div>
@@ -221,7 +251,7 @@ export default function LineupsSection({ season, forecastSource }: { season: num
       {salarySync.loading && <p className="dk-muted" role="status">Syncing salary data…</p>}
       {salarySync.error && <div className="dk-err" role="alert">{salarySync.error} <button className="btn-secondary" onClick={salarySync.refresh}>Retry salary sync</button></div>}
       {salarySync.warning && <p className="dk-note" role="status">{salarySync.warning}</p>}
-      {saved.status === 'none' && <p className="dk-note" role="status">No {formatLabel} salary CSV uploaded. {format === 'showdown' ? 'Upload the official single-game Showdown CSV with CPT and FLEX rows; your Classic CSV stays in Lineups.' : 'Import Featured Classic directly from DraftKings, or upload your contest CSV. No phone download is needed for direct import; Captain files stay in Game Simulator.'}</p>}
+      {saved.status === 'none' && <p className="dk-note" role="status">No {formatLabel} salaries saved. {format === 'showdown' ? 'Import Captain salaries for the selected saved matchup directly from DraftKings, or upload its Showdown CSV. Your Classic salaries stay in Lineups.' : 'Import Featured Classic directly from DraftKings, or upload your contest CSV. No phone download is needed for direct import; Captain files stay in Game Simulator.'}</p>}
       {saved.status === 'corrupt' && <div className="dk-err" role="alert">Saved salary data could not be read: {saved.reason}
         <button className="btn-secondary" onClick={discard}><Trash2 size={14} /> Discard saved data</button></div>}
       {saved.status === 'other-season' && <div className="dk-note">A salary file from season {saved.record.season} ({saved.record.filename}) is stored but is not used for {season}. Import this season's file to replace it.</div>}
@@ -235,8 +265,11 @@ export default function LineupsSection({ season, forecastSource }: { season: num
         <input ref={fileRef} type="file" accept=".csv,text/csv" hidden data-testid="lineups-file"
           onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void importFile(f); }} />
         {format === 'classic' && <button className="btn-primary" data-testid="lineups-import-featured" disabled={saved.status === 'corrupt' || importing || salarySync.loading || !!salarySync.error} onClick={() => void importFeatured()}><Download size={14} /> Import Featured Classic</button>}
+        {format === 'showdown' && <button className="btn-primary" data-testid="lineups-import-captain" disabled={!game || !slate || Date.parse(game.kickoff) <= clock || !Number.isFinite(Date.parse(game.kickoff)) || saved.status === 'corrupt' || importing || salarySync.loading || !!salarySync.error} onClick={() => void importCaptain()}><Download size={14} /> Import Captain salaries</button>}
         <button className="btn-secondary" data-testid="lineups-upload" disabled={saved.status === 'corrupt' || importing || salarySync.loading || !!salarySync.error} onClick={() => fileRef.current?.click()}>{importing ? <><RotateCw size={14} className="spin-icon" /> Importing {formatLabel} salaries…</> : <><Upload size={14} /> {record ? `Replace ${formatLabel} salary CSV` : `Upload ${formatLabel} salary CSV`}</>}</button>
       </div>
+      {format === 'showdown' && !game && <p className="dk-muted lu-gap">For direct import, first run and save the upcoming matchup in Game Simulator. Manual CSV upload remains available without a forecast.</p>}
+      {format === 'showdown' && game && Date.parse(game.kickoff) <= clock && <p className="dk-err lu-gap" role="alert">This matchup has already started. Select and save an upcoming game for Captain import and generation.</p>}
       {importing && <p className="dk-muted lu-gap" role="status">Loading, validating and saving salaries…</p>}
       {fileNotice && <p className="dk-note lu-gap" role="status" data-testid="lineups-featured-status">{fileNotice}</p>}
       {fileError && <div className="dk-err" role="alert">{fileError}</div>}

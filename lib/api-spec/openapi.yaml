@@ -11,6 +11,48 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /draftkings/captain/{season}:
+    get:
+      operationId: getCaptainSalary
+      summary: Retrieve official full-game Captain salaries for the selected NFL matchup
+      parameters:
+        - in: path
+          name: season
+          required: true
+          schema: { type: integer, minimum: 2000, maximum: 2100 }
+        - in: query
+          name: awayTeam
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 80 }
+        - in: query
+          name: homeTeam
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 80 }
+        - in: query
+          name: kickoff
+          required: true
+          schema: { type: string, format: date-time }
+      responses:
+        "200":
+          description: Verified official Captain CSV for the exact matchup, not yet saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CaptainSalary" }
+        "400":
+          description: Invalid or already-started matchup
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeasonError" }
+        "404":
+          description: Captain salaries not yet published for this matchup
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeasonError" }
+        "502":
+          description: DraftKings unavailable or salary validation failed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SeasonError" }
   /draftkings/featured-classic/{season}:
     get:
       operationId: getFeaturedClassicSalary
@@ -322,6 +364,17 @@ paths:
               schema: { $ref: "#/components/schemas/SeasonError" }
 components:
   schemas:
+    CaptainSalary:
+      type: object
+      required: [draftGroupId, startTime, awayTeam, homeTeam, filename, csv, sourceUrl]
+      properties:
+        draftGroupId: { type: integer, minimum: 1 }
+        startTime: { type: string, format: date-time }
+        awayTeam: { type: string }
+        homeTeam: { type: string }
+        filename: { type: string }
+        csv: { type: string, minLength: 1, maxLength: 2000000 }
+        sourceUrl: { type: string, format: uri }
     FeaturedClassicSalary:
       type: object
       required: [draftGroupId, startTime, gameCount, filename, csv, sourceUrl]

@@ -5,6 +5,21 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface CaptainSalary {
+  /** @minimum 1 */
+  draftGroupId: number;
+  startTime: string;
+  awayTeam: string;
+  homeTeam: string;
+  filename: string;
+  /**
+     * @minLength 1
+     * @maxLength 2000000
+     */
+  csv: string;
+  sourceUrl: string;
+}
+
 export interface FeaturedClassicSalary {
   /** @minimum 1 */
   draftGroupId: number;
@@ -571,6 +586,20 @@ export interface NflImportPreview {
   weeks: TeamWeek[];
   warnings: string[];
 }
+
+export type GetCaptainSalaryParams = {
+/**
+ * @minLength 1
+ * @maxLength 80
+ */
+awayTeam: string;
+/**
+ * @minLength 1
+ * @maxLength 80
+ */
+homeTeam: string;
+kickoff: string;
+};
 
 export type GetNflScheduleParams = {
 /**

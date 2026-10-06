@@ -21,7 +21,7 @@ export function selectFeaturedClassic(lobby: unknown, season: number, now = Date
   return groups[0];
 }
 
-function csvRows(csv: string) {
+export function csvRows(csv: string) {
   const rows: string[][] = [];
   let row: string[] = [], cell = '', quoted = false, closed = false;
   for (const char of csv.replace(/^\uFEFF/, '') + '\n') {
@@ -71,7 +71,7 @@ export function validateFeaturedCsv(csv: string, group: DraftGroup) {
   if (games.size !== group.GameCount) throw new Error('DraftKings export game count does not match the featured slate.');
 }
 
-async function sourceText(url: string, kind: 'lobby' | 'csv') {
+export async function sourceText(url: string, kind: 'lobby' | 'csv') {
   const response = await fetch(url, {
     headers: { 'User-Agent': 'GridironSim/1.0', Accept: kind === 'csv' ? 'text/csv,application/csv' : 'application/json' },
     signal: AbortSignal.timeout(15000),

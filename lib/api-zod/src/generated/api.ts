@@ -9,6 +9,46 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Retrieve official full-game Captain salaries for the selected NFL matchup
+ */
+export const getCaptainSalaryPathSeasonMin = 2000;
+export const getCaptainSalaryPathSeasonMax = 2100;
+
+
+
+export const GetCaptainSalaryParams = zod.object({
+  "season": zod.coerce.number().int().min(getCaptainSalaryPathSeasonMin).max(getCaptainSalaryPathSeasonMax)
+})
+
+export const getCaptainSalaryQueryAwayTeamMax = 80;
+
+export const getCaptainSalaryQueryHomeTeamMax = 80;
+
+
+
+export const GetCaptainSalaryQueryParams = zod.object({
+  "awayTeam": zod.coerce.string().min(1).max(getCaptainSalaryQueryAwayTeamMax),
+  "homeTeam": zod.coerce.string().min(1).max(getCaptainSalaryQueryHomeTeamMax),
+  "kickoff": zod.date()
+})
+
+
+export const getCaptainSalaryResponseCsvMax = 2000000;
+
+
+
+export const GetCaptainSalaryResponse = zod.object({
+  "draftGroupId": zod.number().int().min(1),
+  "startTime": zod.coerce.date(),
+  "awayTeam": zod.string(),
+  "homeTeam": zod.string(),
+  "filename": zod.string(),
+  "csv": zod.string().min(1).max(getCaptainSalaryResponseCsvMax),
+  "sourceUrl": zod.string().url()
+})
+
+
+/**
  * @summary Retrieve the official upcoming Featured NFL Classic salary CSV
  */
 export const getFeaturedClassicSalaryPathSeasonMin = 2000;

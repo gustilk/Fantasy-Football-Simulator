@@ -20,7 +20,9 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  CaptainSalary,
   FeaturedClassicSalary,
+  GetCaptainSalaryParams,
   GetNflScheduleParams,
   HealthStatus,
   ListSeasonTeamsParams,
@@ -63,6 +65,95 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetCaptainSalaryUrl = (season: number,
+    params: GetCaptainSalaryParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/draftkings/captain/${season}?${stringifiedParams}` : `/api/draftkings/captain/${season}`
+}
+
+/**
+ * @summary Retrieve official full-game Captain salaries for the selected NFL matchup
+ */
+export const getCaptainSalary = async (season: number,
+    params: GetCaptainSalaryParams, options?: Parameters<typeof customFetch>[1]): Promise<CaptainSalary> => {
+
+  return customFetch<CaptainSalary>(getGetCaptainSalaryUrl(season,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetCaptainSalaryQueryKey = (season: number,
+    params?: GetCaptainSalaryParams,) => {
+    return [
+    `/api/draftkings/captain/${season}`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetCaptainSalaryQueryOptions = <TData = Awaited<ReturnType<typeof getCaptainSalary>>, TError = ErrorType<SeasonError>>(season: number,
+    params: GetCaptainSalaryParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCaptainSalary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetCaptainSalaryQueryKey(season,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCaptainSalary>>> = ({ signal }) => getCaptainSalary(season,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: season !== null && season !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCaptainSalary>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetCaptainSalaryQueryResult = NonNullable<Awaited<ReturnType<typeof getCaptainSalary>>>
+export type GetCaptainSalaryQueryError = ErrorType<SeasonError>
+
+
+/**
+ * @summary Retrieve official full-game Captain salaries for the selected NFL matchup
+ */
+
+export function useGetCaptainSalary<TData = Awaited<ReturnType<typeof getCaptainSalary>>, TError = ErrorType<SeasonError>>(
+ season: number,
+    params: GetCaptainSalaryParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCaptainSalary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetCaptainSalaryQueryOptions(season,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetFeaturedClassicSalaryUrl = (season: number,) => {
 
