@@ -164,6 +164,8 @@ export interface SimulationResult {
   kickers?: KickerProjection[];
   ensemble?: {
     runs: number;
+    /** Mean and central 80% range across simulations, not the displayed example game. */
+    scoring?: { awayMean: number; homeMean: number; totalMean: number; totalP10: number; totalP90: number };
     awayWinPct: number;
     homeWinPct: number;
     tiePct: number;

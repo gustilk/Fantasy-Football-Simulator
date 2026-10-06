@@ -215,7 +215,12 @@ function App() {
             <div className="panel-top">
                <div className="panel-title" id="setup-title">Choose your game</div>
             </div>
-              <UpcomingGames key={season} season={season} enabled={tab === 'simulator'} busy={busy} teams={storedTeams.map(team => team.team)}
+              <UpcomingGames key={season} season={season} enabled={tab === 'simulator'} busy={busy} teams={storedTeams}
+               historyReady={!history.isLoading && !history.isError}
+               loadDepth={(year, name) => queryClient.fetchQuery({
+                 queryKey: getGetNflDepthChartQueryKey(year, name),
+                 queryFn: () => getNflDepthChart(year, name), staleTime: 300_000, retry: false,
+               })}
                onRunGame={(selectedWeek, game, fetchedAt) => void runGame(selectedWeek, game, fetchedAt)} progress={weeklyProgress} />
              {active && <div className="sim-matchup">
                <strong>Viewing: {currentAwayName} at {currentHomeName}</strong>

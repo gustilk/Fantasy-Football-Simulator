@@ -44,6 +44,16 @@ export function simulateEnsemble(input: SimulationInput, runs = 200): Simulation
   }
   first.ensemble = {
     runs,
+    scoring: (() => {
+      const totals = scores.map(score => score.away + score.home).sort((a, b) => a - b);
+      return {
+        awayMean: rounded(scores.reduce((sum, score) => sum + score.away, 0) / runs),
+        homeMean: rounded(scores.reduce((sum, score) => sum + score.home, 0) / runs),
+        totalMean: rounded(totals.reduce((sum, score) => sum + score, 0) / runs),
+        totalP10: totals[Math.floor((runs - 1) * 0.1)]!,
+        totalP90: totals[Math.floor((runs - 1) * 0.9)]!,
+      };
+    })(),
     awayWinPct: rounded(awayWins / runs * 100),
     homeWinPct: rounded(homeWins / runs * 100),
     tiePct: rounded(ties / runs * 100),

@@ -204,6 +204,10 @@ input::placeholder, textarea::placeholder { color: var(--app-muted); opacity: .8
 .schedule-filter { display:grid; gap:6px; margin:12px 0; font-size:12px; }
 .schedule-filter select { width:100%; }
 .schedule-games { display:grid; gap:8px; max-height:310px; overflow-y:auto; }
+.scoring-rankings { margin-bottom:12px; }
+.scoring-game { display:grid; gap:4px; padding:12px; text-align:left; background:var(--app-card); color:inherit; border:1px solid var(--app-border); border-radius:8px; font-size:12px; }
+.scoring-game.selected { border-color:var(--app-away); box-shadow:inset 3px 0 0 var(--app-away); }
+.scoring-game small { opacity:.7; }
 .scheduled-game { display:grid; gap:5px; width:100%; text-align:left; background:var(--app-bg); color:var(--app-text); border:1px solid var(--app-border); border-radius:8px; padding:12px; font-size:12px; }
 .scheduled-game:hover:not(:disabled), .scheduled-game:focus-visible, .scheduled-game.selected { border-color:var(--app-away); }
 .scheduled-game span, .scheduled-game small { color:var(--app-muted); font-size:11px; }
