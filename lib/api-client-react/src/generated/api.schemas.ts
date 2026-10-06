@@ -487,7 +487,7 @@ export const RosterPlayerSide = {
 } as const;
 
 /**
- * Optional manual opportunity tier. 0 disables, 1 gives 20%, 2 gives 40%, and 3 gives 60% higher target/carry priority. QB rushing only. Omitted uses legacy preferences or approved name-and-position defaults.
+ * Optional manual opportunity tier. 0 disables, 1 gives 20%, 1.5 gives 30%, 2 gives 40%, and 3 gives 60% higher target/carry priority. QB rushing only. Omitted uses legacy preferences or approved name-and-position defaults.
  */
 export type RosterPlayerEliteTier = typeof RosterPlayerEliteTier[keyof typeof RosterPlayerEliteTier];
 
@@ -495,6 +495,7 @@ export type RosterPlayerEliteTier = typeof RosterPlayerEliteTier[keyof typeof Ro
 export const RosterPlayerEliteTier = {
   NUMBER_0: 0,
   NUMBER_1: 1,
+  '15': 1.5,
   NUMBER_2: 2,
   NUMBER_3: 3,
 } as const;
@@ -581,7 +582,7 @@ export interface RosterPlayer {
   active: boolean;
   /** Legacy elite preference. Used only when eliteTier is omitted; false disables defaults and true enables the approved default tier or 1x. */
   elite1x?: boolean;
-  /** Optional manual opportunity tier. 0 disables, 1 gives 20%, 2 gives 40%, and 3 gives 60% higher target/carry priority. QB rushing only. Omitted uses legacy preferences or approved name-and-position defaults. */
+  /** Optional manual opportunity tier. 0 disables, 1 gives 20%, 1.5 gives 30%, 2 gives 40%, and 3 gives 60% higher target/carry priority. QB rushing only. Omitted uses legacy preferences or approved name-and-position defaults. */
   eliteTier?: RosterPlayerEliteTier;
   /** Defensive event priority for defense-side DL/EDGE/LB/CB/S players. 0 disables, 1 adds 20%, 2 adds 40% to role-appropriate opportunity weights. Omitted uses approved defender defaults. Never overrides availability or multiplies fantasy points. */
   defensiveTier?: RosterPlayerDefensiveTier;

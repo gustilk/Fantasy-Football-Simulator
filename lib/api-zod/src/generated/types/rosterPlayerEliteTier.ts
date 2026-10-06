@@ -7,7 +7,7 @@
  */
 
 /**
- * Optional manual opportunity tier. 0 disables, 1 gives 20%, 2 gives 40%, and 3 gives 60% higher target/carry priority. QB rushing only. Omitted uses legacy preferences or approved name-and-position defaults.
+ * Optional manual opportunity tier. 0 disables, 1 gives 20%, 1.5 gives 30%, 2 gives 40%, and 3 gives 60% higher target/carry priority. QB rushing only. Omitted uses legacy preferences or approved name-and-position defaults.
  */
 export type RosterPlayerEliteTier = typeof RosterPlayerEliteTier[keyof typeof RosterPlayerEliteTier];
 
@@ -15,6 +15,7 @@ export type RosterPlayerEliteTier = typeof RosterPlayerEliteTier[keyof typeof Ro
 export const RosterPlayerEliteTier = {
   NUMBER_0: 0,
   NUMBER_1: 1,
+  '15': 1.5,
   NUMBER_2: 2,
   NUMBER_3: 3,
 } as const;

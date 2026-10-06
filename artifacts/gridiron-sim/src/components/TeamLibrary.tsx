@@ -278,7 +278,7 @@ function Roster({ players, patch, setDraft, depth, nextWeek }: { players: Player
         </select>
       </label>
       <p className="tl-hint">QB/RB/WR/TE overrides apply only to the selected week and take precedence over the saved Active flag. Out/Doubtful excludes; Questionable/Limited includes without modeling missed-game probability or a workload reduction. One weekly override per player is retained. Save team to persist it. Roster reports are not confirmed game-day participation.</p>
-      <p className="tl-hint"><strong>Elite priority:</strong> 1x +20%, 2x +40%, 3x +60% target/carry priority; QB rushing only. Your assigned players start at their chosen tiers. None disables the boost. Save team after changes, then rerun projections to apply.</p>
+      <p className="tl-hint"><strong>Elite priority:</strong> 1x +20%, 1.5x +30%, 2x +40%, 3x +60% target/carry priority; QB rushing only. Your assigned players start at their chosen tiers. None disables the boost. Save team after changes, then rerun projections to apply.</p>
       {players.length === 0 ? (
         <div className="tl-empty"><Database size={26} /><strong>No roster saved for this team and season</strong><span>Refresh recent NFL data above, add players, or paste a list. Nothing is stored until you save.</span></div>
       ) : (

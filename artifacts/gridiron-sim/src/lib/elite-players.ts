@@ -23,9 +23,11 @@ export const ELITE_TIER_ASSIGNMENTS = [
   ['Jaxon Smith-Njigba', 'WR', 3], ['Josh Allen', 'QB', 3],
   ['Nico Collins', 'WR', 1], ['Zay Flowers', 'WR', 1], ['Parker Washington', 'WR', 1],
   ['Ashton Jeanty', 'RB', 1],
+  ['Michael Wilson', 'WR', 1.5],
 ] as const;
 export const ELITE_TIER_OPTIONS = [
   { value: 0, label: 'None' }, { value: 1, label: '1x · +20%' },
+  { value: 1.5, label: '1.5x · +30%' },
   { value: 2, label: '2x · +40%' }, { value: 3, label: '3x · +60%' },
 ] as const;
 type ElitePlayer = { name: string; position: string; side?: string; elite1x?: boolean; eliteTier?: EliteTier };
@@ -62,5 +64,6 @@ export function savedEliteTier(player: { eliteTier?: EliteTier; elite1x?: boolea
 /** Multiply selection weights, never points, efficiency, or eligibility. */
 export function eliteOpportunityWeight(weight: number, tier: EliteTier | boolean): number {
   const level = typeof tier === 'boolean' ? (tier ? 1 : 0) : tier;
+  if (level === 1.5) return weight * 1.3;
   return weight * [1, 1.2, 1.4, 1.6][level]!;
 }

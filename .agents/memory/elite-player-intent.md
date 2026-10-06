@@ -20,3 +20,9 @@ The user confirmed opportunity boosts of 1x = +20%, 2x = +40%, and 3x = +60%. Th
 **Why:** The user explicitly entered 20, 40, and 60 in the tier-strength form after discussing the alternatives.
 
 **How to apply:** Keep these strengths consistent across saved-roster and manual simulations and DraftKings forecasts. Preserve availability exclusions and existing scored snapshots when changing current player assignments.
+
+For the requested intermediate 1.5x tier, use +30% opportunity priority, not a literal 1.5-times fantasy-point multiplier.
+
+**Why:** This follows the user's established +20% per tier scale; they requested Michael Wilson at 1.5x.
+
+**How to apply:** Keep fractional-tier meaning consistent with 1x/2x/3x. Assignment changes affect new forecasts, not previously scored results.

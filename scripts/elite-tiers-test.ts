@@ -16,6 +16,7 @@ const assignments = [
   ['Jahmyr Gibbs', 'RB', 3], ['Brock Bowers', 'TE', 3], ['Bijan Robinson', 'RB', 3],
   ['Jaxon Smith-Njigba', 'WR', 3], ['Josh Allen', 'QB', 3],
   ['Nico Collins', 'WR', 1], ['Zay Flowers', 'WR', 1], ['Parker Washington', 'WR', 1], ['Ashton Jeanty', 'RB', 1],
+  ['Michael Wilson', 'WR', 1.5],
 ] as const;
 for (const [name, position, tier] of assignments) assert.equal(getEliteTier({ name, position }), tier, name);
 assert.equal(getEliteTier({ name: 'Jamar Chase', position: 'WR' }), 2);
@@ -42,7 +43,7 @@ const players = [
 const team: TeamSetup = { name: 'Buffalo Bills', qb: 'Test passer', rb: 'Test runner', wr1: 'Test receiver', wr2: 'Other receiver', wr3: '', te: 'Test tight end', kicker: '', passRating: 60, rushRating: 60, defenseRating: 60, context: '', roster: players };
 const input: SimulationInput = { away: team, home: { ...team, name: 'Detroit Lions' }, weather: { temperatureF: 68, windMph: 5, precipitation: 'none' } };
 const usage: { tier: number; catches: number; qbRush: number }[] = [];
-for (const tier of [0, 1, 2, 3] as const) {
+for (const tier of [0, 1, 1.5, 2, 3] as const) {
   const boosted = structuredClone(input);
   boosted.away.roster![0]!.eliteTier = tier;
   boosted.away.roster![2]!.eliteTier = tier;
@@ -80,7 +81,9 @@ for (const tier of [0, 1, 2, 3] as const) {
   assert.ok(!eligible.some(p => p.id === 'qb' || p.id === 'wr'));
   assert.equal(eligible.find(p => p.id === 'rb')!.eliteTier, tier);
 }
-for (const invalid of [-1, 4, 1.5, '3']) assert.equal(SaveSeasonTeamBody.safeParse({ players: [{ ...roster[0], eliteTier: invalid }], weeks: [], expectedVersion: 0 }).success, false);
+for (const invalid of [-1, 4, 1.25, '3']) assert.equal(SaveSeasonTeamBody.safeParse({ players: [{ ...roster[0], eliteTier: invalid }], weeks: [], expectedVersion: 0 }).success, false);
+assert.equal(eliteOpportunityWeight(10, 1.5), 13);
+assert.equal(savedEliteTier({ eliteTier: 1.5 }), 1.5);
 const projected = structuredClone(input); projected.away.roster![0]!.eliteTier = 3; projected.away.roster![2]!.eliteTier = 2;
 const game = { id: 'game', week: 4, date: '2026-10-04T17:00:00Z', awayTeam: team.name, homeTeam: 'Detroit Lions' } as Parameters<typeof gameForecast>[0];
 const forecast = gameForecast(game, projected, simulateEnsemble(projected, 50));

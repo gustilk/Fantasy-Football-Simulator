@@ -681,9 +681,9 @@ components:
           type: boolean
           description: Legacy elite preference. Used only when eliteTier is omitted; false disables defaults and true enables the approved default tier or 1x.
         eliteTier:
-          type: integer
-          enum: [0, 1, 2, 3]
-          description: Optional manual opportunity tier. 0 disables, 1 gives 20%, 2 gives 40%, and 3 gives 60% higher target/carry priority. QB rushing only. Omitted uses legacy preferences or approved name-and-position defaults.
+          type: number
+          enum: [0, 1, 1.5, 2, 3]
+          description: Optional manual opportunity tier. 0 disables, 1 gives 20%, 1.5 gives 30%, 2 gives 40%, and 3 gives 60% higher target/carry priority. QB rushing only. Omitted uses legacy preferences or approved name-and-position defaults.
         defensiveTier:
           type: integer
           enum: [0, 1, 2]
