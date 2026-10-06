@@ -14,6 +14,7 @@ import { getEliteTier, eliteOpportunityWeight, type EliteTier } from "./elite-pl
 import { protectedSackProbability, type OffensiveLineTier } from "./offensive-line";
 import { backfieldOpportunityWeight, backfieldReceivingPrior, backfieldEfficiency, type BackfieldEvidence } from "./backfield-workload";
 import { simulatePossessionGame } from "./possession-game";
+import type { PossessionPlay } from "./possession-drive";
 
 export type Precipitation = "none" | "light" | "moderate" | "heavy";
 
@@ -934,7 +935,7 @@ function makeOverview(
   return overview;
 }
 
-export function simulateGame(input: SimulationInput): SimulationResult {
+export function simulateGame(input: SimulationInput, observePlay?: (team: string, play: Readonly<PossessionPlay>) => void): SimulationResult {
   for (const team of [input.away, input.home]) protectedSackProbability(0.047, team.offensiveLineTier);
   if (input.driveModel !== undefined && input.driveModel !== 'possession-v1') throw new Error('Unsupported possession model. Saved forecasts must use their frozen model version.');
   if (input.secondaryModel !== undefined && (input.secondaryModel !== 'secondary-v1' || input.driveModel !== 'possession-v1')) throw new Error('Unsupported secondary model. Deep-pass matchups require their frozen possession model.');
@@ -984,7 +985,7 @@ export function simulateGame(input: SimulationInput): SimulationResult {
   const possession = input.driveModel === 'possession-v1' ? simulatePossessionGame(input, random, targetAwayPlays, targetHomePlays, {
     makeTeam: makeTeamSimulation, receiver: receiverFor, runner: runningBackFor, recent: recentForPlayer,
     reliability: playerReliability, fumbleChance: observedFumbleChance, footballPassShare: footballPassingShare,
-  }) : undefined;
+  }, observePlay) : undefined;
   const away = possession?.away ?? simulateTeam(
     input.away,
     input.home,

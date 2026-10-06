@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Deep-pass matchup accuracy — evidence assessment</title>
+<style>
+body{margin:0;background:#0f1a13;color:#e9e8de;font:16px/1.6 system-ui,sans-serif}
+main{max-width:900px;margin:auto;padding:40px 24px 64px}h1{font-size:clamp(28px,5vw,42px);line-height:1.2}
+h2{margin-top:34px;font-size:24px}p,li{max-width:82ch}.muted{color:#98a89c}.result{background:#16251b;border-left:4px solid #f0b429;padding:20px 24px;border-radius:4px}
+table{width:100%;border-collapse:collapse;font-size:15px}th,td{text-align:left;border-bottom:1px solid #2c4234;padding:12px 8px;vertical-align:top}
+th{color:#7fc08f}code{font-size:.9em;overflow-wrap:anywhere}.scroll{overflow-x:auto}.small{font-size:14px}strong{color:#f0b429}
+@media print{body{background:white;color:#222}main{padding:0}.muted,th,strong{color:#333}.result{background:#f4f4f4}h2{break-after:avoid}tr{break-inside:avoid}}
+</style>
+<main>
+<p class="muted">GRIDIRON SIM · RESEARCH ASSESSMENT · OCTOBER 6, 2026</p>
+<h1>Do deep-pass matchups improve forecast accuracy?</h1>
+<section class="result"><strong>Not established — insufficient eligible evidence.</strong>
+<p>The library contains 64 completed games, but zero independently archived pregame input/roster pairs.
+Neither improvement nor harm can be measured from those games. No model weights or forecast behavior were changed.</p></section>
+<h2>Actual sample coverage</h2>
+<div class="scroll"><table><thead><tr><th>Evidence</th><th>2026</th><th>2025</th></tr></thead><tbody>
+<tr><td>Saved teams</td><td>32</td><td>0</td></tr>
+<tr><td>Completed team-game rows</td><td>128</td><td>0</td></tr>
+<tr><td>Distinct candidate games</td><td>64</td><td>0</td></tr>
+<tr><td>Both teams have four saved prior games</td><td>0</td><td>0</td></tr>
+<tr><td>Independently archived pregame input/eligibility pairs</td><td>0</td><td>0</td></tr>
+<tr><td>Complete observed DraftKings scoring ledgers</td><td>0</td><td>0</td></tr>
+<tr><td>Eligible calibration / held-out games</td><td>0 / 0</td><td>0 / 0</td></tr>
+</tbody></table></div>
+<p class="muted">The 2026 library contains weeks 1–4. Shorter early-season windows could qualify if independently archived;
+the evaluator does not fabricate four games or reject a short window on its own.</p>
+<h2>Why the saved games are excluded</h2>
+<ul><li>Current active flags, depth roles and eventual participation do not prove historical pregame eligibility.</li>
+<li>Prior-week statistics alone do not prove a complete input was available and frozen before kickoff.</li>
+<li>The library does not retain reviewed full passing-play inventories for historical last-four evidence.</li>
+<li>Missing fantasy scoring events and absent player rows remain unknown, not zero.</li></ul>
+<p>All 64 candidate games and their individual exclusions are recorded in
+<code>reports/secondary-feasibility-2026.json</code>. The audit was read-only. Recorded score fields were not
+treated as independently reviewed authoritative targets.</p>
+<h2>Requested accuracy comparisons</h2>
+<div class="scroll"><table><thead><tr><th>Endpoint</th><th>Eligible empirical sample</th><th>Finding</th></tr></thead><tbody>
+<tr><td>10–19 and 20+ air-yard attempts/completions</td><td>0 games</td><td>Unknown; baseline has no air-depth outputs</td></tr>
+<tr><td>Passing-only 15+ gain frequency</td><td>0 games</td><td>Paired error difference unknown</td></tr>
+<tr><td>YAC mean and ≥5 / ≥10 YAC frequency</td><td>0 games</td><td>Unknown; baseline has no YAC outputs</td></tr>
+<tr><td>Team-score errors and P10–P90 coverage</td><td>0 eligible team targets</td><td>Unknown</td></tr>
+<tr><td>Classic fantasy errors and P10–P90 coverage</td><td>0 complete observed player targets</td><td>Unknown</td></tr>
+</tbody></table></div>
+<p>Gain alone cannot identify air yards or YAC. Generating those values would change the unchanged baseline.
+The evaluator keeps secondary-only component diagnostics separate from paired shared-endpoint comparisons.
+Missing metrics stay null; no improvement percentage or guaranteed 80% coverage is claimed.</p>
+<h2>What was verified</h2>
+<p>A read-only paired evaluator now validates reviewed pregame rosters, complete input freezes, last-four
+passing sources and authoritative observed outcomes. It keeps calibration and evaluation periods separate,
+locks model sources, and uses the same 200-run production seed schedule for both models.</p>
+<ul><li>Both models match their production ensemble scoring summaries.</li>
+<li>The passive every-play observer does not change model output or consume randomness.</li>
+<li>Frozen possession-v1 output remains byte-for-byte unchanged.</li>
+<li>Tests cover chronology, source identities, roster mismatches, missing fantasy events,
+passing/YAC denominators, and empty-sample safeguards.</li>
+<li>Workspace type checks pass. All test fixtures are synthetic, not accuracy evidence.</li></ul>
+<p>A save-schema mismatch for Michael Wilson’s existing 1.5 priority tier was also fixed.
+A forecast save/reload regression confirms the tier, frozen inputs, summaries and older saves are preserved.
+Simulation weights were not changed.</p>
+<h2>Decision and next evidence</h2>
+<p><strong>Keep the secondary method experimental.</strong> Preserve frozen forecasts and do not tune to a team winner
+or desired player score. Collect independently timestamped pregame snapshots under a registered cohort, then compare
+separate held-out games once final scoring, passing plays and complete fantasy ledgers are available.</p>
+<p class="muted small">Research contract: <code>research/secondary-evaluation/README.md</code><br>
+Full assessment: <code>reports/secondary-matchup-validation.md</code><br>
+Empty empirical evaluation: <code>reports/secondary-evaluation.json</code><br>
+Any later behavior change requires a new version and fresh evaluation. Monte Carlo seeds are not additional real games.</p>
+</main>
+</html>

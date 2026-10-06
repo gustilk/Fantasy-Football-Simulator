@@ -28,3 +28,17 @@ mtime_ms = 1791240962903
 storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:1c3bd1a2-d51c-497b-9eb1-bd30c388c597/6a91ad1a-3b8b-4baf-8445-ce02debe97ca/cb43146d-72e6-44e5-95c8-07ff3dff4116"
 storage_version_token = "1791240989218047"
 content_type = "text/csv"
+
+[[outputs]]
+id = "9uf3NZCH3K6mSdHnSmmUy"
+uri = "file://reports/secondary-matchup-validation.html"
+type = "html"
+title = "Deep-pass matchup accuracy assessment"
+description = "Evidence-limited assessment and verified paired evaluator; includes the corrected 1.5-tier forecast save/reload compatibility check."
+logical_id = "947ae194-66c2-42c1-a2dd-36f9220ce077"
+content_hash = "sha256:5b94dd30a1eeb1e50ed4ab9d0447f89be5e47cd036eb01ab00aa319a5f52d5fa"
+size = 5993
+mtime_ms = 1791315574686
+storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:1c3bd1a2-d51c-497b-9eb1-bd30c388c597/947ae194-66c2-42c1-a2dd-36f9220ce077/6c5dcfa2-4b08-41fc-bc36-0a6dacda436f"
+storage_version_token = "1791315614234802"
+content_type = "text/html"

@@ -1,11 +1,11 @@
 import type { PlayerAccumulator, PlayerRecentStats, SimulatedDrive, SimulationInput, TeamSetup, TeamSimulation } from './simulator';
-import { matchupDriveRates, simulatePossessionDrive, DRIVE_PRIORS, type DriveProfile, type PossessionRates } from './possession-drive';
 import { defensiveEventPriorities } from './defensive-tiers';
 import { passingStrategyAdjustment } from './standings';
 import { quarterbackPassShare } from './quarterback-strategy';
 import { backfieldEfficiency } from './backfield-workload';
 import { secondaryMatchup, secondaryNotes } from './secondary-matchup';
 import { protectedSackProbability } from './offensive-line';
+import { matchupDriveRates, simulatePossessionDrive, DRIVE_PRIORS, type DriveProfile, type PossessionRates, type PossessionPlay } from './possession-drive';
 
 type Random = () => number;
 interface Helpers {
@@ -21,7 +21,8 @@ const bound = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n
 const precipitationImpact = { none: 0, light: 0.025, moderate: 0.06, heavy: 0.105 };
 /** Shared regulation clock: possessions actually alternate and inherit field
  * position, rather than merging two independently generated game logs. */
-export function simulatePossessionGame(input: SimulationInput, random: Random, awayPace: number, homePace: number, h: Helpers) {
+export function simulatePossessionGame(input: SimulationInput, random: Random, awayPace: number, homePace: number, h: Helpers,
+  observePlay?: (team: string, play: Readonly<PossessionPlay>) => void) {
   const away = h.makeTeam(input.away), home = h.makeTeam(input.home);
   const secondaries = input.secondaryModel === 'secondary-v1' ? [away, home].map((team, i) =>
     secondaryMatchup(team.setup.footballEvidence?.secondaryOffense, (i === 0 ? home : away).setup.footballEvidence?.secondaryDefense)) : undefined;
@@ -101,6 +102,8 @@ export function simulatePossessionGame(input: SimulationInput, random: Random, a
         };
       },
       onPlay: play => {
+        // Research instrumentation receives a detached copy, never mutable model state.
+        observePlay?.(team.setup.name, Object.freeze({ ...play }));
         team.plays++; qb.played = true;
         let text: string;
         if (play.kind === 'sack') { team.sacksAllowed++; text = `${qb.name} sacked for ${Math.abs(play.gain)} yards`; }

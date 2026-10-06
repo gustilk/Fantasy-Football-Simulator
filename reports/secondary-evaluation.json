@@ -1,0 +1,93 @@
+{
+  "status": "insufficient-evidence",
+  "conclusion": "No predictive improvement is established automatically. Do not tune on evaluation outcomes.",
+  "modelFingerprint": "108fcc7550f4af52f587362c8dd954fdbb7c7a00d52cc0200a05703f8e893690",
+  "registeredAt": "2026-10-06T00:00:00Z",
+  "seeds": [
+    104729,
+    130363,
+    155921
+  ],
+  "runsPerSeedPerModel": 200,
+  "calibration": {
+    "suppliedGames": 0,
+    "eligibleGames": 0,
+    "activeSecondaryGames": 0,
+    "excludedGames": 0,
+    "teamScoring": null,
+    "fantasy": null,
+    "pairedPassing": {
+      "attempts": null,
+      "completions": null,
+      "intermediateAttempts": null,
+      "intermediateCompletions": null,
+      "deepAttempts": null,
+      "deepCompletions": null,
+      "intermediateCompletionRate": null,
+      "deepCompletionRate": null,
+      "passing15PlusRate": null,
+      "yacMean": null,
+      "yac5PlusFrequency": null,
+      "yac10PlusFrequency": null
+    },
+    "secondaryPassingDiagnostics": {
+      "attempts": null,
+      "completions": null,
+      "intermediateAttempts": null,
+      "intermediateCompletions": null,
+      "deepAttempts": null,
+      "deepCompletions": null,
+      "intermediateCompletionRate": null,
+      "deepCompletionRate": null,
+      "passing15PlusRate": null,
+      "yacMean": null,
+      "yac5PlusFrequency": null,
+      "yac10PlusFrequency": null
+    }
+  },
+  "heldOut": {
+    "suppliedGames": 0,
+    "eligibleGames": 0,
+    "activeSecondaryGames": 0,
+    "excludedGames": 0,
+    "teamScoring": null,
+    "fantasy": null,
+    "pairedPassing": {
+      "attempts": null,
+      "completions": null,
+      "intermediateAttempts": null,
+      "intermediateCompletions": null,
+      "deepAttempts": null,
+      "deepCompletions": null,
+      "intermediateCompletionRate": null,
+      "deepCompletionRate": null,
+      "passing15PlusRate": null,
+      "yacMean": null,
+      "yac5PlusFrequency": null,
+      "yac10PlusFrequency": null
+    },
+    "secondaryPassingDiagnostics": {
+      "attempts": null,
+      "completions": null,
+      "intermediateAttempts": null,
+      "intermediateCompletions": null,
+      "deepAttempts": null,
+      "deepCompletions": null,
+      "intermediateCompletionRate": null,
+      "deepCompletionRate": null,
+      "passing15PlusRate": null,
+      "yacMean": null,
+      "yac5PlusFrequency": null,
+      "yac10PlusFrequency": null
+    }
+  },
+  "games": [],
+  "limitations": [
+    "Independent archive/source authenticity requires review; hashes and local declarations do not prove pregame availability.",
+    "P10–P90 intervals are model uncertainty, not guaranteed 80% empirical coverage.",
+    "Possession-v1 has no air-depth or YAC outputs; those baseline metrics are unavailable, not zero.",
+    "Counts disclose known-air throws; interceptions without generated air depth remain unknown.",
+    "YAC frequencies use >=5 and >=10 yards per measured completion, not passing explosives.",
+    "Paired seeds reduce simulation noise but are not additional real games. Repeated teams/weeks remain dependent."
+  ]
+}

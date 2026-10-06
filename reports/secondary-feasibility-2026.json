@@ -1,0 +1,2034 @@
+{
+  "auditedAt": "2026-10-06T19:33:00.639Z",
+  "librarySnapshotSha256": "6f4d88a110874718cecbc9609e4932af2d2efa6b3027444b3196480f08db74f8",
+  "kind": "secondary-evidence-feasibility-audit",
+  "season": 2026,
+  "savedTeams": 32,
+  "savedTeamGameRows": 128,
+  "candidateGames": 64,
+  "candidatesWithFourSavedPriorGamesBothTeams": 0,
+  "eligibleHeldOutGames": 0,
+  "completeDraftKingsLedgers": 0,
+  "calibrationGames": 0,
+  "heldOutGames": 0,
+  "accuracyMetrics": null,
+  "conclusion": "Insufficient point-in-time evidence; neither improvement nor harm is established. Keep model behavior unchanged.",
+  "games": [
+    {
+      "season": 2026,
+      "week": 1,
+      "teams": [
+        "Arizona Cardinals",
+        "Los Angeles Chargers"
+      ],
+      "eventId": "401872926",
+      "priorCompletedWeeks": [
+        [],
+        []
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        26,
+        14
+      ],
+      "recordedPlayerRows": 59,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 2,
+      "teams": [
+        "Arizona Cardinals",
+        "Seattle Seahawks"
+      ],
+      "eventId": "401872943",
+      "priorCompletedWeeks": [
+        [
+          1
+        ],
+        [
+          1
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        7,
+        31
+      ],
+      "recordedPlayerRows": 64,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 3,
+      "teams": [
+        "Arizona Cardinals",
+        "San Francisco 49ers"
+      ],
+      "eventId": "401872958",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          2
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        30,
+        36
+      ],
+      "recordedPlayerRows": 67,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 4,
+      "teams": [
+        "Arizona Cardinals",
+        "New York Giants"
+      ],
+      "eventId": "401872966",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        24,
+        36
+      ],
+      "recordedPlayerRows": 69,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 1,
+      "teams": [
+        "Atlanta Falcons",
+        "Pittsburgh Steelers"
+      ],
+      "eventId": "401872658",
+      "priorCompletedWeeks": [
+        [],
+        []
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        13,
+        20
+      ],
+      "recordedPlayerRows": 67,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 2,
+      "teams": [
+        "Atlanta Falcons",
+        "Carolina Panthers"
+      ],
+      "eventId": "401872933",
+      "priorCompletedWeeks": [
+        [
+          1
+        ],
+        [
+          1
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        3,
+        34
+      ],
+      "recordedPlayerRows": 70,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 3,
+      "teams": [
+        "Atlanta Falcons",
+        "Green Bay Packers"
+      ],
+      "eventId": "401872948",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          2
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        35,
+        14
+      ],
+      "recordedPlayerRows": 65,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 4,
+      "teams": [
+        "Atlanta Falcons",
+        "New Orleans Saints"
+      ],
+      "eventId": "401872979",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        45,
+        24
+      ],
+      "recordedPlayerRows": 66,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 1,
+      "teams": [
+        "Baltimore Ravens",
+        "Indianapolis Colts"
+      ],
+      "eventId": "401872659",
+      "priorCompletedWeeks": [
+        [],
+        []
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        41,
+        23
+      ],
+      "recordedPlayerRows": 64,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 2,
+      "teams": [
+        "Baltimore Ravens",
+        "New Orleans Saints"
+      ],
+      "eventId": "401872938",
+      "priorCompletedWeeks": [
+        [
+          1
+        ],
+        [
+          1
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        17,
+        24
+      ],
+      "recordedPlayerRows": 63,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 3,
+      "teams": [
+        "Baltimore Ravens",
+        "Dallas Cowboys"
+      ],
+      "eventId": "401872960",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          2
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        34,
+        31
+      ],
+      "recordedPlayerRows": 66,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 4,
+      "teams": [
+        "Baltimore Ravens",
+        "Tennessee Titans"
+      ],
+      "eventId": "401872973",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        24,
+        18
+      ],
+      "recordedPlayerRows": 68,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 1,
+      "teams": [
+        "Buffalo Bills",
+        "Houston Texans"
+      ],
+      "eventId": "401872660",
+      "priorCompletedWeeks": [
+        [],
+        []
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        36,
+        31
+      ],
+      "recordedPlayerRows": 70,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 2,
+      "teams": [
+        "Buffalo Bills",
+        "Detroit Lions"
+      ],
+      "eventId": "401872932",
+      "priorCompletedWeeks": [
+        [
+          1
+        ],
+        [
+          1
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        41,
+        31
+      ],
+      "recordedPlayerRows": 68,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 3,
+      "teams": [
+        "Buffalo Bills",
+        "Los Angeles Chargers"
+      ],
+      "eventId": "401872953",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          2
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        24,
+        16
+      ],
+      "recordedPlayerRows": 64,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 4,
+      "teams": [
+        "Buffalo Bills",
+        "New England Patriots"
+      ],
+      "eventId": "401872971",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        26,
+        29
+      ],
+      "recordedPlayerRows": 67,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 1,
+      "teams": [
+        "Carolina Panthers",
+        "Chicago Bears"
+      ],
+      "eventId": "401872661",
+      "priorCompletedWeeks": [
+        [],
+        []
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        37,
+        59
+      ],
+      "recordedPlayerRows": 69,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 3,
+      "teams": [
+        "Carolina Panthers",
+        "Cleveland Browns"
+      ],
+      "eventId": "401872949",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          2
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        18,
+        21
+      ],
+      "recordedPlayerRows": 68,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 4,
+      "teams": [
+        "Carolina Panthers",
+        "Detroit Lions"
+      ],
+      "eventId": "401872978",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        32,
+        26
+      ],
+      "recordedPlayerRows": 69,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 2,
+      "teams": [
+        "Chicago Bears",
+        "Minnesota Vikings"
+      ],
+      "eventId": "401872937",
+      "priorCompletedWeeks": [
+        [
+          1
+        ],
+        [
+          1
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        3,
+        9
+      ],
+      "recordedPlayerRows": 67,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 3,
+      "teams": [
+        "Chicago Bears",
+        "Philadelphia Eagles"
+      ],
+      "eventId": "401872963",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          2
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        27,
+        7
+      ],
+      "recordedPlayerRows": 61,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 4,
+      "teams": [
+        "Chicago Bears",
+        "New York Jets"
+      ],
+      "eventId": "401872972",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        23,
+        12
+      ],
+      "recordedPlayerRows": 61,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 1,
+      "teams": [
+        "Cincinnati Bengals",
+        "Tampa Bay Buccaneers"
+      ],
+      "eventId": "401872925",
+      "priorCompletedWeeks": [
+        [],
+        []
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        33,
+        27
+      ],
+      "recordedPlayerRows": 63,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 2,
+      "teams": [
+        "Cincinnati Bengals",
+        "Houston Texans"
+      ],
+      "eventId": "401872934",
+      "priorCompletedWeeks": [
+        [
+          1
+        ],
+        [
+          1
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        20,
+        6
+      ],
+      "recordedPlayerRows": 62,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 3,
+      "teams": [
+        "Cincinnati Bengals",
+        "Pittsburgh Steelers"
+      ],
+      "eventId": "401872950",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          2
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        27,
+        30
+      ],
+      "recordedPlayerRows": 73,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 4,
+      "teams": [
+        "Cincinnati Bengals",
+        "Jacksonville Jaguars"
+      ],
+      "eventId": "401872969",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        17,
+        22
+      ],
+      "recordedPlayerRows": 61,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 1,
+      "teams": [
+        "Cleveland Browns",
+        "Jacksonville Jaguars"
+      ],
+      "eventId": "401872922",
+      "priorCompletedWeeks": [
+        [],
+        []
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        10,
+        34
+      ],
+      "recordedPlayerRows": 65,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 2,
+      "teams": [
+        "Cleveland Browns",
+        "Tampa Bay Buccaneers"
+      ],
+      "eventId": "401872935",
+      "priorCompletedWeeks": [
+        [
+          1
+        ],
+        [
+          1
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        23,
+        19
+      ],
+      "recordedPlayerRows": 61,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 4,
+      "teams": [
+        "Cleveland Browns",
+        "Pittsburgh Steelers"
+      ],
+      "eventId": "401872964",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        27,
+        24
+      ],
+      "recordedPlayerRows": 63,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 1,
+      "teams": [
+        "Dallas Cowboys",
+        "New York Giants"
+      ],
+      "eventId": "401872930",
+      "priorCompletedWeeks": [
+        [],
+        []
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        20,
+        28
+      ],
+      "recordedPlayerRows": 67,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 2,
+      "teams": [
+        "Dallas Cowboys",
+        "Washington Commanders"
+      ],
+      "eventId": "401872944",
+      "priorCompletedWeeks": [
+        [
+          1
+        ],
+        [
+          1
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        37,
+        20
+      ],
+      "recordedPlayerRows": 66,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 4,
+      "teams": [
+        "Dallas Cowboys",
+        "Houston Texans"
+      ],
+      "eventId": "401872967",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        34,
+        30
+      ],
+      "recordedPlayerRows": 64,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 1,
+      "teams": [
+        "Denver Broncos",
+        "Kansas City Chiefs"
+      ],
+      "eventId": "401872931",
+      "priorCompletedWeeks": [
+        [],
+        []
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        10,
+        31
+      ],
+      "recordedPlayerRows": 73,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 2,
+      "teams": [
+        "Denver Broncos",
+        "Jacksonville Jaguars"
+      ],
+      "eventId": "401872940",
+      "priorCompletedWeeks": [
+        [
+          1
+        ],
+        [
+          1
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        20,
+        13
+      ],
+      "recordedPlayerRows": 66,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 3,
+      "teams": [
+        "Denver Broncos",
+        "Los Angeles Rams"
+      ],
+      "eventId": "401872962",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          2
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        30,
+        26
+      ],
+      "recordedPlayerRows": 70,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 4,
+      "teams": [
+        "Denver Broncos",
+        "San Francisco 49ers"
+      ],
+      "eventId": "401872975",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        14,
+        24
+      ],
+      "recordedPlayerRows": 68,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 1,
+      "teams": [
+        "Detroit Lions",
+        "New Orleans Saints"
+      ],
+      "eventId": "401872923",
+      "priorCompletedWeeks": [
+        [],
+        []
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        31,
+        30
+      ],
+      "recordedPlayerRows": 67,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 3,
+      "teams": [
+        "Detroit Lions",
+        "New York Jets"
+      ],
+      "eventId": "401872954",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          2
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        31,
+        24
+      ],
+      "recordedPlayerRows": 62,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 1,
+      "teams": [
+        "Green Bay Packers",
+        "Minnesota Vikings"
+      ],
+      "eventId": "401872927",
+      "priorCompletedWeeks": [
+        [],
+        []
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        22,
+        39
+      ],
+      "recordedPlayerRows": 67,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 2,
+      "teams": [
+        "Green Bay Packers",
+        "New York Jets"
+      ],
+      "eventId": "401872936",
+      "priorCompletedWeeks": [
+        [
+          1
+        ],
+        [
+          1
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        20,
+        17
+      ],
+      "recordedPlayerRows": 63,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 4,
+      "teams": [
+        "Green Bay Packers",
+        "Tampa Bay Buccaneers"
+      ],
+      "eventId": "401872968",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        17,
+        14
+      ],
+      "recordedPlayerRows": 64,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 3,
+      "teams": [
+        "Houston Texans",
+        "Indianapolis Colts"
+      ],
+      "eventId": "401872951",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          2
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        17,
+        19
+      ],
+      "recordedPlayerRows": 63,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 2,
+      "teams": [
+        "Indianapolis Colts",
+        "Kansas City Chiefs"
+      ],
+      "eventId": "401872945",
+      "priorCompletedWeeks": [
+        [
+          1
+        ],
+        [
+          1
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        30,
+        33
+      ],
+      "recordedPlayerRows": 66,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 4,
+      "teams": [
+        "Indianapolis Colts",
+        "Washington Commanders"
+      ],
+      "eventId": "401872965",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        30,
+        13
+      ],
+      "recordedPlayerRows": 65,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 3,
+      "teams": [
+        "Jacksonville Jaguars",
+        "New England Patriots"
+      ],
+      "eventId": "401872957",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          2
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        35,
+        6
+      ],
+      "recordedPlayerRows": 67,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 3,
+      "teams": [
+        "Kansas City Chiefs",
+        "Miami Dolphins"
+      ],
+      "eventId": "401872952",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          2
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        24,
+        10
+      ],
+      "recordedPlayerRows": 60,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 4,
+      "teams": [
+        "Kansas City Chiefs",
+        "Las Vegas Raiders"
+      ],
+      "eventId": "401872976",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        30,
+        27
+      ],
+      "recordedPlayerRows": 66,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 1,
+      "teams": [
+        "Las Vegas Raiders",
+        "Miami Dolphins"
+      ],
+      "eventId": "401872928",
+      "priorCompletedWeeks": [
+        [],
+        []
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        27,
+        13
+      ],
+      "recordedPlayerRows": 62,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 2,
+      "teams": [
+        "Las Vegas Raiders",
+        "Los Angeles Chargers"
+      ],
+      "eventId": "401872941",
+      "priorCompletedWeeks": [
+        [
+          1
+        ],
+        [
+          1
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        26,
+        14
+      ],
+      "recordedPlayerRows": 70,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 3,
+      "teams": [
+        "Las Vegas Raiders",
+        "New Orleans Saints"
+      ],
+      "eventId": "401872961",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          2
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        35,
+        27
+      ],
+      "recordedPlayerRows": 65,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 4,
+      "teams": [
+        "Los Angeles Chargers",
+        "Seattle Seahawks"
+      ],
+      "eventId": "401872977",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        23,
+        30
+      ],
+      "recordedPlayerRows": 63,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 1,
+      "teams": [
+        "Los Angeles Rams",
+        "San Francisco 49ers"
+      ],
+      "eventId": "401872657",
+      "priorCompletedWeeks": [
+        [],
+        []
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        7,
+        27
+      ],
+      "recordedPlayerRows": 65,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 2,
+      "teams": [
+        "Los Angeles Rams",
+        "New York Giants"
+      ],
+      "eventId": "401872947",
+      "priorCompletedWeeks": [
+        [
+          1
+        ],
+        [
+          1
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        28,
+        6
+      ],
+      "recordedPlayerRows": 60,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 4,
+      "teams": [
+        "Los Angeles Rams",
+        "Philadelphia Eagles"
+      ],
+      "eventId": "401872970",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        24,
+        20
+      ],
+      "recordedPlayerRows": 65,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 2,
+      "teams": [
+        "Miami Dolphins",
+        "San Francisco 49ers"
+      ],
+      "eventId": "401872942",
+      "priorCompletedWeeks": [
+        [
+          1
+        ],
+        [
+          1
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        13,
+        35
+      ],
+      "recordedPlayerRows": 69,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 4,
+      "teams": [
+        "Miami Dolphins",
+        "Minnesota Vikings"
+      ],
+      "eventId": "401872974",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          1,
+          2,
+          3
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        10,
+        15
+      ],
+      "recordedPlayerRows": 61,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 3,
+      "teams": [
+        "Minnesota Vikings",
+        "Tampa Bay Buccaneers"
+      ],
+      "eventId": "401872959",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          2
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        23,
+        16
+      ],
+      "recordedPlayerRows": 69,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 1,
+      "teams": [
+        "New England Patriots",
+        "Seattle Seahawks"
+      ],
+      "eventId": "401872656",
+      "priorCompletedWeeks": [
+        [],
+        []
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        10,
+        13
+      ],
+      "recordedPlayerRows": 60,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 2,
+      "teams": [
+        "New England Patriots",
+        "Pittsburgh Steelers"
+      ],
+      "eventId": "401872946",
+      "priorCompletedWeeks": [
+        [
+          1
+        ],
+        [
+          1
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        20,
+        3
+      ],
+      "recordedPlayerRows": 68,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 3,
+      "teams": [
+        "New York Giants",
+        "Tennessee Titans"
+      ],
+      "eventId": "401872956",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          2
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        12,
+        7
+      ],
+      "recordedPlayerRows": 60,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 1,
+      "teams": [
+        "New York Jets",
+        "Tennessee Titans"
+      ],
+      "eventId": "401872924",
+      "priorCompletedWeeks": [
+        [],
+        []
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        23,
+        10
+      ],
+      "recordedPlayerRows": 62,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 1,
+      "teams": [
+        "Philadelphia Eagles",
+        "Washington Commanders"
+      ],
+      "eventId": "401872929",
+      "priorCompletedWeeks": [
+        [],
+        []
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        24,
+        22
+      ],
+      "recordedPlayerRows": 65,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 2,
+      "teams": [
+        "Philadelphia Eagles",
+        "Tennessee Titans"
+      ],
+      "eventId": "401872939",
+      "priorCompletedWeeks": [
+        [
+          1
+        ],
+        [
+          1
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        24,
+        20
+      ],
+      "recordedPlayerRows": 63,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    },
+    {
+      "season": 2026,
+      "week": 3,
+      "teams": [
+        "Seattle Seahawks",
+        "Washington Commanders"
+      ],
+      "eventId": "401872955",
+      "priorCompletedWeeks": [
+        [
+          1,
+          2
+        ],
+        [
+          1,
+          2
+        ]
+      ],
+      "bothHaveFourPriorGames": false,
+      "mirroredHistory": true,
+      "recordedFinalScores": [
+        31,
+        33
+      ],
+      "recordedPlayerRows": 63,
+      "completeDraftKingsLedgers": 0,
+      "status": "excluded",
+      "reasons": [
+        "No independently archived pregame eligibility and complete input/source freeze supplied.",
+        "No source-reviewed historical passing-play/last-four inventory in saved library.",
+        "Fewer than four saved prior completed games for at least one team (a shorter window could be eligible if independently archived)."
+      ]
+    }
+  ]
+}

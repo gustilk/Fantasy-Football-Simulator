@@ -50,3 +50,9 @@ Winning contest totals are not targets for calibrating average projections.
 **Why:** The user compared generated lineups around 176 projected points with perceived winning totals around 220, then delegated practical improvements. A winning score is a selected high-end outcome, not evidence that every lineup's mean is too low.
 
 **How to apply:** Separate average projections from jointly simulated tournament upside. Do not inflate scores to reach 220 or equate simulated 220+ frequency with winning probability. Use matched completed pregame forecasts and observed results to assess bias before changing the scoring model.
+
+Do not invent baseline air-depth or YAC values to enable an apparent paired comparison.
+
+**Why:** A gain includes air distance and run after catch; it cannot identify either component. Adding a decomposition or random draws would change the unchanged baseline being evaluated.
+
+**How to apply:** Keep ungenerated baseline components unknown. Report the new method's component diagnostics separately from paired scoring/fantasy and shared passing-gain endpoints, disclose known-air and measured-YAC denominators, and do not call those diagnostics evidence of paired improvement.

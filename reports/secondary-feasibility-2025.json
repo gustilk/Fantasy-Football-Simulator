@@ -1,0 +1,17 @@
+{
+  "auditedAt": "2026-10-06T19:33:01.658Z",
+  "librarySnapshotSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "kind": "secondary-evidence-feasibility-audit",
+  "season": 2025,
+  "savedTeams": 0,
+  "savedTeamGameRows": 0,
+  "candidateGames": 0,
+  "candidatesWithFourSavedPriorGamesBothTeams": 0,
+  "eligibleHeldOutGames": 0,
+  "completeDraftKingsLedgers": 0,
+  "calibrationGames": 0,
+  "heldOutGames": 0,
+  "accuracyMetrics": null,
+  "conclusion": "Insufficient point-in-time evidence; neither improvement nor harm is established. Keep model behavior unchanged.",
+  "games": []
+}
