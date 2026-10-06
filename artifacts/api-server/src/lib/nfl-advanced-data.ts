@@ -18,6 +18,8 @@ const round = (value: number) => Math.round(value * 10000) / 10000;
 interface Identity { key: string; playerId: string | null; name: string; position: NflAdvancedPlayer['position'] }
 interface PlayerGame extends Identity { targets: number; carries: number; airYards: number; airTargets: number; redZoneTargets: number; goalLineCarries: number; snaps: number | null; snapShare: number | null; participated: boolean }
 interface TeamGame {
+  successes: number; successSamples: number; explosives: number; explosiveSamples: number; redZoneTrips: number; redZoneTDs: number;
+  successesAllowed: number; successAllowedSamples: number; explosivesAllowed: number; explosiveAllowedSamples: number; redZoneTripsAllowed: number; redZoneTDsAllowed: number;
   players: Map<string, PlayerGame>; targets: number; carries: number; offensePlays: number;
   passPlays: number; rushPlays: number; passEpaSum: number; rushEpaSum: number; passEpaPlays: number; rushEpaPlays: number; hits: number; hitSamples: number;
   dropbacks: number; offRushes: number; offPassEpaSum: number; offRushEpaSum: number; offPassSamples: number; offRushSamples: number; sacks: number; redZoneTargets: number; goalLineCarries: number;
@@ -25,7 +27,9 @@ interface TeamGame {
 }
 interface Game { week: number; date: string; endedAt: number | null; complete: boolean; teams: Map<string, TeamGame> }
 export interface AdvancedSeason { season: number; games: Map<string, Game>; hasPbp: boolean; hasSnaps: boolean; hasIdentities: boolean }
-const newTeam = (): TeamGame => ({ players: new Map(), targets: 0, carries: 0, offensePlays: 0, passPlays: 0, rushPlays: 0, passEpaSum: 0, rushEpaSum: 0, passEpaPlays: 0, rushEpaPlays: 0, hits: 0, hitSamples: 0, dropbacks: 0, offRushes: 0, offPassEpaSum: 0, offRushEpaSum: 0, offPassSamples: 0, offRushSamples: 0, sacks: 0, redZoneTargets: 0, goalLineCarries: 0, rbEpa: 0, wrEpa: 0, teEpa: 0, rbTargets: 0, wrTargets: 0, teTargets: 0 });
+const newTeam = (): TeamGame => ({ players: new Map(), targets: 0, carries: 0, offensePlays: 0, passPlays: 0, rushPlays: 0, passEpaSum: 0, rushEpaSum: 0, passEpaPlays: 0, rushEpaPlays: 0, hits: 0, hitSamples: 0, dropbacks: 0, offRushes: 0, offPassEpaSum: 0, offRushEpaSum: 0, offPassSamples: 0, offRushSamples: 0, sacks: 0, redZoneTargets: 0, goalLineCarries: 0, rbEpa: 0, wrEpa: 0, teEpa: 0, rbTargets: 0, wrTargets: 0, teTargets: 0,
+  successes: 0, successSamples: 0, explosives: 0, explosiveSamples: 0, redZoneTrips: 0, redZoneTDs: 0,
+  successesAllowed: 0, successAllowedSamples: 0, explosivesAllowed: 0, explosiveAllowedSamples: 0, redZoneTripsAllowed: 0, redZoneTDsAllowed: 0 });
 const newPlayer = (identity: Identity): PlayerGame => ({ ...identity, targets: 0, carries: 0, airYards: 0, airTargets: 0, redZoneTargets: 0, goalLineCarries: 0, snaps: null, snapShare: null, participated: false });
 
 /** Aggregate immutable observed game facts first. Cutoffs are applied to whole
@@ -43,6 +47,7 @@ export function parseAdvancedSeason(season: number, pbp?: string, snaps?: string
     addIdentity(gsis, row.gsis_id!, item); addIdentity(pfr, row.pfr_id!, item);
   }
   const games = new Map<string, Game>(), seenPlays = new Set<string>(), seenSnaps = new Set<string>();
+  const redZoneDrives = new Map<string, { touchdown: boolean }>();
   const teamGame = (game: Game, team: string) => {
     team = code(team);
     if (!NFL_TEAM_CODES[team]) throw new Error('Unknown team in advanced NFL source.');
@@ -82,6 +87,31 @@ export function parseAdvancedSeason(season: number, pbp?: string, snaps?: string
     if (!game.teams.has(code(row.posteam!)) || !game.teams.has(code(row.defteam!)) || code(row.posteam!) === code(row.defteam!)) throw new Error('Mismatched offense/defense in advanced source.');
     const offense = teamGame(game, row.posteam!), defense = teamGame(game, row.defteam!);
     offense.offensePlays++;
+    const gain = number(row.yards_gained), down = number(row.down), toGo = number(row.ydstogo);
+    // Yardage-based success: 40%/60%/100% of yards to go on downs 1/2/3–4.
+    // Deleted plays, spikes, kneels and conversions were excluded above.
+    if (gain !== null) {
+      offense.explosiveSamples++; defense.explosiveAllowedSamples++;
+      if (gain >= 15) { offense.explosives++; defense.explosivesAllowed++; }
+      if (down !== null && Number.isInteger(down) && down >= 1 && down <= 4 && toGo !== null && toGo > 0) {
+        offense.successSamples++; defense.successAllowedSamples++;
+        if (gain >= toGo * (down === 1 ? 0.4 : down === 2 ? 0.6 : 1)
+          && row.interception !== '1' && row.fumble_lost !== '1') {
+          offense.successes++; defense.successesAllowed++;
+        }
+      }
+    }
+    const drive = number(row.fixed_drive ?? row.drive), yardline = number(row.yardline_100);
+    if (drive !== null && Number.isInteger(drive) && drive > 0) {
+      const driveKey = `${row.game_id}:${code(row.posteam!)}:${drive}`;
+      if (yardline !== null && yardline >= 0 && yardline <= 20 && !redZoneDrives.has(driveKey)) {
+        redZoneDrives.set(driveKey, { touchdown: false }); offense.redZoneTrips++; defense.redZoneTripsAllowed++;
+      }
+      const trip = redZoneDrives.get(driveKey);
+      if (trip && !trip.touchdown && row.touchdown === '1' && code(row.td_team ?? '') === code(row.posteam!)) {
+        trip.touchdown = true; offense.redZoneTDs++; defense.redZoneTDsAllowed++;
+      }
+    }
     const epa = number(row.epa);
     if (dropback) {
       offense.dropbacks++;
@@ -179,6 +209,12 @@ export function advancedReport(data: AdvancedSeason, teamName: string, beforeWee
   const sum = (field: keyof Omit<TeamGame, 'players'>) => teams.reduce((total, row) => total + row[field], 0);
   const passEpaPlays = sum('passEpaPlays'), rushEpaPlays = sum('rushEpaPlays'), hitSamples = sum('hitSamples');
   const defense: NflAdvancedDefense = { passPlays: sum('passPlays'), rushPlays: sum('rushPlays'), passEpaPlays, rushEpaPlays,
+    successRateAllowed: sum('successAllowedSamples') ? round(sum('successesAllowed') / sum('successAllowedSamples')) : null,
+    successSamples: sum('successAllowedSamples'),
+    explosivePlayRateAllowed: sum('explosiveAllowedSamples') ? round(sum('explosivesAllowed') / sum('explosiveAllowedSamples')) : null,
+    explosiveSamples: sum('explosiveAllowedSamples'),
+    redZoneTdRateAllowed: sum('redZoneTripsAllowed') ? round(sum('redZoneTDsAllowed') / sum('redZoneTripsAllowed')) : null,
+    redZoneTrips: sum('redZoneTripsAllowed'),
     passEpaAllowed: passEpaPlays ? round(sum('passEpaSum') / passEpaPlays) : null,
     rushEpaAllowed: rushEpaPlays ? round(sum('rushEpaSum') / rushEpaPlays) : null,
     sackHitPlays: hitSamples, sackHitRate: hitSamples ? round(sum('hits') / hitSamples) : null, pressureRate: null,
@@ -211,6 +247,12 @@ export function advancedReport(data: AdvancedSeason, teamName: string, beforeWee
     dataThroughWeek: selected.length ? Math.max(...selected.map(g => g.week)) : null, unmatchedPlayers, sources, warnings, players, defense,
     sampleWeeks: selected.map(g => g.week),
     offense: { dropbackShare: sum('offensePlays') ? round(sum('dropbacks') / sum('offensePlays')) : null,
+      successRate: sum('successSamples') ? round(sum('successes') / sum('successSamples')) : null,
+      successSamples: sum('successSamples'),
+      explosivePlayRate: sum('explosiveSamples') ? round(sum('explosives') / sum('explosiveSamples')) : null,
+      explosiveSamples: sum('explosiveSamples'),
+      redZoneTdRate: sum('redZoneTrips') ? round(sum('redZoneTDs') / sum('redZoneTrips')) : null,
+      redZoneTrips: sum('redZoneTrips'),
       passEpa: sum('offPassSamples') ? round(sum('offPassEpaSum') / sum('offPassSamples')) : null,
       rushEpa: sum('offRushSamples') ? round(sum('offRushEpaSum') / sum('offRushSamples')) : null,
       passSamples: sum('offPassSamples'), rushSamples: sum('offRushSamples'),

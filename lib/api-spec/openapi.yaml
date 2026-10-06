@@ -554,6 +554,12 @@ components:
         positionEpaSamples:
           type: object
           additionalProperties: { type: integer }
+        successRateAllowed: { type: ["number", "null"], minimum: 0, maximum: 1 }
+        successSamples: { type: integer, minimum: 0 }
+        explosivePlayRateAllowed: { type: ["number", "null"], minimum: 0, maximum: 1 }
+        explosiveSamples: { type: integer, minimum: 0 }
+        redZoneTdRateAllowed: { type: ["number", "null"], minimum: 0, maximum: 1 }
+        redZoneTrips: { type: integer, minimum: 0 }
     NflAdvancedOffense:
       type: object
       required: [dropbackShare, passEpa, rushEpa, passSamples, rushSamples, playsPerGame]
@@ -564,6 +570,12 @@ components:
         passSamples: { type: integer }
         rushSamples: { type: integer }
         playsPerGame: { type: ["number", "null"] }
+        successRate: { type: ["number", "null"], minimum: 0, maximum: 1 }
+        successSamples: { type: integer, minimum: 0 }
+        explosivePlayRate: { type: ["number", "null"], minimum: 0, maximum: 1 }
+        explosiveSamples: { type: integer, minimum: 0 }
+        redZoneTdRate: { type: ["number", "null"], minimum: 0, maximum: 1 }
+        redZoneTrips: { type: integer, minimum: 0 }
     NflAdvancedReport:
       type: object
       required: [season, team, beforeWeek, fetchedAt, status, games, dataThroughWeek, unmatchedPlayers, sources, warnings, players, defense]
