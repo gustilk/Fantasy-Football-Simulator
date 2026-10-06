@@ -162,6 +162,38 @@ export const GetNflMatchupEvidenceParams = zod.object({
   "window": zod.union([zod.literal(4),zod.literal(18)])
 })
 
+export const getNflMatchupEvidenceResponseDefenseSuccessRateAllowedMin = 0;
+export const getNflMatchupEvidenceResponseDefenseSuccessRateAllowedMax = 1;
+
+export const getNflMatchupEvidenceResponseDefenseSuccessSamplesMin = 0;
+
+export const getNflMatchupEvidenceResponseDefenseExplosivePlayRateAllowedMin = 0;
+export const getNflMatchupEvidenceResponseDefenseExplosivePlayRateAllowedMax = 1;
+
+export const getNflMatchupEvidenceResponseDefenseExplosiveSamplesMin = 0;
+
+export const getNflMatchupEvidenceResponseDefenseRedZoneTdRateAllowedMin = 0;
+export const getNflMatchupEvidenceResponseDefenseRedZoneTdRateAllowedMax = 1;
+
+export const getNflMatchupEvidenceResponseDefenseRedZoneTripsMin = 0;
+
+export const getNflMatchupEvidenceResponseOffenseSuccessRateMin = 0;
+export const getNflMatchupEvidenceResponseOffenseSuccessRateMax = 1;
+
+export const getNflMatchupEvidenceResponseOffenseSuccessSamplesMin = 0;
+
+export const getNflMatchupEvidenceResponseOffenseExplosivePlayRateMin = 0;
+export const getNflMatchupEvidenceResponseOffenseExplosivePlayRateMax = 1;
+
+export const getNflMatchupEvidenceResponseOffenseExplosiveSamplesMin = 0;
+
+export const getNflMatchupEvidenceResponseOffenseRedZoneTdRateMin = 0;
+export const getNflMatchupEvidenceResponseOffenseRedZoneTdRateMax = 1;
+
+export const getNflMatchupEvidenceResponseOffenseRedZoneTripsMin = 0;
+
+
+
 export const GetNflMatchupEvidenceResponse = zod.object({
   "season": zod.number().int(),
   "team": zod.string(),
@@ -214,7 +246,13 @@ export const GetNflMatchupEvidenceResponse = zod.object({
   "sackRate": zod.number().nullish(),
   "receivingEpaAllowed": zod.number().nullish(),
   "positionEpaAllowed": zod.record(zod.string(), zod.number()).optional(),
-  "positionEpaSamples": zod.record(zod.string(), zod.number().int()).optional()
+  "positionEpaSamples": zod.record(zod.string(), zod.number().int()).optional(),
+  "successRateAllowed": zod.number().min(getNflMatchupEvidenceResponseDefenseSuccessRateAllowedMin).max(getNflMatchupEvidenceResponseDefenseSuccessRateAllowedMax).nullish(),
+  "successSamples": zod.number().int().min(getNflMatchupEvidenceResponseDefenseSuccessSamplesMin).optional(),
+  "explosivePlayRateAllowed": zod.number().min(getNflMatchupEvidenceResponseDefenseExplosivePlayRateAllowedMin).max(getNflMatchupEvidenceResponseDefenseExplosivePlayRateAllowedMax).nullish(),
+  "explosiveSamples": zod.number().int().min(getNflMatchupEvidenceResponseDefenseExplosiveSamplesMin).optional(),
+  "redZoneTdRateAllowed": zod.number().min(getNflMatchupEvidenceResponseDefenseRedZoneTdRateAllowedMin).max(getNflMatchupEvidenceResponseDefenseRedZoneTdRateAllowedMax).nullish(),
+  "redZoneTrips": zod.number().int().min(getNflMatchupEvidenceResponseDefenseRedZoneTripsMin).optional()
 }),
   "offense": zod.object({
   "dropbackShare": zod.number().nullable(),
@@ -222,7 +260,13 @@ export const GetNflMatchupEvidenceResponse = zod.object({
   "rushEpa": zod.number().nullable(),
   "passSamples": zod.number().int(),
   "rushSamples": zod.number().int(),
-  "playsPerGame": zod.number().nullable()
+  "playsPerGame": zod.number().nullable(),
+  "successRate": zod.number().min(getNflMatchupEvidenceResponseOffenseSuccessRateMin).max(getNflMatchupEvidenceResponseOffenseSuccessRateMax).nullish(),
+  "successSamples": zod.number().int().min(getNflMatchupEvidenceResponseOffenseSuccessSamplesMin).optional(),
+  "explosivePlayRate": zod.number().min(getNflMatchupEvidenceResponseOffenseExplosivePlayRateMin).max(getNflMatchupEvidenceResponseOffenseExplosivePlayRateMax).nullish(),
+  "explosiveSamples": zod.number().int().min(getNflMatchupEvidenceResponseOffenseExplosiveSamplesMin).optional(),
+  "redZoneTdRate": zod.number().min(getNflMatchupEvidenceResponseOffenseRedZoneTdRateMin).max(getNflMatchupEvidenceResponseOffenseRedZoneTdRateMax).nullish(),
+  "redZoneTrips": zod.number().int().min(getNflMatchupEvidenceResponseOffenseRedZoneTripsMin).optional()
 }).optional(),
   "sampleWeeks": zod.array(zod.number().int()).optional()
 })
@@ -435,6 +479,38 @@ export const GetNflAdvancedStatsParams = zod.object({
   "beforeWeek": zod.coerce.number().int().min(1).max(getNflAdvancedStatsPathBeforeWeekMax)
 })
 
+export const getNflAdvancedStatsResponseDefenseSuccessRateAllowedMin = 0;
+export const getNflAdvancedStatsResponseDefenseSuccessRateAllowedMax = 1;
+
+export const getNflAdvancedStatsResponseDefenseSuccessSamplesMin = 0;
+
+export const getNflAdvancedStatsResponseDefenseExplosivePlayRateAllowedMin = 0;
+export const getNflAdvancedStatsResponseDefenseExplosivePlayRateAllowedMax = 1;
+
+export const getNflAdvancedStatsResponseDefenseExplosiveSamplesMin = 0;
+
+export const getNflAdvancedStatsResponseDefenseRedZoneTdRateAllowedMin = 0;
+export const getNflAdvancedStatsResponseDefenseRedZoneTdRateAllowedMax = 1;
+
+export const getNflAdvancedStatsResponseDefenseRedZoneTripsMin = 0;
+
+export const getNflAdvancedStatsResponseOffenseSuccessRateMin = 0;
+export const getNflAdvancedStatsResponseOffenseSuccessRateMax = 1;
+
+export const getNflAdvancedStatsResponseOffenseSuccessSamplesMin = 0;
+
+export const getNflAdvancedStatsResponseOffenseExplosivePlayRateMin = 0;
+export const getNflAdvancedStatsResponseOffenseExplosivePlayRateMax = 1;
+
+export const getNflAdvancedStatsResponseOffenseExplosiveSamplesMin = 0;
+
+export const getNflAdvancedStatsResponseOffenseRedZoneTdRateMin = 0;
+export const getNflAdvancedStatsResponseOffenseRedZoneTdRateMax = 1;
+
+export const getNflAdvancedStatsResponseOffenseRedZoneTripsMin = 0;
+
+
+
 export const GetNflAdvancedStatsResponse = zod.object({
   "season": zod.number().int(),
   "team": zod.string(),
@@ -487,7 +563,13 @@ export const GetNflAdvancedStatsResponse = zod.object({
   "sackRate": zod.number().nullish(),
   "receivingEpaAllowed": zod.number().nullish(),
   "positionEpaAllowed": zod.record(zod.string(), zod.number()).optional(),
-  "positionEpaSamples": zod.record(zod.string(), zod.number().int()).optional()
+  "positionEpaSamples": zod.record(zod.string(), zod.number().int()).optional(),
+  "successRateAllowed": zod.number().min(getNflAdvancedStatsResponseDefenseSuccessRateAllowedMin).max(getNflAdvancedStatsResponseDefenseSuccessRateAllowedMax).nullish(),
+  "successSamples": zod.number().int().min(getNflAdvancedStatsResponseDefenseSuccessSamplesMin).optional(),
+  "explosivePlayRateAllowed": zod.number().min(getNflAdvancedStatsResponseDefenseExplosivePlayRateAllowedMin).max(getNflAdvancedStatsResponseDefenseExplosivePlayRateAllowedMax).nullish(),
+  "explosiveSamples": zod.number().int().min(getNflAdvancedStatsResponseDefenseExplosiveSamplesMin).optional(),
+  "redZoneTdRateAllowed": zod.number().min(getNflAdvancedStatsResponseDefenseRedZoneTdRateAllowedMin).max(getNflAdvancedStatsResponseDefenseRedZoneTdRateAllowedMax).nullish(),
+  "redZoneTrips": zod.number().int().min(getNflAdvancedStatsResponseDefenseRedZoneTripsMin).optional()
 }),
   "offense": zod.object({
   "dropbackShare": zod.number().nullable(),
@@ -495,7 +577,13 @@ export const GetNflAdvancedStatsResponse = zod.object({
   "rushEpa": zod.number().nullable(),
   "passSamples": zod.number().int(),
   "rushSamples": zod.number().int(),
-  "playsPerGame": zod.number().nullable()
+  "playsPerGame": zod.number().nullable(),
+  "successRate": zod.number().min(getNflAdvancedStatsResponseOffenseSuccessRateMin).max(getNflAdvancedStatsResponseOffenseSuccessRateMax).nullish(),
+  "successSamples": zod.number().int().min(getNflAdvancedStatsResponseOffenseSuccessSamplesMin).optional(),
+  "explosivePlayRate": zod.number().min(getNflAdvancedStatsResponseOffenseExplosivePlayRateMin).max(getNflAdvancedStatsResponseOffenseExplosivePlayRateMax).nullish(),
+  "explosiveSamples": zod.number().int().min(getNflAdvancedStatsResponseOffenseExplosiveSamplesMin).optional(),
+  "redZoneTdRate": zod.number().min(getNflAdvancedStatsResponseOffenseRedZoneTdRateMin).max(getNflAdvancedStatsResponseOffenseRedZoneTdRateMax).nullish(),
+  "redZoneTrips": zod.number().int().min(getNflAdvancedStatsResponseOffenseRedZoneTripsMin).optional()
 }).optional(),
   "sampleWeeks": zod.array(zod.number().int()).optional()
 })

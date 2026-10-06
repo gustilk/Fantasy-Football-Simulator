@@ -1,6 +1,7 @@
 import type { NflAdvancedPlayer, NflAdvancedReport, TeamSeasonRecord } from '@workspace/api-client-react';
 import { setupFromHistory } from './season-model';
 import type { TeamSetup } from './simulator';
+import type { PossessionRates } from './possession-drive';
 
 export interface FootballPlayerEvidence {
   targetShare?: number; carryShare?: number; snapShare?: number; airYardsPerTarget?: number;
@@ -10,6 +11,7 @@ export interface FootballEvidence {
   version: 'football-v2';
   passDefenseRating: number; rushDefenseRating: number;
   dropbackShare?: number; playsPerGame?: number;
+  driveOffense?: PossessionRates; driveDefense?: PossessionRates;
   passEpaAllowed?: number; rushEpaAllowed?: number; sackRate?: number; nonSackHitRate?: number;
   passSamples: number; rushSamples: number;
   positionMatchups: Record<string, { delta: number; samples: number }>;
@@ -50,6 +52,24 @@ export function footballSetup(team: TeamSeasonRecord, week: number, venue: 'home
   const current = eligible(reports.current, team.season, week, 4);
   const prior = eligible(reports.prior, team.season - 1, 19, 18);
   const n = current?.games ?? 0, p = prior?.games ?? 0;
+  const driveEvidence = (side: 'offense' | 'defense'): PossessionRates => {
+    const result: PossessionRates = {};
+    for (const key of ['successRate', 'explosivePlayRate', 'redZoneTdRate'] as const) {
+      const sample = key === 'successRate' ? 'successSamples' : key === 'explosivePlayRate' ? 'explosiveSamples' : 'redZoneTrips';
+      const read = (report?: NflAdvancedReport) => side === 'offense' ? report?.offense?.[key]
+        : key === 'successRate' ? report?.defense.successRateAllowed
+        : key === 'explosivePlayRate' ? report?.defense.explosivePlayRateAllowed : report?.defense.redZoneTdRateAllowed;
+      const a = read(current), b = read(prior);
+      const count = (report?: NflAdvancedReport) => (side === 'offense' ? report?.offense?.[sample] : report?.defense[sample]) ?? 0;
+      const ca = known(a) ? count(current) : 0;
+      // Separate, capped prior evidence: approximately three games, not a
+      // synthetic addition to the current-season game count.
+      const cb = known(b) ? Math.min(key === 'redZoneTdRate' ? 12 : 180, count(prior)) : 0;
+      result[sample] = ca + cb;
+      if (ca + cb > 0) result[key] = ((known(a) ? a * ca : 0) + (known(b) ? b * cb : 0)) / (ca + cb);
+    }
+    return result;
+  };
   const blend = (a: number | null | undefined, b: number | null | undefined) => footballBlend(a, b, n, p);
   const passSamples = (current?.defense.passEpaPlays ?? 0) + Math.min(150, prior?.defense.passEpaPlays ?? 0);
   const rushSamples = (current?.defense.rushEpaPlays ?? 0) + Math.min(100, prior?.defense.rushEpaPlays ?? 0);
@@ -97,6 +117,7 @@ export function footballSetup(team: TeamSeasonRecord, week: number, venue: 'home
     nonSackHitRate: hits !== undefined && sackRate !== undefined ? Math.max(0, hits - sackRate) : undefined,
     passSamples, rushSamples, positionMatchups, dropbackShare: blend(current?.offense?.dropbackShare, prior?.offense?.dropbackShare),
     playsPerGame: blend(current?.offense?.playsPerGame, prior?.offense?.playsPerGame),
+    driveOffense: driveEvidence('offense'), driveDefense: driveEvidence('defense'),
     sources: [current, prior].filter((r): r is NflAdvancedReport => !!r).map(r => ({
       season: r.season, games: r.games, weeks: [...r.sampleWeeks!], fetchedAt: r.fetchedAt, status: r.status, urls: r.sources.map(s => s.url),
     })), warnings, matchedPlayers };

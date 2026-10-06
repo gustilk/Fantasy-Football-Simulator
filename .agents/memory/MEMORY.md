@@ -13,3 +13,4 @@
 - [Standings intent](standings-intent.md) — user marks win pressure manually; division-only, team-specific strategy assumptions must preserve point-in-time forecasts.
 - [Backup QB intent](quarterback-strategy-intent.md) — backup starters should favor rushing; distinguish known depth roles from unknowns and support promoted replacements.
 - [API path validation](api-path-validation.md) — generated numeric-enum path literals do not coerce HTTP strings; validate and convert at the route boundary.
+- [Drive metric definitions](drive-metric-definitions.md) — success, red-zone conversion, and 15+ yard explosiveness are distinct evidence; new mappings need independent calibration.

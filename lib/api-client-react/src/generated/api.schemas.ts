@@ -269,6 +269,30 @@ export interface NflAdvancedDefense {
   receivingEpaAllowed?: number | null;
   positionEpaAllowed?: NflAdvancedDefensePositionEpaAllowed;
   positionEpaSamples?: NflAdvancedDefensePositionEpaSamples;
+  /**
+     * @minimum 0
+     * @maximum 1
+     * @nullable
+     */
+  successRateAllowed?: number | null;
+  /** @minimum 0 */
+  successSamples?: number;
+  /**
+     * @minimum 0
+     * @maximum 1
+     * @nullable
+     */
+  explosivePlayRateAllowed?: number | null;
+  /** @minimum 0 */
+  explosiveSamples?: number;
+  /**
+     * @minimum 0
+     * @maximum 1
+     * @nullable
+     */
+  redZoneTdRateAllowed?: number | null;
+  /** @minimum 0 */
+  redZoneTrips?: number;
 }
 
 export interface NflAdvancedOffense {
@@ -282,6 +306,30 @@ export interface NflAdvancedOffense {
   rushSamples: number;
   /** @nullable */
   playsPerGame: number | null;
+  /**
+     * @minimum 0
+     * @maximum 1
+     * @nullable
+     */
+  successRate?: number | null;
+  /** @minimum 0 */
+  successSamples?: number;
+  /**
+     * @minimum 0
+     * @maximum 1
+     * @nullable
+     */
+  explosivePlayRate?: number | null;
+  /** @minimum 0 */
+  explosiveSamples?: number;
+  /**
+     * @minimum 0
+     * @maximum 1
+     * @nullable
+     */
+  redZoneTdRate?: number | null;
+  /** @minimum 0 */
+  redZoneTrips?: number;
 }
 
 export type NflAdvancedReportStatus = typeof NflAdvancedReportStatus[keyof typeof NflAdvancedReportStatus];

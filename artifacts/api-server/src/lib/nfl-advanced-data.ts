@@ -47,7 +47,7 @@ export function parseAdvancedSeason(season: number, pbp?: string, snaps?: string
     addIdentity(gsis, row.gsis_id!, item); addIdentity(pfr, row.pfr_id!, item);
   }
   const games = new Map<string, Game>(), seenPlays = new Set<string>(), seenSnaps = new Set<string>();
-  const redZoneDrives = new Map<string, { touchdown: boolean }>();
+  const redZoneDrives = new Map<string, { offense: TeamGame; defense: TeamGame; redZone: boolean; touchdown: boolean; valid: boolean }>();
   const teamGame = (game: Game, team: string) => {
     team = code(team);
     if (!NFL_TEAM_CODES[team]) throw new Error('Unknown team in advanced NFL source.');
@@ -101,16 +101,15 @@ export function parseAdvancedSeason(season: number, pbp?: string, snaps?: string
         }
       }
     }
-    const drive = number(row.fixed_drive ?? row.drive), yardline = number(row.yardline_100);
+    const drive = number(row.fixed_drive) ?? number(row.drive), yardline = number(row.yardline_100);
     if (drive !== null && Number.isInteger(drive) && drive > 0) {
       const driveKey = `${row.game_id}:${code(row.posteam!)}:${drive}`;
-      if (yardline !== null && yardline >= 0 && yardline <= 20 && !redZoneDrives.has(driveKey)) {
-        redZoneDrives.set(driveKey, { touchdown: false }); offense.redZoneTrips++; defense.redZoneTripsAllowed++;
-      }
-      const trip = redZoneDrives.get(driveKey);
-      if (trip && !trip.touchdown && row.touchdown === '1' && code(row.td_team ?? '') === code(row.posteam!)) {
-        trip.touchdown = true; offense.redZoneTDs++; defense.redZoneTDsAllowed++;
-      }
+      if (!redZoneDrives.has(driveKey)) redZoneDrives.set(driveKey, { offense, defense, redZone: false, touchdown: false, valid: true });
+      const trip = redZoneDrives.get(driveKey)!;
+      trip.valid &&= yardline !== null && yardline >= 0 && yardline <= 100 && ['0', '1'].includes(row.touchdown ?? '')
+        && (row.touchdown !== '1' || !!NFL_TEAM_CODES[code(row.td_team ?? '')]);
+      trip.redZone ||= yardline !== null && yardline >= 0 && yardline <= 20;
+      trip.touchdown ||= row.touchdown === '1' && code(row.td_team ?? '') === code(row.posteam!);
     }
     const epa = number(row.epa);
     if (dropback) {
@@ -146,6 +145,11 @@ export function parseAdvancedSeason(season: number, pbp?: string, snaps?: string
       const yardline = number(row.yardline_100);
       if (yardline !== null && yardline <= 5 && yardline >= 0) { player.goalLineCarries++; offense.goalLineCarries++; }
     }
+  }
+  for (const trip of redZoneDrives.values()) {
+    if (!trip.valid || !trip.redZone) continue;
+    trip.offense.redZoneTrips++; trip.defense.redZoneTripsAllowed++;
+    if (trip.touchdown) { trip.offense.redZoneTDs++; trip.defense.redZoneTDsAllowed++; }
   }
   if (snaps) for (const row of csvRecords(snaps, ['season', 'game_type', 'week', 'game_id', 'pfr_player_id', 'player', 'position', 'team', 'offense_snaps', 'offense_pct'])) {
     if (number(row.season) !== season || !row.game_id!.startsWith(`${season}_`)) throw new Error('Wrong-season snap source. No other season was substituted.');
@@ -234,6 +238,7 @@ export function advancedReport(data: AdvancedSeason, teamName: string, beforeWee
     'Full pressure rate is unavailable. Sack-or-QB-hit rate counts each dropback once and is not a full pressure measure.',
     'Target/carry shares are averages across verified participation games; absent players are not assigned zero. Targets require an identified receiver; carries exclude kneels. Scrambles count as dropbacks for EPA.',
     'Only completed regular-season games before the cutoff are included. Fetch time is not independent proof of historical pregame publication.',
+    'Drive metrics: success requires 40%/60%/100% of yards to go on downs 1/2/3–4, with turnovers unsuccessful; explosiveness is gains of at least 15 yards. Red-zone efficiency is offensive TDs per drive reaching the opponent’s 20. Missing fields are excluded, not assigned zero.',
   ];
   if (!data.hasSnaps) warnings.push('Snap counts are unavailable. Without snaps, opportunity shares may miss games where a player had no recorded opportunity.');
   if (unmatchedPlayers) warnings.push(`${unmatchedPlayers} players lack a unique ESPN identity; they are not matched to saved rosters by name.`);

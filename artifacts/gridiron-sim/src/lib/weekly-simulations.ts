@@ -63,6 +63,7 @@ export async function runWeeklySimulations(options: {
       const [awayEvidence, homeEvidence] = await Promise.all([loadEvidence(season, away.team, week), loadEvidence(season, home.team, week)]);
       const input: SimulationInput = {
         showdownModel: 'showdown-v1',
+        driveModel: 'possession-v1',
         away: applyStandings(footballSetup(away, week, 'away', home.team, awayEvidence), standings, season, week),
         home: applyStandings(footballSetup(home, week, 'home', away.team, homeEvidence), standings, season, week),
         weather: { temperatureF: 68, windMph: 5, precipitation: 'none' },

@@ -4,6 +4,7 @@ export type StoredSetup = {
   away: TeamSetup; home: TeamSetup; weather: WeatherSetup;
   importance?: SimulationInput['importance']; market?: SimulationInput['market'];
   showdownModel?: SimulationInput['showdownModel'];
+  driveModel?: SimulationInput['driveModel'];
 };
 export type SavedSimulation = {
   id: string; savedAt: string; awayName: string; homeName: string;

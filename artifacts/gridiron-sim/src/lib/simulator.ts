@@ -12,6 +12,7 @@ import type { FootballEvidence, FootballPlayerEvidence } from "./football-eviden
 import type { MarketOdds, MarketEvidence } from "./market-odds";
 import { getEliteTier, eliteOpportunityWeight, type EliteTier } from "./elite-players";
 import { backfieldOpportunityWeight, backfieldReceivingPrior, backfieldEfficiency, type BackfieldEvidence } from "./backfield-workload";
+import { simulatePossessionGame } from "./possession-game";
 
 export type Precipitation = "none" | "light" | "moderate" | "heavy";
 
@@ -118,6 +119,8 @@ export interface SimulationInput {
   market?: MarketOdds;
   /** Opt-in so legacy frozen forecasts retain their original scoring/replay. */
   showdownModel?: 'showdown-v1';
+  /** Absence preserves the old engine and its exact random sequence. */
+  driveModel?: 'possession-v1';
 }
 
 export interface SimulatedDrive {
@@ -176,7 +179,7 @@ export interface SimulationResult {
   };
 }
 
-interface PlayerAccumulator extends Omit<PlayerProjection, "draftKings"> {
+export interface PlayerAccumulator extends Omit<PlayerProjection, "draftKings"> {
   football?: FootballPlayerEvidence;
   backfieldEvidence?: BackfieldEvidence;
   historyObservations?: number;
@@ -186,7 +189,7 @@ interface PlayerAccumulator extends Omit<PlayerProjection, "draftKings"> {
   recentStats?: PlayerRecentStats;
 }
 
-interface TeamSimulation {
+export interface TeamSimulation {
   setup: TeamSetup;
   score: number;
   plays: number;
@@ -926,6 +929,7 @@ function makeOverview(
 }
 
 export function simulateGame(input: SimulationInput): SimulationResult {
+  if (input.driveModel !== undefined && input.driveModel !== 'possession-v1') throw new Error('Unsupported possession model. Saved forecasts must use their frozen model version.');
   if (input.away.name === input.home.name) {
     throw new Error("Choose different teams for the away and home sides.");
   }
@@ -969,7 +973,11 @@ export function simulateGame(input: SimulationInput): SimulationResult {
   };
   const targetAwayPlays = plannedPlays(input.away);
   const targetHomePlays = plannedPlays(input.home);
-  const away = simulateTeam(
+  const possession = input.driveModel === 'possession-v1' ? simulatePossessionGame(input, random, targetAwayPlays, targetHomePlays, {
+    makeTeam: makeTeamSimulation, receiver: receiverFor, runner: runningBackFor, recent: recentForPlayer,
+    reliability: playerReliability, fumbleChance: observedFumbleChance, footballPassShare: footballPassingShare,
+  }) : undefined;
+  const away = possession?.away ?? simulateTeam(
     input.away,
     input.home,
     input.weather,
@@ -978,7 +986,7 @@ export function simulateGame(input: SimulationInput): SimulationResult {
     false,
     input.importance,
   );
-  const home = simulateTeam(
+  const home = possession?.home ?? simulateTeam(
     input.home,
     input.away,
     input.weather,
@@ -988,13 +996,13 @@ export function simulateGame(input: SimulationInput): SimulationResult {
     input.importance,
   );
 
-  const mergedDrives: SimulatedDrive[] = [];
+  const mergedDrives: SimulatedDrive[] = possession?.drives ?? [];
   let awayIndex = 0;
   let homeIndex = 0;
-  let awayFirst = random() < 0.5;
+  let awayFirst = possession ? false : random() < 0.5;
   let playedSnaps = 0;
 
-  while (awayIndex < away.drives.length || homeIndex < home.drives.length) {
+  while (!possession && (awayIndex < away.drives.length || homeIndex < home.drives.length)) {
     const takeAway =
       (awayFirst && awayIndex < away.drives.length) ||
       homeIndex >= home.drives.length;
@@ -1051,7 +1059,7 @@ export function simulateGame(input: SimulationInput): SimulationResult {
     awayScore: away.score,
     homeScore: home.score,
     totalPlays: { away: away.plays, home: home.plays },
-    overview: [...makeOverview(input, away, home), ...(kickers ? [SHOWDOWN_MODEL_WARNING,
+    overview: [...makeOverview(input, away, home), ...(possession?.notes ?? []), ...(kickers ? [SHOWDOWN_MODEL_WARNING,
       `Simulated defensive return touchdowns: ${away.setup.name} ${defenses[0]!.defensiveTD}; ${home.setup.name} ${defenses[1]!.defensiveTD}. Team totals include these TDs and assumed extra points.`] : [])],
     drives: mergedDrives,
     players,

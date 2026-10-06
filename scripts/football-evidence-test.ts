@@ -33,6 +33,25 @@ function report(season: number, games = 4): NflAdvancedReport {
     offense: { dropbackShare: 0.65, passEpa: 0.2, rushEpa: -0.1, passSamples: 140, rushSamples: 100, playsPerGame: 64 } };
 }
 assert.equal(footballBlend(undefined, undefined, 4, 17), undefined);
+const driveCurrent = report(2026), drivePrior = report(2025, 17);
+driveCurrent.offense = { ...driveCurrent.offense!, successRate: 0.45, successSamples: 240,
+  explosivePlayRate: 0, explosiveSamples: 240, redZoneTdRate: 0.5, redZoneTrips: 8 };
+drivePrior.offense = { ...drivePrior.offense!, successRate: 0.6, successSamples: 1000,
+  explosivePlayRate: 0.15, explosiveSamples: 1000, redZoneTdRate: 0.75, redZoneTrips: 60 };
+driveCurrent.defense = { ...driveCurrent.defense, successRateAllowed: 0.4, successSamples: 200,
+  explosivePlayRateAllowed: 0.1, explosiveSamples: 200, redZoneTdRateAllowed: 0.4, redZoneTrips: 10 };
+const driveSetup = footballSetup(team, 7, 'away', 'Detroit Lions', { current: driveCurrent, prior: drivePrior, issues: [] });
+assert.equal(driveSetup.footballEvidence?.driveOffense?.successSamples, 420, 'Prior play evidence is capped separately.');
+assert.equal(driveSetup.footballEvidence?.driveOffense?.successRate, (0.45 * 240 + 0.6 * 180) / 420);
+assert.equal(driveSetup.footballEvidence?.driveOffense?.explosivePlayRate, 0.15 * 180 / 420, 'An observed zero is not treated as missing.');
+assert.equal(driveSetup.footballEvidence?.driveOffense?.redZoneTrips, 20);
+assert.equal(driveSetup.footballEvidence?.driveOffense?.redZoneTdRate, 0.65);
+assert.equal(driveSetup.footballEvidence?.driveDefense?.successRate, 0.4);
+assert.equal(driveSetup.footballEvidence?.driveDefense?.redZoneTrips, 10);
+const unknownDrive = footballSetup(team, 7, 'away', 'Detroit Lions', { issues: [] }).footballEvidence!.driveOffense!;
+assert.equal(unknownDrive.successRate, undefined);
+assert.equal(unknownDrive.explosivePlayRate, undefined);
+assert.equal(unknownDrive.redZoneTdRate, undefined);
 assert.equal(footballBlend(0, 10, 4, 17), 30 / 7, 'Reported zero counts; prior capped at three game equivalents');
 const current = report(2026), prior = report(2025, 17), before = JSON.stringify({ team, current, prior });
 const setup = footballSetup(team, 7, 'away', 'Detroit Lions', { current, prior, issues: [] });
