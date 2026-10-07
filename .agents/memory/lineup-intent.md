@@ -74,3 +74,9 @@ The user also wants a separate manual lineup section: “I will select the playe
 **Why:** They want to optimize their own player expectations rather than relying only on simulator forecasts.
 
 **How to apply:** Treat selected players as the candidate pool, not mandatory locks. Use only their entered point estimates and the current imported Classic contest's salaries and eligibility. Keep manual estimates separate from actual statistics and simulator forecasts; do not silently replace blank estimates with model values or carry them into another salary contest.
+
+My Picks must make relevant players easy to find instead of requiring scrolling through the entire salary list.
+
+**Why:** The user said there are too many players, many not starting, and requested “show only starting players, or find a way to easier to find them.”
+
+**How to apply:** Narrow browsing without removing saved candidates or point estimates. The user accepts easier discovery as an alternative to starter-only filtering; never label expensive players or inferred depth ranks as confirmed game-day starters.

@@ -1,6 +1,8 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Download, Upload, Play, Square, Trash2, RotateCw } from 'lucide-react';
 import { useManualLineups } from '@/hooks/use-manual-lineups';
+import { TEAM_CODES } from '@/lib/lineups';
+import { EMPTY_MANUAL_PLAYER_FILTERS, filterManualPlayers, manualPlayerPage, type ManualPlayerFilters } from '@/lib/manual-player-browser';
 import './manual-lineups.css';
 
 const CAP = 50000;
@@ -9,19 +11,23 @@ const POS = ['QB', 'RB', 'WR', 'TE', 'DST'];
 
 export default function ManualLineupsSection({ season }: { season: number }) {
   const c = useManualLineups(season);
-  const [q, setQ] = useState('');
-  const [pos, setPos] = useState('');
-  const [onlySel, setOnlySel] = useState(false);
+  const [filters, setFilters] = useState<ManualPlayerFilters>({ ...EMPTY_MANUAL_PLAYER_FILTERS });
+  const [requestedPage, setRequestedPage] = useState(1);
   const file = useRef<HTMLInputElement>(null);
+  const playerList = useRef<HTMLUListElement>(null);
   const busy = c.importing || c.loading;
 
-  const rows = useMemo(() => {
-    const t = q.trim().toLowerCase();
-    return c.players.filter(p => (!pos || p.position === pos)
-      && (!onlySel || c.picks[p.id]?.selected)
-      && (!t || p.name.toLowerCase().includes(t) || p.team.toLowerCase().includes(t)))
-      .sort((a, b) => b.salary - a.salary);
-  }, [c.players, c.picks, q, pos, onlySel]);
+  const teams = useMemo(() => [...new Set(c.players.map(p => p.team))].sort((a, b) =>
+    (TEAM_CODES[a] ?? a).localeCompare(TEAM_CODES[b] ?? b)), [c.players]);
+  const games = useMemo(() => [...new Set(c.players.map(p => p.gameInfo).filter(Boolean))].sort(), [c.players]);
+  const rows = useMemo(() => filterManualPlayers(c.players, c.picks, filters), [c.players, c.picks, filters]);
+  const page = manualPlayerPage(rows, requestedPage);
+  useEffect(() => { if (playerList.current) playerList.current.scrollTop = 0; }, [page.page, filters, c.record?.csv]);
+  const changeFilters = (patch: Partial<ManualPlayerFilters>) => {
+    setFilters(current => ({ ...current, ...patch })); setRequestedPage(1);
+  };
+  const resetFilters = () => { setFilters({ ...EMPTY_MANUAL_PLAYER_FILTERS }); setRequestedPage(1); };
+  const filtered = Object.values(filters).some(Boolean);
 
   return <section className="ml" aria-label="My Picks">
     <div className="page-heading" style={{ marginBottom: 0 }}>
@@ -52,19 +58,40 @@ export default function ManualLineupsSection({ season }: { season: number }) {
     <div className="panel ml-panel">
       <h2>2. Choose players &amp; enter points</h2>
       <p className="ml-muted">Points are your own assumptions, not guaranteed results. They never change actual stats or simulator forecasts. Zero is allowed. Salaries are read only.</p>
+      <div className="ml-note">Start with a <strong>team or game</strong>, then choose a position to find players quickly. Salaries do not confirm who will start; backups remain available for replacements.</div>
       <div className="ml-filters">
         <div className="field"><label htmlFor="ml-q">Search player or team</label>
-          <input id="ml-q" type="search" data-testid="manual-search" value={q} onChange={e => setQ(e.target.value)} placeholder="e.g. Mahomes or KC" /></div>
+          <input id="ml-q" type="search" data-testid="manual-search" value={filters.query} onChange={e => changeFilters({ query: e.target.value })} placeholder="Name, team name, or abbreviation" /></div>
         <div className="field"><label htmlFor="ml-pos">Position</label>
-          <select id="ml-pos" data-testid="manual-position" value={pos} onChange={e => setPos(e.target.value)}>
+          <select id="ml-pos" data-testid="manual-position" value={filters.position} onChange={e => changeFilters({ position: e.target.value })}>
             <option value="">All</option>{POS.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
       </div>
-      <label className="ml-check"><input type="checkbox" data-testid="manual-selected-only" checked={onlySel} onChange={e => setOnlySel(e.target.checked)} /> Show selected only ({c.selectedCount})</label>
+      <div className="ml-filters ml-scope-filters">
+        <div className="field"><label htmlFor="ml-team">Team</label>
+          <select id="ml-team" data-testid="manual-team" value={filters.team} onChange={e => changeFilters({ team: e.target.value })}>
+            <option value="">All teams</option>{teams.map(team => <option key={team} value={team}>{TEAM_CODES[team] ?? team} ({team})</option>)}
+          </select></div>
+        <div className="field"><label htmlFor="ml-game">Game</label>
+          <select id="ml-game" data-testid="manual-game" value={filters.game} onChange={e => changeFilters({ game: e.target.value })}>
+            <option value="">All games</option>{games.map(game => <option key={game} value={game}>{game.replace('@', ' at ')}</option>)}
+          </select></div>
+      </div>
+      <div className="ml-actions">
+        <label className="ml-check"><input type="checkbox" data-testid="manual-selected-only" checked={filters.selectedOnly}
+          onChange={e => changeFilters({ selectedOnly: e.target.checked })} /> Show selected only ({c.selectedCount})</label>
+        <button className="btn-secondary" data-testid="manual-review-picks" disabled={!c.selectedCount}
+          onClick={() => { setFilters({ ...EMPTY_MANUAL_PLAYER_FILTERS, selectedOnly: true }); setRequestedPage(1); }}>Review all my picks ({c.selectedCount})</button>
+        <button className="btn-secondary" data-testid="manual-reset-filters" disabled={!filtered} onClick={resetFilters}>Reset filters</button>
+      </div>
+      <p className="ml-muted">Filters only change what is shown. All your selected players and point estimates are kept and used by Generate.</p>
+      <p className="ml-muted" role="status" data-testid="manual-player-count">
+        {rows.length ? `Showing ${page.start}–${page.end} of ${rows.length} matching players` : 'No matching players'} · {c.players.length} in the contest · highest salaries first
+      </p>
       {busy && !c.players.length
         ? <div className="ml-list" aria-busy="true">{[0, 1, 2, 3].map(i => <div key={i} className="ml-row"><span /><span className="ml-muted">Loading…</span><span /></div>)}</div>
         : rows.length === 0
           ? <p className="ml-note" role="status">{c.players.length ? 'No players match these filters.' : 'Import salaries to see players.'}</p>
-          : <ul className="ml-list">{rows.map(p => {
+          : <ul className="ml-list" ref={playerList}>{page.rows.map(p => {
             const pick = c.picks[p.id];
             const sel = !!pick?.selected;
             const blocked = !!p.unavailable && !sel;
@@ -73,12 +100,20 @@ export default function ManualLineupsSection({ season }: { season: number }) {
                 onChange={e => c.updatePick(p.id, { selected: e.target.checked })} />
               <div className="ml-who"><strong>{p.name}</strong>
                 <span>{p.position} · {p.team} · {money(p.salary)}</span>
+                <span className="ml-game-info">{p.gameInfo.replace('@', ' at ')}</span>
                 {p.unavailable && <em>{p.unavailable}</em>}</div>
               <input type="text" inputMode="decimal" aria-label={`Your projected points for ${p.name}`} placeholder="Pts"
                 data-testid={`manual-points-${p.id}`} value={pick?.points ?? ''} disabled={busy || !!c.storageError || (!!p.unavailable && !sel)}
                 onChange={e => c.updatePick(p.id, { points: e.target.value })} />
             </li>;
           })}</ul>}
+      {page.pages > 1 && <nav className="ml-pagination" aria-label="Player list pages">
+        <button className="btn-secondary" data-testid="manual-previous-page" disabled={page.page === 1}
+          onClick={() => setRequestedPage(page.page - 1)}>Previous</button>
+        <span className="ml-muted">Page {page.page} of {page.pages}</span>
+        <button className="btn-secondary" data-testid="manual-next-page" disabled={page.page === page.pages}
+          onClick={() => setRequestedPage(page.page + 1)}>Next</button>
+      </nav>}
       <div className="ml-actions"><button className="btn-secondary" disabled={busy || (!c.storageError && !c.selectedCount && !Object.keys(c.picks).length)} onClick={c.clearPicks}><Trash2 size={14} /> Clear selections</button></div>
     </div>
 
