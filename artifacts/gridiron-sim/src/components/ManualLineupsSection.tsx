@@ -3,6 +3,7 @@ import { Download, Upload, Play, Square, Trash2, RotateCw } from 'lucide-react';
 import { useManualLineups } from '@/hooks/use-manual-lineups';
 import { TEAM_CODES } from '@/lib/lineups';
 import { EMPTY_MANUAL_PLAYER_FILTERS, filterManualPlayers, manualPlayerPage, type ManualPlayerFilters } from '@/lib/manual-player-browser';
+import { manualRosterReadiness } from '@/lib/manual-lineup-readiness';
 import './manual-lineups.css';
 
 const CAP = 50000;
@@ -28,6 +29,7 @@ export default function ManualLineupsSection({ season }: { season: number }) {
   };
   const resetFilters = () => { setFilters({ ...EMPTY_MANUAL_PLAYER_FILTERS }); setRequestedPage(1); };
   const filtered = Object.values(filters).some(Boolean);
+  const readiness = useMemo(() => manualRosterReadiness(c.players, c.picks), [c.players, c.picks]);
 
   return <section className="ml" aria-label="My Picks">
     <div className="page-heading" style={{ marginBottom: 0 }}>
@@ -128,6 +130,22 @@ export default function ManualLineupsSection({ season }: { season: number }) {
       <h2>3. Generate</h2>
       <p className="ml-muted">Cap {money(CAP)}. Roster: QB, 2 RB, 3 WR, TE, FLEX, DST, with players from at least 2 games. Only your selected players are used.</p>
       <div className="ml-stats"><div><span>Selected</span><strong>{c.selectedCount}</strong></div><div><span>Cap</span><strong>{money(CAP)}</strong></div></div>
+      <div className="ml-roster-check" data-testid="manual-roster-check" aria-label="Selected position counts">
+        {readiness.positions.map(p => <span key={p.position} className={p.count < p.required ? 'missing' : ''}>
+          {p.position === 'DST' ? 'DST (defense)' : p.position}: {p.count} selected · need {p.required}
+        </span>)}
+        <span className={readiness.flexMissing ? 'missing' : ''}>RB/WR/TE for FLEX: {readiness.flexCount} selected · need 7 total</span>
+      </div>
+      {!!c.selectedCount && readiness.issues.length > 0 && <div className="ml-note" data-testid="manual-roster-needs">
+        <strong>Still needed:</strong><ul>{readiness.issues.map(issue => <li key={issue}>{issue}</li>)}</ul>
+        <div className="ml-actions">{readiness.positions.filter(p => p.count < p.required).map(p =>
+          <button key={p.position} className="btn-secondary" onClick={() => {
+            setFilters({ ...EMPTY_MANUAL_PLAYER_FILTERS, position: p.position }); setRequestedPage(1);
+            playerList.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+          }}>Find {p.position === 'DST' ? 'team defenses (DST)' : p.position}</button>)}
+        </div>
+      </div>}
+      <p className="ml-muted">You can select more than 9 candidates. The $50,000 cap applies to the final lineup, not the salary total of all your picks.</p>
       {c.error && <div className="ml-err" role="alert" data-testid="manual-error">{c.error}
         {c.salaryError && <button className="btn-secondary" onClick={c.refreshSalaries}>Retry salary sync</button>}</div>}
       <div className="ml-actions">

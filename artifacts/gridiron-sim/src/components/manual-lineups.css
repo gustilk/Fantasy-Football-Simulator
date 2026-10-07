@@ -15,6 +15,10 @@
 .ml-filters select,.ml-filters input{min-width:0;width:100%}
 .ml-pagination{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .ml-game-info{overflow-wrap:anywhere}
+.ml-roster-check{display:flex;gap:8px;flex-wrap:wrap;font-size:12px}
+.ml-roster-check span{padding:7px 9px;border:1px solid var(--app-border);border-radius:7px}
+.ml-roster-check .missing{border-color:var(--app-danger);color:var(--app-danger)}
+.ml-note ul{margin:8px 0;padding-left:20px}
 .ml-check{display:flex;align-items:center;gap:8px;font-size:13px;min-height:44px}
 .ml-check input{width:20px;height:20px;accent-color:var(--app-away)}
 .ml-list{list-style:none;margin:0;padding:0;border:1px solid var(--app-border);border-radius:10px;max-height:520px;overflow:auto}

@@ -5,6 +5,7 @@ import { useSyncedManualPicks } from './use-synced-manual-picks';
 import { parseSalaryCsv, lineupSlots, exportLineups, type Lineup } from '@/lib/lineups';
 import { readSalaryFile } from '@/lib/salary-file';
 import { buildManualLineupPool, manualContestSignature, manualSalaryGame, type ManualPick } from '@/lib/manual-lineups';
+import { manualLineupIssue, manualRosterReadiness } from '@/lib/manual-lineup-readiness';
 
 const message = (e: unknown) => e instanceof Error ? e.message : 'The operation failed. Please retry.';
 export function useManualLineups(season: number) {
@@ -70,6 +71,8 @@ export function useManualLineups(season: number) {
     }
     try {
       const pool = buildManualLineupPool(parsed.players, picks);
+      const readiness = manualRosterReadiness(parsed.players, picks);
+      if (readiness.issues.length) { setError(readiness.issues.join(' ')); return; }
       const runKey = keyRef.current;
       const w = new Worker(new URL('../lib/lineup-worker.ts', import.meta.url), { type: 'module' });
       worker.current = w; setRunning(true);
@@ -79,7 +82,7 @@ export function useManualLineups(season: number) {
         if (keyRef.current !== runKey) return;
         if (event.data.error) { setError(event.data.error); return; }
         const lineup = event.data.lineups?.[0];
-        if (!lineup) { setError('No legal lineup fits $50,000 from your selected list. Select at least 1 QB, 2 RB, 3 WR, 1 TE, 1 DST and one extra RB/WR/TE for FLEX, across at least two games. Lower-cost alternatives may be needed.'); return; }
+        if (!lineup) { setError(manualLineupIssue(pool) || 'No lineup was returned despite a feasible selected pool. Please retry generation. Your picks have not changed.'); return; }
         try {
           lineupSlots(lineup);
           if (lineup.players.some(p => Date.parse(p.kickoff) <= Date.now())) throw new Error('Kickoff passed while generating. Refresh your picks before generating again.');
