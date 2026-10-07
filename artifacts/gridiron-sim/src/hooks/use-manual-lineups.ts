@@ -4,7 +4,7 @@ import { useSyncedSalaries } from './use-synced-salaries';
 import { useSyncedManualPicks } from './use-synced-manual-picks';
 import { parseSalaryCsv, lineupSlots, exportLineups, type Lineup } from '@/lib/lineups';
 import { readSalaryFile } from '@/lib/salary-file';
-import { buildManualLineupPool, manualContestSignature, manualSalaryGame, type ManualPick } from '@/lib/manual-lineups';
+import { buildManualLineupPool, manualContestSignature, manualSalaryGame, MANUAL_LINEUP_COUNT, type ManualPick } from '@/lib/manual-lineups';
 import { manualLineupIssue, manualRosterReadiness } from '@/lib/manual-lineup-readiness';
 
 const message = (e: unknown) => e instanceof Error ? e.message : 'The operation failed. Please retry.';
@@ -23,7 +23,7 @@ export function useManualLineups(season: number) {
   const [notice, setNotice] = useState('');
   const [importing, setImporting] = useState(false);
   const [running, setRunning] = useState(false);
-  const [result, setResult] = useState<{ key: string; lineup: Lineup } | null>(null);
+  const [result, setResult] = useState<{ key: string; lineups: Lineup[] } | null>(null);
   const worker = useRef<Worker | null>(null);
   const key = JSON.stringify([season, signature, picks]);
   const keyRef = useRef(key); keyRef.current = key;
@@ -81,24 +81,27 @@ export function useManualLineups(season: number) {
         stop();
         if (keyRef.current !== runKey) return;
         if (event.data.error) { setError(event.data.error); return; }
-        const lineup = event.data.lineups?.[0];
-        if (!lineup) { setError(manualLineupIssue(pool) || 'No lineup was returned despite a feasible selected pool. Please retry generation. Your picks have not changed.'); return; }
+        const lineups = event.data.lineups ?? [];
+        if (!lineups.length) { setError(manualLineupIssue(pool) || 'No lineup was returned despite a feasible selected pool. Please retry generation. Your picks have not changed.'); return; }
         try {
-          lineupSlots(lineup);
-          if (lineup.players.some(p => Date.parse(p.kickoff) <= Date.now())) throw new Error('Kickoff passed while generating. Refresh your picks before generating again.');
-          setResult({ key: runKey, lineup });
+          for (const lineup of lineups) {
+            lineupSlots(lineup);
+            if (lineup.players.some(p => Date.parse(p.kickoff) <= Date.now())) throw new Error('Kickoff passed while generating. Refresh your picks before generating again.');
+          }
+          setResult({ key: runKey, lineups });
+          if (lineups.length < MANUAL_LINEUP_COUNT) setNotice(`Only ${lineups.length} distinct legal ${lineups.length === 1 ? 'lineup is' : 'lineups are'} possible from your selected pool under $50,000. All are shown; add more candidates to make more combinations possible.`);
         } catch (e) { setError(message(e)); }
       };
       w.onerror = event => { if (worker.current === w) { stop(); setError(`Lineup generation failed: ${event.message}`); } };
-      w.postMessage({ players: pool, count: 1, format: 'classic', mode: 'average' });
+      w.postMessage({ players: pool, count: MANUAL_LINEUP_COUNT, format: 'classic', mode: 'average' });
     } catch (e) { stop(); setError(message(e)); }
   };
-  const lineup = result?.key === key ? result.lineup : null;
-  const exportLineup = () => {
-    if (!lineup) return;
+  const lineups = result?.key === key ? result.lineups : [];
+  const exportResults = () => {
+    if (!lineups.length) return;
     try {
-      const url = URL.createObjectURL(new Blob([exportLineups([lineup])], { type: 'text/csv' }));
-      const a = document.createElement('a'); a.href = url; a.download = `manual-classic-lineup-${season}.csv`; a.click();
+      const url = URL.createObjectURL(new Blob([exportLineups(lineups)], { type: 'text/csv' }));
+      const a = document.createElement('a'); a.href = url; a.download = `manual-classic-top-${lineups.length}-lineups-${season}.csv`; a.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (e) { setError(message(e)); }
   };
@@ -108,9 +111,9 @@ export function useManualLineups(season: number) {
     catch (e) { unavailable = message(e); }
     return { ...player, unavailable };
   }), [parsed.players]);
-  return { season, record, players, picks, updatePick, lineup, slots: lineup ? lineupSlots(lineup) : [],
+  return { season, record, players, picks, updatePick, lineups,
     running, stop, importing, loading: salarySync.loading || pickSync.loading, selectedCount: players.filter(p => picks[p.id]?.selected).length,
     error: error || parsed.error || salarySync.error, salaryError: salarySync.error, warning: salarySync.warning || pickSync.warning, notice, storageError,
-    pickSync, generate, importCsv, importFeatured, retrySave: pickSync.save, clearPicks, exportLineup, refreshSalaries: salarySync.refresh };
+    pickSync, generate, importCsv, importFeatured, retrySave: pickSync.save, clearPicks, exportResults, refreshSalaries: salarySync.refresh };
 }
 export type ManualLineupsController = ReturnType<typeof useManualLineups>;

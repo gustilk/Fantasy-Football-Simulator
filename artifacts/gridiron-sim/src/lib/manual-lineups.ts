@@ -2,6 +2,7 @@ import { TEAM_CODES, type SalaryPlayer, type LineupPlayer } from './lineups';
 
 export interface ManualPick { selected: boolean; points: string }
 export type ManualPicks = Record<string, ManualPick>;
+export const MANUAL_LINEUP_COUNT = 5;
 export const MANUAL_PICKS_KEY = 'gridiron-manual-picks-v1';
 const eastern = new Intl.DateTimeFormat('en-US', {
   timeZone: 'America/New_York', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: false,

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Download, Upload, Play, Square, Trash2, RotateCw } from 'lucide-react';
 import { useManualLineups } from '@/hooks/use-manual-lineups';
-import { TEAM_CODES } from '@/lib/lineups';
+import { TEAM_CODES, lineupSlots } from '@/lib/lineups';
+import { MANUAL_LINEUP_COUNT } from '@/lib/manual-lineups';
 import { EMPTY_MANUAL_PLAYER_FILTERS, filterManualPlayers, manualPlayerPage, type ManualPlayerFilters } from '@/lib/manual-player-browser';
 import { manualRosterReadiness } from '@/lib/manual-lineup-readiness';
 import './manual-lineups.css';
@@ -34,7 +35,7 @@ export default function ManualLineupsSection({ season }: { season: number }) {
   return <section className="ml" aria-label="My Picks">
     <div className="page-heading" style={{ marginBottom: 0 }}>
       <div><h1>My Picks</h1>
-        <p>Select any number of candidates, enter your fantasy-point estimates, and generate the highest-point DraftKings Classic lineup from your entire selected pool.</p></div>
+        <p>Select any number of candidates, enter your fantasy-point estimates, and generate the top {MANUAL_LINEUP_COUNT} DraftKings Classic lineups from your entire selected pool.</p></div>
     </div>
 
     <div className="panel ml-panel">
@@ -128,7 +129,7 @@ export default function ManualLineupsSection({ season }: { season: number }) {
 
     <div className="panel ml-panel">
       <h2>3. Generate</h2>
-      <p className="ml-note"><strong>Select as many candidates as you want.</strong> Generate compares legal combinations from <strong>all {c.selectedCount} selected candidates</strong> and chooses the lineup with the highest total of your entered points. Selected players are options—not mandatory locks.</p>
+      <p className="ml-note"><strong>Select as many candidates as you want.</strong> Generate compares legal combinations from <strong>all {c.selectedCount} selected candidates</strong> and returns the top {MANUAL_LINEUP_COUNT} distinct lineups, ranked by the total of your entered points. Selected players are options—not mandatory locks.</p>
       <p className="ml-muted">The final 9-player Classic lineup—not your selection list—must fit {money(CAP)} and contain QB, 2 RB, 3 WR, TE, FLEX, DST across at least 2 games.</p>
       <div className="ml-stats"><div><span>Candidates in your pool</span><strong>{c.selectedCount}</strong></div><div><span>Final lineup budget</span><strong>{money(CAP)}</strong></div></div>
       <div className="ml-roster-check" data-testid="manual-roster-check" aria-label="Selected position counts">
@@ -152,25 +153,26 @@ export default function ManualLineupsSection({ season }: { season: number }) {
       <div className="ml-actions">
         {c.running
           ? <button className="btn-secondary" data-testid="manual-stop" onClick={c.stop}><Square size={14} /> Stop</button>
-          : <button className="btn-primary" data-testid="manual-generate" disabled={busy || !c.pickSync.ready || c.pickSync.dirty || !!c.storageError || !c.selectedCount} onClick={c.generate}><Play size={15} /> Generate best lineup</button>}
-        {c.lineup && <button className="btn-secondary" onClick={c.exportLineup}><Download size={14} /> Export CSV</button>}
+          : <button className="btn-primary" data-testid="manual-generate" disabled={busy || !c.pickSync.ready || c.pickSync.dirty || !!c.storageError || !c.selectedCount} onClick={c.generate}><Play size={15} /> Generate top {MANUAL_LINEUP_COUNT} lineups</button>}
+        {!!c.lineups.length && <button className="btn-secondary" onClick={c.exportResults}><Download size={14} /> Export {c.lineups.length} {c.lineups.length === 1 ? 'lineup' : 'lineups'} CSV</button>}
       </div>
       {c.running && <p className="ml-muted" role="status"><RotateCw size={12} className="spin-icon" /> Searching all legal lineups…</p>}
     </div>
 
-    {c.lineup && <article className="panel ml-panel ml-result" data-testid="manual-result">
-      <h2>Best lineup from your list</h2>
+    {!!c.lineups.length && <p className="ml-muted" role="status">Showing {c.lineups.length} distinct {c.lineups.length === 1 ? 'lineup' : 'lineups'}, highest projected points first. Each lineup uses only your selected candidates and stays under $50,000. Lineups may share players.</p>}
+    {c.lineups.map((lineup, index) => <article key={lineup.players.map(p => p.id).sort().join(',')} className="panel ml-panel ml-result" data-testid={index === 0 ? 'manual-result' : `manual-result-${index + 1}`}>
+      <h2>Lineup #{index + 1}{index === 0 ? ' — Highest projected points' : ''}</h2>
       <div className="ml-stats">
-        <div><span>Your projected points</span><strong className="ml-total">{c.lineup.points.toFixed(2)}</strong></div>
-        <div><span>Salary used</span><strong>{money(c.lineup.salary)}</strong></div>
-        <div><span>Remaining</span><strong>{money(CAP - c.lineup.salary)}</strong></div>
+        <div><span>Your projected points</span><strong className="ml-total">{lineup.points.toFixed(2)}</strong></div>
+        <div><span>Salary used</span><strong>{money(lineup.salary)}</strong></div>
+        <div><span>Remaining</span><strong>{money(CAP - lineup.salary)}</strong></div>
       </div>
       <div className="tw"><table><thead><tr><th>Slot</th><th>Player</th><th>Your pts</th><th>Salary</th></tr></thead><tbody>
-        {c.slots.map(({ slot, player }) => <tr key={`${slot}-${player.id}`}>
+        {lineupSlots(lineup).map(({ slot, player }) => <tr key={`${slot}-${player.id}`}>
           <td className="ml-slot">{slot}</td><td>{player.name}<br /><small className="ml-muted">{player.position} {player.team}</small></td>
           <td>{player.mean.toFixed(2)}</td><td>{money(player.salary)}</td></tr>)}
       </tbody></table></div>
       <p className="ml-muted">Totals use your own assumptions, not guaranteed results.</p>
-    </article>}
+    </article>)}
   </section>;
 }
