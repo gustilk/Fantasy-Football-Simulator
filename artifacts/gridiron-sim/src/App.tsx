@@ -24,6 +24,7 @@ import { runSingleGameSimulation, type WeeklyProgress, type WeeklyRun } from '@/
 import { readStandings, findStandings } from '@/lib/standings';
 import StandingsEditor from '@/components/StandingsEditor';
 import { simulatorLineupSource } from '@/lib/simulator-lineups';
+import { APP_SECTION_STORAGE_KEY, initialAppSection, appSectionUrl, type AppSection } from '@/lib/app-navigation';
 
 type PatchTeam = (side: 'away' | 'home', field: keyof TeamSetup, value: TeamSetup[keyof TeamSetup]) => void;
 
@@ -68,7 +69,8 @@ function formatSavedDate(value: string) {
   return Number.isNaN(date.getTime()) ? 'Saved matchup' : date.toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
 }
 function App() {
-  const [tab, setTab] = useState<'library' | 'simulator' | 'draftkings' | 'lineups' | 'manual' | 'standings'>(() => { const v = new URLSearchParams(window.location.search).get('view'); return v === 'library' || v === 'simulator' || v === 'lineups' || v === 'manual' || v === 'standings' ? v : 'draftkings'; });
+  const [tab, setTab] = useState<AppSection>(() =>
+    initialAppSection(window.location.search, () => localStorage.getItem(APP_SECTION_STORAGE_KEY)));
   const [season, setSeason] = useState(() => readSetup().market?.season ?? new Date().getFullYear());
   const [week, setWeek] = useState(() => readSetup().market?.week ?? 2);
   const queryClient = useQueryClient();
@@ -94,6 +96,13 @@ function App() {
     if (tab === 'standings' && standingsDirty && !window.confirm('You have unsaved standings. Discard them and leave this section?')) return;
     setTab(value);
   };
+  useEffect(() => {
+    // No full-page navigation: a refresh or browser tab restoration opens this section.
+    try { window.history.replaceState(window.history.state, '', appSectionUrl(window.location.href, tab)); }
+    catch { /* Storage below still remembers the section when history is unavailable. */ }
+    try { localStorage.setItem(APP_SECTION_STORAGE_KEY, tab); }
+    catch { /* The URL still preserves the section when browser storage is blocked. */ }
+  }, [tab]);
 
   useEffect(() => {
     try { localStorage.setItem(setupStorageKey, JSON.stringify(setup)); } catch { setNotice('Browser storage is unavailable; this setup will not persist.'); }
