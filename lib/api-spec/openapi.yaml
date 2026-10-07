@@ -138,6 +138,55 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/SeasonError" }
+  /manual-picks/{season}/lookup:
+    parameters:
+      - in: path
+        name: season
+        required: true
+        schema: { type: integer, minimum: 2000, maximum: 2100 }
+    post:
+      operationId: getSharedManualPicks
+      summary: Read manual picks for exact Classic salary rows (body avoids oversized URLs)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ManualContestInput" }
+      responses:
+        "200":
+          description: Current contest-specific picks
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SharedManualPicks" }
+        "400":
+          description: Invalid contest
+        "500":
+          description: Stored picks unreadable or storage unavailable
+  /manual-picks/{season}:
+    parameters:
+      - in: path
+        name: season
+        required: true
+        schema: { type: integer, minimum: 2000, maximum: 2100 }
+    put:
+      operationId: saveSharedManualPicks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ManualPicksInput" }
+      responses:
+        "200":
+          description: Verified saved picks
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SharedManualPicks" }
+        "400":
+          description: Invalid picks
+        "409":
+          description: Picks or Classic salary contest changed on another device
+        "500":
+          description: Stored picks unreadable or storage unavailable
   /salary-files/{season}/{format}:
     parameters:
       - in: path
@@ -453,6 +502,38 @@ components:
         filename: { type: string }
         csv: { type: string, minLength: 1, maxLength: 2000000 }
         sourceUrl: { type: string, format: uri }
+    ManualContestInput:
+      type: object
+      required: [signature]
+      properties:
+        signature: { type: string, minLength: 2, maxLength: 600000 }
+    ManualPickEntry:
+      type: object
+      required: [id, selected, points]
+      properties:
+        id: { type: string, minLength: 1, maxLength: 50 }
+        selected: { type: boolean }
+        points: { type: string, maxLength: 100 }
+    ManualPicksInput:
+      type: object
+      required: [signature, expectedRevision, picks]
+      properties:
+        signature: { type: string, minLength: 2, maxLength: 600000 }
+        expectedRevision: { type: integer, minimum: 0, maximum: 2147483646 }
+        picks:
+          type: array
+          maxItems: 5000
+          items: { $ref: "#/components/schemas/ManualPickEntry" }
+    SharedManualPicks:
+      type: object
+      required: [signature, revision, picks]
+      properties:
+        signature: { type: string }
+        revision: { type: integer, minimum: 0, maximum: 2147483647 }
+        picks:
+          type: array
+          maxItems: 5000
+          items: { $ref: "#/components/schemas/ManualPickEntry" }
     SalaryRow:
       type: object
       required: [id, name, position, team, salary, gameInfo, rosterPosition]

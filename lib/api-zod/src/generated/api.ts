@@ -371,6 +371,104 @@ export const GetNflMatchupEvidenceResponse = zod.object({
 
 
 /**
+ * @summary Read manual picks for exact Classic salary rows (body avoids oversized URLs)
+ */
+export const getSharedManualPicksPathSeasonMin = 2000;
+export const getSharedManualPicksPathSeasonMax = 2100;
+
+
+
+export const GetSharedManualPicksParams = zod.object({
+  "season": zod.coerce.number().int().min(getSharedManualPicksPathSeasonMin).max(getSharedManualPicksPathSeasonMax)
+})
+
+export const getSharedManualPicksBodySignatureMin = 2;
+export const getSharedManualPicksBodySignatureMax = 600000;
+
+
+
+export const GetSharedManualPicksBody = zod.object({
+  "signature": zod.string().min(getSharedManualPicksBodySignatureMin).max(getSharedManualPicksBodySignatureMax)
+})
+
+export const getSharedManualPicksResponseRevisionMin = 0;
+export const getSharedManualPicksResponseRevisionMax = 2147483647;
+
+export const getSharedManualPicksResponsePicksItemIdMax = 50;
+
+export const getSharedManualPicksResponsePicksItemPointsMax = 100;
+
+export const getSharedManualPicksResponsePicksMax = 5000;
+
+
+
+export const GetSharedManualPicksResponse = zod.object({
+  "signature": zod.string(),
+  "revision": zod.number().int().min(getSharedManualPicksResponseRevisionMin).max(getSharedManualPicksResponseRevisionMax),
+  "picks": zod.array(zod.object({
+  "id": zod.string().min(1).max(getSharedManualPicksResponsePicksItemIdMax),
+  "selected": zod.boolean(),
+  "points": zod.string().max(getSharedManualPicksResponsePicksItemPointsMax)
+})).max(getSharedManualPicksResponsePicksMax)
+})
+
+
+export const saveSharedManualPicksPathSeasonMin = 2000;
+export const saveSharedManualPicksPathSeasonMax = 2100;
+
+
+
+export const SaveSharedManualPicksParams = zod.object({
+  "season": zod.coerce.number().int().min(saveSharedManualPicksPathSeasonMin).max(saveSharedManualPicksPathSeasonMax)
+})
+
+export const saveSharedManualPicksBodySignatureMin = 2;
+export const saveSharedManualPicksBodySignatureMax = 600000;
+
+export const saveSharedManualPicksBodyExpectedRevisionMin = 0;
+export const saveSharedManualPicksBodyExpectedRevisionMax = 2147483646;
+
+export const saveSharedManualPicksBodyPicksItemIdMax = 50;
+
+export const saveSharedManualPicksBodyPicksItemPointsMax = 100;
+
+export const saveSharedManualPicksBodyPicksMax = 5000;
+
+
+
+export const SaveSharedManualPicksBody = zod.object({
+  "signature": zod.string().min(saveSharedManualPicksBodySignatureMin).max(saveSharedManualPicksBodySignatureMax),
+  "expectedRevision": zod.number().int().min(saveSharedManualPicksBodyExpectedRevisionMin).max(saveSharedManualPicksBodyExpectedRevisionMax),
+  "picks": zod.array(zod.object({
+  "id": zod.string().min(1).max(saveSharedManualPicksBodyPicksItemIdMax),
+  "selected": zod.boolean(),
+  "points": zod.string().max(saveSharedManualPicksBodyPicksItemPointsMax)
+})).max(saveSharedManualPicksBodyPicksMax)
+})
+
+export const saveSharedManualPicksResponseRevisionMin = 0;
+export const saveSharedManualPicksResponseRevisionMax = 2147483647;
+
+export const saveSharedManualPicksResponsePicksItemIdMax = 50;
+
+export const saveSharedManualPicksResponsePicksItemPointsMax = 100;
+
+export const saveSharedManualPicksResponsePicksMax = 5000;
+
+
+
+export const SaveSharedManualPicksResponse = zod.object({
+  "signature": zod.string(),
+  "revision": zod.number().int().min(saveSharedManualPicksResponseRevisionMin).max(saveSharedManualPicksResponseRevisionMax),
+  "picks": zod.array(zod.object({
+  "id": zod.string().min(1).max(saveSharedManualPicksResponsePicksItemIdMax),
+  "selected": zod.boolean(),
+  "points": zod.string().max(saveSharedManualPicksResponsePicksItemPointsMax)
+})).max(saveSharedManualPicksResponsePicksMax)
+})
+
+
+/**
  * @summary Shared personal-app contest salary data
  */
 export const getSharedSalaryFilePathSeasonMin = 2000;

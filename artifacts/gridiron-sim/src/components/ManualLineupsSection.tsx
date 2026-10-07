@@ -41,7 +41,7 @@ export default function ManualLineupsSection({ season }: { season: number }) {
       {c.record
         ? <p className="ml-muted"><strong>{c.record.filename}</strong> · imported {new Date(c.record.importedAt).toLocaleString()} · {c.players.length} players</p>
         : !busy && <div className="ml-note" role="status">No Classic salaries yet. Import Featured Classic or upload a DraftKings Classic CSV.</div>}
-      <p className="ml-muted">These salaries are shared with Lineups and synced across devices; replacing them changes both. Your picks are saved only in this browser for this contest.</p>
+      <p className="ml-muted">These salaries are shared with Lineups; replacing them changes both. Save your picks to sync selections and point estimates across devices for this exact contest. Other contests never inherit these points.</p>
       {c.warning && <div className="ml-note" role="status">{c.warning}</div>}
       {c.notice && <div className="ml-note" role="status">{c.notice}</div>}
       <div className="ml-actions">
@@ -53,10 +53,17 @@ export default function ManualLineupsSection({ season }: { season: number }) {
     </div>
 
     {c.storageError && <div className="ml-err" role="alert">{c.storageError}
-      <button className="btn-secondary" data-testid="manual-save-retry" onClick={c.retrySave}>Retry save</button></div>}
+      <button className="btn-secondary" data-testid="manual-save-retry" disabled={c.pickSync.saving || c.pickSync.conflict || !c.pickSync.dirty} onClick={c.retrySave}>Retry save</button></div>}
 
     <div className="panel ml-panel">
       <h2>2. Choose players &amp; enter points</h2>
+      {c.record && <><p className="ml-muted" role="status" data-testid="manual-sync-status">{c.pickSync.status}</p>
+        <div className="ml-actions">
+          <button className="btn-primary" data-testid="manual-save" disabled={busy || !c.pickSync.ready || !c.pickSync.dirty || c.pickSync.saving || c.pickSync.conflict} onClick={c.pickSync.save}>Save picks</button>
+          <button className="btn-secondary" data-testid="manual-refresh" disabled={c.pickSync.saving} onClick={c.pickSync.refresh}><RotateCw size={14} /> Refresh picks</button>
+          {(c.pickSync.dirty || c.warning) && <button className="btn-secondary" data-testid="manual-export-draft" onClick={c.pickSync.exportDraft}>Export browser draft</button>}
+          {c.pickSync.conflict && <button className="btn-secondary" data-testid="manual-use-shared" onClick={c.pickSync.useShared}>Use latest shared picks</button>}
+        </div></>}
       <p className="ml-muted">Points are your own assumptions, not guaranteed results. They never change actual stats or simulator forecasts. Zero is allowed. Salaries are read only.</p>
       <div className="ml-note">Start with a <strong>team or game</strong>, then choose a position to find players quickly. Salaries do not confirm who will start; backups remain available for replacements.</div>
       <div className="ml-filters">
@@ -96,14 +103,14 @@ export default function ManualLineupsSection({ season }: { season: number }) {
             const sel = !!pick?.selected;
             const blocked = !!p.unavailable && !sel;
             return <li key={p.id} className={`ml-row${sel ? ' on' : ''}${p.unavailable ? ' off' : ''}`}>
-              <input type="checkbox" aria-label={`Select ${p.name}`} data-testid={`manual-pick-${p.id}`} checked={sel} disabled={busy || blocked || !!c.storageError}
+              <input type="checkbox" aria-label={`Select ${p.name}`} data-testid={`manual-pick-${p.id}`} checked={sel} disabled={busy || blocked || !c.pickSync.ready}
                 onChange={e => c.updatePick(p.id, { selected: e.target.checked })} />
               <div className="ml-who"><strong>{p.name}</strong>
                 <span>{p.position} · {p.team} · {money(p.salary)}</span>
                 <span className="ml-game-info">{p.gameInfo.replace('@', ' at ')}</span>
                 {p.unavailable && <em>{p.unavailable}</em>}</div>
               <input type="text" inputMode="decimal" aria-label={`Your projected points for ${p.name}`} placeholder="Pts"
-                data-testid={`manual-points-${p.id}`} value={pick?.points ?? ''} disabled={busy || !!c.storageError || (!!p.unavailable && !sel)}
+                data-testid={`manual-points-${p.id}`} maxLength={100} value={pick?.points ?? ''} disabled={busy || !c.pickSync.ready || (!!p.unavailable && !sel)}
                 onChange={e => c.updatePick(p.id, { points: e.target.value })} />
             </li>;
           })}</ul>}
@@ -114,7 +121,7 @@ export default function ManualLineupsSection({ season }: { season: number }) {
         <button className="btn-secondary" data-testid="manual-next-page" disabled={page.page === page.pages}
           onClick={() => setRequestedPage(page.page + 1)}>Next</button>
       </nav>}
-      <div className="ml-actions"><button className="btn-secondary" disabled={busy || (!c.storageError && !c.selectedCount && !Object.keys(c.picks).length)} onClick={c.clearPicks}><Trash2 size={14} /> Clear selections</button></div>
+      <div className="ml-actions"><button className="btn-secondary" disabled={busy || !c.pickSync.ready || (!c.selectedCount && !Object.keys(c.picks).length)} onClick={c.clearPicks}><Trash2 size={14} /> Clear selections</button></div>
     </div>
 
     <div className="panel ml-panel">
@@ -126,7 +133,7 @@ export default function ManualLineupsSection({ season }: { season: number }) {
       <div className="ml-actions">
         {c.running
           ? <button className="btn-secondary" data-testid="manual-stop" onClick={c.stop}><Square size={14} /> Stop</button>
-          : <button className="btn-primary" data-testid="manual-generate" disabled={busy || !!c.storageError || !c.selectedCount} onClick={c.generate}><Play size={15} /> Generate best lineup</button>}
+          : <button className="btn-primary" data-testid="manual-generate" disabled={busy || !c.pickSync.ready || c.pickSync.dirty || !!c.storageError || !c.selectedCount} onClick={c.generate}><Play size={15} /> Generate best lineup</button>}
         {c.lineup && <button className="btn-secondary" onClick={c.exportLineup}><Download size={14} /> Export CSV</button>}
       </div>
       {c.running && <p className="ml-muted" role="status"><RotateCw size={12} className="spin-icon" /> Searching all legal lineups…</p>}

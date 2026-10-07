@@ -27,6 +27,8 @@ import type {
   GetNflStandingsParams,
   HealthStatus,
   ListSeasonTeamsParams,
+  ManualContestInput,
+  ManualPicksInput,
   NflAdvancedReport,
   NflDepthChart,
   NflImportPreview,
@@ -36,6 +38,7 @@ import type {
   SalaryDeletionInput,
   SalaryUploadInput,
   SeasonError,
+  SharedManualPicks,
   SharedSalaryState,
   TeamSeasonInput,
   TeamSeasonRecord
@@ -414,6 +417,178 @@ export function useGetNflMatchupEvidence<TData = Awaited<ReturnType<typeof getNf
 
 
 
+
+export const getGetSharedManualPicksUrl = (season: number,) => {
+
+
+
+
+  return `/api/manual-picks/${season}/lookup`
+}
+
+/**
+ * @summary Read manual picks for exact Classic salary rows (body avoids oversized URLs)
+ */
+export const getSharedManualPicks = async (season: number,
+    manualContestInput: ManualContestInput, options?: Parameters<typeof customFetch>[1]): Promise<SharedManualPicks> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SharedManualPicks>(getGetSharedManualPicksUrl(season),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(manualContestInput)
+  }
+);}
+
+
+
+
+
+export const getGetSharedManualPicksMutationKey = () => ['getSharedManualPicks'] as const;
+
+export const getGetSharedManualPicksMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getSharedManualPicks>>, TError,GetSharedManualPicksMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof getSharedManualPicks>>, TError,GetSharedManualPicksMutationVariables, TContext> => {
+
+const mutationKey = getGetSharedManualPicksMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof getSharedManualPicks>>, GetSharedManualPicksMutationVariables> = (props) => {
+          const {season,data} = props ?? {};
+
+          return  getSharedManualPicks(season,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GetSharedManualPicksMutationResult = NonNullable<Awaited<ReturnType<typeof getSharedManualPicks>>>
+    export type GetSharedManualPicksMutationBody = BodyType<ManualContestInput>
+    export type GetSharedManualPicksMutationError = ErrorType<void>
+    export type GetSharedManualPicksMutationVariables = {season: number;data: BodyType<ManualContestInput>}
+
+    /**
+ * @summary Read manual picks for exact Classic salary rows (body avoids oversized URLs)
+ */
+export const useGetSharedManualPicks = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getSharedManualPicks>>, TError,GetSharedManualPicksMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof getSharedManualPicks>>,
+        TError,
+        GetSharedManualPicksMutationVariables,
+        TContext
+      > => {
+      return useMutation(getGetSharedManualPicksMutationOptions(options));
+    }
+
+export const getSaveSharedManualPicksUrl = (season: number,) => {
+
+
+
+
+  return `/api/manual-picks/${season}`
+}
+
+export const saveSharedManualPicks = async (season: number,
+    manualPicksInput: ManualPicksInput, options?: Parameters<typeof customFetch>[1]): Promise<SharedManualPicks> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SharedManualPicks>(getSaveSharedManualPicksUrl(season),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(manualPicksInput)
+  }
+);}
+
+
+
+
+
+export const getSaveSharedManualPicksMutationKey = () => ['saveSharedManualPicks'] as const;
+
+export const getSaveSharedManualPicksMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveSharedManualPicks>>, TError,SaveSharedManualPicksMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveSharedManualPicks>>, TError,SaveSharedManualPicksMutationVariables, TContext> => {
+
+const mutationKey = getSaveSharedManualPicksMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveSharedManualPicks>>, SaveSharedManualPicksMutationVariables> = (props) => {
+          const {season,data} = props ?? {};
+
+          return  saveSharedManualPicks(season,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveSharedManualPicksMutationResult = NonNullable<Awaited<ReturnType<typeof saveSharedManualPicks>>>
+    export type SaveSharedManualPicksMutationBody = BodyType<ManualPicksInput>
+    export type SaveSharedManualPicksMutationError = ErrorType<void>
+    export type SaveSharedManualPicksMutationVariables = {season: number;data: BodyType<ManualPicksInput>}
+
+    export const useSaveSharedManualPicks = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveSharedManualPicks>>, TError,SaveSharedManualPicksMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof saveSharedManualPicks>>,
+        TError,
+        SaveSharedManualPicksMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSaveSharedManualPicksMutationOptions(options));
+    }
 
 export const getGetSharedSalaryFileUrl = (season: number,
     format: 'classic' | 'showdown',) => {

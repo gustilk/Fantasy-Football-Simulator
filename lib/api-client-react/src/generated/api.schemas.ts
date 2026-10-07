@@ -85,6 +85,51 @@ export interface FeaturedClassicSalary {
   sourceUrl: string;
 }
 
+export interface ManualContestInput {
+  /**
+     * @minLength 2
+     * @maxLength 600000
+     */
+  signature: string;
+}
+
+export interface ManualPickEntry {
+  /**
+     * @minLength 1
+     * @maxLength 50
+     */
+  id: string;
+  selected: boolean;
+  /** @maxLength 100 */
+  points: string;
+}
+
+export interface ManualPicksInput {
+  /**
+     * @minLength 2
+     * @maxLength 600000
+     */
+  signature: string;
+  /**
+     * @minimum 0
+     * @maximum 2147483646
+     */
+  expectedRevision: number;
+  /** @maxItems 5000 */
+  picks: ManualPickEntry[];
+}
+
+export interface SharedManualPicks {
+  signature: string;
+  /**
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  revision: number;
+  /** @maxItems 5000 */
+  picks: ManualPickEntry[];
+}
+
 export type SalaryRowPosition = typeof SalaryRowPosition[keyof typeof SalaryRowPosition];
 
 

@@ -80,3 +80,9 @@ My Picks must make relevant players easy to find instead of requiring scrolling 
 **Why:** The user said there are too many players, many not starting, and requested “show only starting players, or find a way to easier to find them.”
 
 **How to apply:** Narrow browsing without removing saved candidates or point estimates. The user accepts easier discovery as an alternative to starter-only filtering; never label expensive players or inferred depth ranks as confirmed game-day starters.
+
+Treat preserving an unfinished manual draft and publishing a shared list as separate decisions.
+
+**Why:** Intermediate numeric input may be incomplete but still needs recovery. A recoverable browser draft is not evidence that another device can see the edits.
+
+**How to apply:** Keep draft recovery independent of shared-save status. Require a verified shared response before describing edits as synced; preserve the draft on failures or conflicts rather than automatically rebasing it onto newer shared data.

@@ -19,3 +19,4 @@
 
 export * from "./season-teams";
 export * from "./salary-uploads";
+export * from "./manual-picks";
