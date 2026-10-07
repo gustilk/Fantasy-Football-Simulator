@@ -73,7 +73,7 @@ The user also wants a separate manual lineup section: “I will select the playe
 
 **Why:** They want to optimize their own player expectations rather than relying only on simulator forecasts.
 
-**How to apply:** Treat selected players as the candidate pool, not mandatory locks. Use only their entered point estimates and the current imported Classic contest's salaries and eligibility. Keep manual estimates separate from actual statistics and simulator forecasts; do not silently replace blank estimates with model values or carry them into another salary contest.
+**How to apply:** Treat selected players as the candidate pool, not mandatory locks. The user explicitly corrected this: “it should generate the best lineup with most point from all the players I selected, I can select as many players as I want.” Do not limit selections to nine, require deselecting extras, or optimize only the currently visible filtered page. Choose the highest-total-point legal lineup from the entire selected pool under the cap. Use only their entered point estimates and the current imported Classic contest's salaries and eligibility. Keep manual estimates separate from actual statistics and simulator forecasts; do not silently replace blank estimates with model values or carry them into another salary contest.
 
 My Picks must make relevant players easy to find instead of requiring scrolling through the entire salary list.
 

@@ -34,7 +34,7 @@ export default function ManualLineupsSection({ season }: { season: number }) {
   return <section className="ml" aria-label="My Picks">
     <div className="page-heading" style={{ marginBottom: 0 }}>
       <div><h1>My Picks</h1>
-        <p>Pick players, enter your own fantasy points, and build the best DraftKings Classic lineup from only your list.</p></div>
+        <p>Select any number of candidates, enter your fantasy-point estimates, and generate the highest-point DraftKings Classic lineup from your entire selected pool.</p></div>
     </div>
 
     <div className="panel ml-panel">
@@ -128,16 +128,17 @@ export default function ManualLineupsSection({ season }: { season: number }) {
 
     <div className="panel ml-panel">
       <h2>3. Generate</h2>
-      <p className="ml-muted">Cap {money(CAP)}. Roster: QB, 2 RB, 3 WR, TE, FLEX, DST, with players from at least 2 games. Only your selected players are used.</p>
-      <div className="ml-stats"><div><span>Selected</span><strong>{c.selectedCount}</strong></div><div><span>Cap</span><strong>{money(CAP)}</strong></div></div>
+      <p className="ml-note"><strong>Select as many candidates as you want.</strong> Generate compares legal combinations from <strong>all {c.selectedCount} selected candidates</strong> and chooses the lineup with the highest total of your entered points. Selected players are options—not mandatory locks.</p>
+      <p className="ml-muted">The final 9-player Classic lineup—not your selection list—must fit {money(CAP)} and contain QB, 2 RB, 3 WR, TE, FLEX, DST across at least 2 games.</p>
+      <div className="ml-stats"><div><span>Candidates in your pool</span><strong>{c.selectedCount}</strong></div><div><span>Final lineup budget</span><strong>{money(CAP)}</strong></div></div>
       <div className="ml-roster-check" data-testid="manual-roster-check" aria-label="Selected position counts">
         {readiness.positions.map(p => <span key={p.position} className={p.count < p.required ? 'missing' : ''}>
-          {p.position === 'DST' ? 'DST (defense)' : p.position}: {p.count} selected · need {p.required}
+          {p.position === 'DST' ? 'DST (defense)' : p.position}: {p.count} candidates · lineup uses {p.required}{['RB', 'WR', 'TE'].includes(p.position) ? ' + possible FLEX' : ''}
         </span>)}
-        <span className={readiness.flexMissing ? 'missing' : ''}>RB/WR/TE for FLEX: {readiness.flexCount} selected · need 7 total</span>
+        <span className={readiness.flexMissing ? 'missing' : ''}>RB/WR/TE: {readiness.flexCount} candidates · lineup chooses 7 including FLEX</span>
       </div>
       {!!c.selectedCount && readiness.issues.length > 0 && <div className="ml-note" data-testid="manual-roster-needs">
-        <strong>Still needed:</strong><ul>{readiness.issues.map(issue => <li key={issue}>{issue}</li>)}</ul>
+        <strong>Your candidate pool is missing options for these slots:</strong><ul>{readiness.issues.map(issue => <li key={issue}>{issue}</li>)}</ul>
         <div className="ml-actions">{readiness.positions.filter(p => p.count < p.required).map(p =>
           <button key={p.position} className="btn-secondary" onClick={() => {
             setFilters({ ...EMPTY_MANUAL_PLAYER_FILTERS, position: p.position }); setRequestedPage(1);
@@ -145,7 +146,7 @@ export default function ManualLineupsSection({ season }: { season: number }) {
           }}>Find {p.position === 'DST' ? 'team defenses (DST)' : p.position}</button>)}
         </div>
       </div>}
-      <p className="ml-muted">You can select more than 9 candidates. The $50,000 cap applies to the final lineup, not the salary total of all your picks.</p>
+      <p className="ml-muted">You do not need to deselect extra players or reduce your pool to 9. The $50,000 cap applies only to the chosen lineup, not the salary total of all your candidates. Filters and pages do not restrict the optimizer.</p>
       {c.error && <div className="ml-err" role="alert" data-testid="manual-error">{c.error}
         {c.salaryError && <button className="btn-secondary" onClick={c.refreshSalaries}>Retry salary sync</button>}</div>}
       <div className="ml-actions">

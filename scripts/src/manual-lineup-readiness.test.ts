@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { manualLineupIssue, manualRosterReadiness } from '../../artifacts/gridiron-sim/src/lib/manual-lineup-readiness';
+import { optimizeLineups } from '../../artifacts/gridiron-sim/src/lib/lineup-optimizer';
 import type { LineupPlayer } from '../../artifacts/gridiron-sim/src/lib/lineups';
 
 const positions = ['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE', 'RB', 'DST'] as const;
@@ -30,4 +31,18 @@ test('diagnostics keep salaries, point estimates and selections unchanged', () =
   const before = JSON.stringify({ pool, picks });
   manualRosterReadiness(pool, picks); manualLineupIssue(pool);
   assert.equal(JSON.stringify({ pool, picks }), before);
+});
+test('all candidates are considered: more than nine picks, a pool salary above cap, and a winner on a later page', () => {
+  const many = [...pool, ...Array.from({ length: 50 }, (_, i) => ({
+    ...pool[0]!, id: `extra-${i}`, name: `Extra quarterback ${i}`, mean: i === 49 ? 300 : 1,
+  }))];
+  assert.ok(many.length > 25);
+  assert.ok(many.reduce((sum, p) => sum + p.salary, 0) > 50000);
+  const [best] = optimizeLineups(many, 1);
+  assert.ok(best);
+  assert.equal(best.players.length, 9);
+  assert.ok(best.players.some(p => p.id === 'extra-49'));
+  assert.equal(best.points, 460);
+  assert.equal(best.salary, 45000);
+  assert.equal(many.length, 59);
 });
