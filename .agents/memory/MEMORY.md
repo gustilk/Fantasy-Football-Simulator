@@ -18,3 +18,4 @@
 - [API path validation](api-path-validation.md) — generated numeric-enum path literals do not coerce HTTP strings; validate and convert at the route boundary.
 - [Drive metric definitions](drive-metric-definitions.md) — success, red-zone conversion, and 15+ yard explosiveness are distinct evidence; new mappings need independent calibration.
 - [Secondary evidence intent](secondary-evidence-intent.md) — use the last four games as valid recent coverage evidence; keep prior-season support separate and never hardcode weak-team lists.
+- [Reload diagnosis](reload-diagnosis.md) — restoring a tab is not a fix for unwanted refreshes; verify the actual browser URL before diagnosing preview versus published behavior.
