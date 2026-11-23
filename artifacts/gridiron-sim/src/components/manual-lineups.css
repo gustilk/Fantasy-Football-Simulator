@@ -10,9 +10,13 @@
 .ml-stats>div{padding:10px 12px;border:1px solid var(--app-border);border-radius:8px;background:var(--app-bg);min-width:0}
 .ml-stats span{display:block;font-size:11px;color:var(--app-muted)}
 .ml-stats strong{font-size:18px}
-.ml-filters{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,130px);gap:8px}
+.ml-filters{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
 .ml-scope-filters{grid-template-columns:repeat(2,minmax(0,1fr))}
 .ml-filters select,.ml-filters input{min-width:0;width:100%}
+.ml-position-tabs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.ml-position-tab{width:100%;display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}
+.ml-position-tab[aria-pressed=true]{background:var(--app-away);border-color:var(--app-away);color:#fff}
+.ml-position-count{font-size:11px;opacity:.8}
 .ml-pagination{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .ml-game-info{overflow-wrap:anywhere}
 .ml-roster-check{display:flex;gap:8px;flex-wrap:wrap;font-size:12px}
@@ -38,5 +42,5 @@
 .ml-result>summary{cursor:pointer;font-weight:600;line-height:1.5}
 .ml-slot{font-weight:700;color:var(--app-away)}
 .ml-total{color:var(--app-away)}
-@media(max-width:480px){.ml-panel{padding:12px}.ml-row{grid-template-columns:auto minmax(0,1fr);gap:8px;padding:10px}}
+@media(max-width:480px){.ml-panel{padding:12px}.ml-row{grid-template-columns:auto minmax(0,1fr);gap:8px;padding:10px}.ml-position-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:480px){.ml-scope-filters{grid-template-columns:minmax(0,1fr)}}

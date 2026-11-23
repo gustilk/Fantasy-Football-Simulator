@@ -10,6 +10,7 @@ import './manual-lineups.css';
 const CAP = 50000;
 const money = (n: number) => `$${n.toLocaleString('en-US')}`;
 const POS = ['QB', 'RB', 'WR', 'TE', 'DST'];
+const POSITION_TABS = [{ value: '', label: 'All' }, ...POS.map(position => ({ value: position, label: position }))];
 
 export default function ManualLineupsSection({ season }: { season: number }) {
   const c = useManualLineups(season);
@@ -23,6 +24,12 @@ export default function ManualLineupsSection({ season }: { season: number }) {
     (TEAM_CODES[a] ?? a).localeCompare(TEAM_CODES[b] ?? b)), [c.players]);
   const games = useMemo(() => [...new Set(c.players.map(p => p.gameInfo).filter(Boolean))].sort(), [c.players]);
   const rows = useMemo(() => filterManualPlayers(c.players, c.picks, filters), [c.players, c.picks, filters]);
+  const positionCounts = useMemo(() => {
+    const matching = filterManualPlayers(c.players, c.picks, { ...filters, position: '' });
+    return Object.fromEntries(POSITION_TABS.map(({ value }) => [
+      value, value ? matching.filter(player => player.position === value).length : matching.length,
+    ]));
+  }, [c.players, c.picks, filters]);
   const page = manualPlayerPage(rows, requestedPage);
   useEffect(() => { if (playerList.current) playerList.current.scrollTop = 0; }, [page.page, filters, c.record?.csv]);
   const changeFilters = (patch: Partial<ManualPlayerFilters>) => {
@@ -71,9 +78,17 @@ export default function ManualLineupsSection({ season }: { season: number }) {
       <div className="ml-filters">
         <div className="field"><label htmlFor="ml-q">Search player or team</label>
           <input id="ml-q" type="search" data-testid="manual-search" value={filters.query} onChange={e => changeFilters({ query: e.target.value })} placeholder="Name, team name, or abbreviation" /></div>
-        <div className="field"><label htmlFor="ml-pos">Position</label>
-          <select id="ml-pos" data-testid="manual-position" value={filters.position} onChange={e => changeFilters({ position: e.target.value })}>
-            <option value="">All</option>{POS.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
+      </div>
+      <div className="ml-position-tabs" role="group" aria-label="Filter players by position">
+        {POSITION_TABS.map(({ value, label }) => {
+          const count = positionCounts[value] ?? 0;
+          return <button key={value || 'all'} type="button" className="btn-secondary ml-position-tab"
+            data-testid={`manual-position-${value || 'all'}`} aria-pressed={filters.position === value}
+            aria-label={`${label === 'All' ? 'All positions' : label}: ${count} matching players`}
+            onClick={() => changeFilters({ position: value })}>
+            <span>{label}</span><span className="ml-position-count">{count}</span>
+          </button>;
+        })}
       </div>
       <div className="ml-filters ml-scope-filters">
         <div className="field"><label htmlFor="ml-team">Team</label>
