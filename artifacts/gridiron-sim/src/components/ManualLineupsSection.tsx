@@ -79,17 +79,6 @@ export default function ManualLineupsSection({ season }: { season: number }) {
         <div className="field"><label htmlFor="ml-q">Search player or team</label>
           <input id="ml-q" type="search" data-testid="manual-search" value={filters.query} onChange={e => changeFilters({ query: e.target.value })} placeholder="Name, team name, or abbreviation" /></div>
       </div>
-      <div className="ml-position-tabs" role="group" aria-label="Filter players by position">
-        {POSITION_TABS.map(({ value, label }) => {
-          const count = positionCounts[value] ?? 0;
-          return <button key={value || 'all'} type="button" className="btn-secondary ml-position-tab"
-            data-testid={`manual-position-${value || 'all'}`} aria-pressed={filters.position === value}
-            aria-label={`${label === 'All' ? 'All positions' : label}: ${count} matching players`}
-            onClick={() => changeFilters({ position: value })}>
-            <span>{label}</span><span className="ml-position-count">{count}</span>
-          </button>;
-        })}
-      </div>
       <div className="ml-filters ml-scope-filters">
         <div className="field"><label htmlFor="ml-team">Team</label>
           <select id="ml-team" data-testid="manual-team" value={filters.team} onChange={e => changeFilters({ team: e.target.value })}>
@@ -108,6 +97,17 @@ export default function ManualLineupsSection({ season }: { season: number }) {
         <button className="btn-secondary" data-testid="manual-reset-filters" disabled={!filtered} onClick={resetFilters}>Reset filters</button>
       </div>
       <p className="ml-muted">Filters only change what is shown. Generate uses all selected players, including those on other pages.</p>
+      <div className="ml-position-tabs" role="group" aria-label="Filter players by position">
+        {POSITION_TABS.map(({ value, label }) => {
+          const count = positionCounts[value] ?? 0;
+          return <button key={value || 'all'} type="button" className="btn-secondary ml-position-tab"
+            data-testid={`manual-position-${value || 'all'}`} aria-pressed={filters.position === value}
+            aria-label={`${label === 'All' ? 'All positions' : label}: ${count} matching players`}
+            onClick={() => changeFilters({ position: value })}>
+            <span>{label}</span><span className="ml-position-count">{count}</span>
+          </button>;
+        })}
+      </div>
       <p className="ml-muted" role="status" data-testid="manual-player-count">
         {rows.length ? `Showing ${page.start}–${page.end} of ${rows.length} matching players` : 'No matching players'} · {c.players.length} in the contest · highest salaries first
       </p>
