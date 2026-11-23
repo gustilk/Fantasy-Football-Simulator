@@ -42,3 +42,17 @@ mtime_ms = 1791315574686
 storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:1c3bd1a2-d51c-497b-9eb1-bd30c388c597/947ae194-66c2-42c1-a2dd-36f9220ce077/6c5dcfa2-4b08-41fc-bc36-0a6dacda436f"
 storage_version_token = "1791315614234802"
 content_type = "text/html"
+
+[[outputs]]
+id = "mEyDkCdYkLEOzz73F8P9I"
+uri = "file://attached_assets/DKSalaries-NFL-Thanksgiving-2026-11-26-156932.csv"
+type = "table"
+title = "DraftKings NFL Thanksgiving Classic Salaries"
+description = "Official DraftKings salary CSV for the 3-game Thursday NFL Classic slate on November 26, 2026. Retrieved from DraftKings and validated: 154 players across all three games."
+logical_id = "b5e991f3-57d8-4e14-a725-96a371b2b927"
+content_hash = "sha256:cf2ae0aef789803b5d872265da12184f8de80b36df43d9d91e636e8849c41ffc"
+size = 15766
+mtime_ms = 1795414119399
+storage_uri = "gcs://replit-rams-assets-spock/rams/assets/repl:1c3bd1a2-d51c-497b-9eb1-bd30c388c597/b5e991f3-57d8-4e14-a725-96a371b2b927/a3f961cf-4f44-497c-a4f7-2a4eb4c87f5d"
+storage_version_token = "1795414124685317"
+content_type = "text/csv"
