@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { getFeaturedClassicSalary } from '@workspace/api-client-react';
 import { useSyncedSalaries } from './use-synced-salaries';
 import { useSyncedManualPicks } from './use-synced-manual-picks';
-import { parseSalaryCsv, lineupSlots, exportLineups, type Lineup } from '@/lib/lineups';
+import { parseSalaryCsv, lineupSlots, exportLineups } from '@/lib/lineups';
 import { readSalaryFile } from '@/lib/salary-file';
-import { buildManualLineupPool, manualContestSignature, manualSalaryGame, MANUAL_LINEUP_COUNT, type ManualPick } from '@/lib/manual-lineups';
+import { buildManualLineupPool, manualContestSignature, manualSalaryGame, MANUAL_LINEUP_COUNT, type ManualPick, type ManualSalaryLineup } from '@/lib/manual-lineups';
 import { manualLineupIssue, manualRosterReadiness } from '@/lib/manual-lineup-readiness';
 
 const message = (e: unknown) => e instanceof Error ? e.message : 'The operation failed. Please retry.';
@@ -23,7 +23,7 @@ export function useManualLineups(season: number) {
   const [notice, setNotice] = useState('');
   const [importing, setImporting] = useState(false);
   const [running, setRunning] = useState(false);
-  const [result, setResult] = useState<{ key: string; lineups: Lineup[] } | null>(null);
+  const [result, setResult] = useState<{ key: string; lineups: ManualSalaryLineup[] } | null>(null);
   const worker = useRef<Worker | null>(null);
   const key = JSON.stringify([season, signature, picks]);
   const keyRef = useRef(key); keyRef.current = key;
@@ -39,7 +39,7 @@ export function useManualLineups(season: number) {
     pickSync.edit({ ...pickSync.picks, [id]: { ...(pickSync.picks[id] ?? { selected: false, points: '' }), ...patch } });
   };
   const clearPicks = () => {
-    if (!window.confirm('Clear your manual player selections and point estimates? Salaries and simulator forecasts will not change.')) return;
+    if (!window.confirm('Clear your selected players and any previously saved point entries? Salaries and simulator forecasts will not change.')) return;
     pickSync.edit({}); stop(); setResult(null); setError('');
   };
   const importCsv = async (file: File) => {
@@ -48,7 +48,7 @@ export function useManualLineups(season: number) {
       if (record && !window.confirm(`Replace "${record.filename}" with this Classic salary file? These salaries are also used in Lineups. Manual picks for a different contest will not carry over.`)) return;
       const { csv } = await readSalaryFile(file, undefined, 'classic');
       await salarySync.save({ version: 1, season, filename: file.name, importedAt: new Date().toISOString(), csv, format: 'classic', slateId: '', sunday: '' });
-      if (mounted.current) setNotice('DraftKings salaries imported. Select players and enter your own projected points.');
+      if (mounted.current) setNotice('DraftKings salaries imported. Select players to generate salary-only lineups.');
     } catch (e) { if (mounted.current) setError(`Salaries were not imported: ${message(e)}`); }
     finally { if (mounted.current) setImporting(false); }
   };
@@ -60,7 +60,7 @@ export function useManualLineups(season: number) {
       if (record && !window.confirm(`Replace "${record.filename}" with Featured NFL Classic salaries? These salaries are also used in Lineups; picks for another contest will not carry over.`)) return;
       parseSalaryCsv(file.csv, 'classic');
       await salarySync.save({ version: 1, season, filename: file.filename, importedAt: new Date().toISOString(), csv: file.csv, format: 'classic', slateId: '', sunday: '' });
-      if (mounted.current) setNotice('Featured NFL Classic salaries imported. Enter your own projected points.');
+      if (mounted.current) setNotice('Featured NFL Classic salaries imported. Select players to generate salary-only lineups.');
     } catch (e) { if (mounted.current) setError(`Featured salaries were not imported: ${message(e)}`); }
     finally { if (mounted.current) setImporting(false); }
   };
@@ -74,9 +74,9 @@ export function useManualLineups(season: number) {
       const readiness = manualRosterReadiness(parsed.players, picks);
       if (readiness.issues.length) { setError(readiness.issues.join(' ')); return; }
       const runKey = keyRef.current;
-      const w = new Worker(new URL('../lib/lineup-worker.ts', import.meta.url), { type: 'module' });
+      const w = new Worker(new URL('../lib/manual-lineup-worker.ts', import.meta.url), { type: 'module' });
       worker.current = w; setRunning(true);
-      w.onmessage = (event: MessageEvent<{ lineups?: Lineup[]; error?: string }>) => {
+      w.onmessage = (event: MessageEvent<{ lineups?: ManualSalaryLineup[]; error?: string }>) => {
         if (worker.current !== w) return;
         stop();
         if (keyRef.current !== runKey) return;
@@ -89,11 +89,11 @@ export function useManualLineups(season: number) {
             if (lineup.players.some(p => Date.parse(p.kickoff) <= Date.now())) throw new Error('Kickoff passed while generating. Refresh your picks before generating again.');
           }
           setResult({ key: runKey, lineups });
-          if (lineups.length < MANUAL_LINEUP_COUNT) setNotice(`Only ${lineups.length} distinct legal ${lineups.length === 1 ? 'lineup is' : 'lineups are'} possible from your selected pool under $50,000. All are shown; add more candidates to make more combinations possible.`);
+        if (lineups.length < MANUAL_LINEUP_COUNT) setNotice(`Generated ${lineups.length} distinct legal ${lineups.length === 1 ? 'lineup' : 'lineups'}. Your selected pool may not allow 150 unique combinations under $50,000; add candidates or generate again for another random sample.`);
         } catch (e) { setError(message(e)); }
       };
       w.onerror = event => { if (worker.current === w) { stop(); setError(`Lineup generation failed: ${event.message}`); } };
-      w.postMessage({ players: pool, count: MANUAL_LINEUP_COUNT, format: 'classic', mode: 'average' });
+      w.postMessage({ players: pool, count: MANUAL_LINEUP_COUNT });
     } catch (e) { stop(); setError(message(e)); }
   };
   const lineups = result?.key === key ? result.lineups : [];
@@ -101,7 +101,7 @@ export function useManualLineups(season: number) {
     if (!lineups.length) return;
     try {
       const url = URL.createObjectURL(new Blob([exportLineups(lineups)], { type: 'text/csv' }));
-      const a = document.createElement('a'); a.href = url; a.download = `manual-classic-top-${lineups.length}-lineups-${season}.csv`; a.click();
+      const a = document.createElement('a'); a.href = url; a.download = `manual-classic-${lineups.length}-random-lineups-${season}.csv`; a.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (e) { setError(message(e)); }
   };

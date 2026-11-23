@@ -156,7 +156,9 @@ export function buildLineupPool(salaries: SalaryPlayer[], slate: DKSlate, teams?
   return { players, issues, warnings };
 }
 
-export function lineupSlots(lineup: Lineup): { slot: string; player: LineupPlayer }[] {
+type LineupSlotPlayer = Pick<LineupPlayer, 'id' | 'name' | 'position' | 'team' | 'salary' | 'gameId' | 'kickoff' | 'rosterPosition'>;
+type LineupRoster<T extends LineupSlotPlayer> = { players: T[]; salary: number; format?: LineupFormat };
+export function lineupSlots<T extends LineupSlotPlayer>(lineup: LineupRoster<T>): { slot: string; player: T }[] {
   if (lineup.format === 'showdown') {
     const captain = lineup.players.filter(p => p.rosterPosition === 'CPT');
     const flex = lineup.players.filter(p => p.rosterPosition === 'FLEX');
@@ -166,7 +168,7 @@ export function lineupSlots(lineup: Lineup): { slot: string; player: LineupPlaye
       lineup.salary !== lineup.players.reduce((n, p) => n + p.salary, 0) || lineup.salary > 50000) throw new Error('Invalid NFL Showdown lineup.');
     return [{ slot: 'CPT', player: captain[0]! }, ...flex.map(player => ({ slot: 'FLEX', player }))];
   }
-  const used = new Set<string>(), slots: { slot: string; player: LineupPlayer }[] = [];
+  const used = new Set<string>(), slots: { slot: string; player: T }[] = [];
   for (const slot of ['QB', 'RB', 'RB', 'WR', 'WR', 'WR', 'TE']) {
     const player = lineup.players.find(p => p.position === slot && !used.has(p.id));
     if (!player) throw new Error('Invalid lineup roster slots.');
@@ -179,7 +181,7 @@ export function lineupSlots(lineup: Lineup): { slot: string; player: LineupPlaye
     || lineup.salary > 50000 || new Set(lineup.players.map(p => p.gameId)).size < 2) throw new Error('Invalid NFL Classic lineup.');
   return [...slots, { slot: 'FLEX', player: flex }, { slot: 'DST', player: defense }];
 }
-export function exportLineups(lineups: Lineup[]): string {
+export function exportLineups<T extends LineupSlotPlayer>(lineups: LineupRoster<T>[]): string {
   if (!lineups.length || lineups.some(l => (l.format ?? 'classic') !== (lineups[0]!.format ?? 'classic'))) throw new Error('Export one contest format at a time.');
   if (lineups.some(lineup => lineup.players.some(p => Date.parse(p.kickoff) <= Date.now() || !Number.isFinite(Date.parse(p.kickoff))))) {
     throw new Error('A game has started. Generate a new pregame lineup; late swaps are not supported.');

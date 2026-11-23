@@ -1,8 +1,10 @@
-import { TEAM_CODES, type SalaryPlayer, type LineupPlayer } from './lineups';
+import { TEAM_CODES, type SalaryPlayer } from './lineups';
 
 export interface ManualPick { selected: boolean; points: string }
 export type ManualPicks = Record<string, ManualPick>;
-export const MANUAL_LINEUP_COUNT = 5;
+export interface ManualSalaryCandidate extends SalaryPlayer { gameId: string; kickoff: string }
+export interface ManualSalaryLineup { players: ManualSalaryCandidate[]; salary: number }
+export const MANUAL_LINEUP_COUNT = 150;
 export const MANUAL_PICKS_KEY = 'gridiron-manual-picks-v1';
 const eastern = new Intl.DateTimeFormat('en-US', {
   timeZone: 'America/New_York', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', hour12: false,
@@ -40,18 +42,14 @@ export function manualSalaryGame(player: SalaryPlayer): { gameId: string; kickof
   throw new Error(`${player.name}: invalid or ambiguous Eastern kickoff in the salary file.`);
 }
 
-export function buildManualLineupPool(salaries: SalaryPlayer[], picks: ManualPicks, now = Date.now()): LineupPlayer[] {
+export function buildManualLineupPool(salaries: SalaryPlayer[], picks: ManualPicks, now = Date.now()): ManualSalaryCandidate[] {
   const selected = salaries.filter(p => picks[p.id]?.selected);
-  if (!selected.length) throw new Error('Select players and enter their projected DraftKings points first.');
+  if (!selected.length) throw new Error('Select players from the imported DraftKings salary list first.');
   return selected.map(player => {
-    const raw = picks[player.id]!.points.trim();
-    if (!raw || !/^[+-]?(?:\d+\.?\d*|\.\d+)$/.test(raw) || !Number.isFinite(Number(raw))) {
-      throw new Error(`${player.name}: enter a valid projected points value. Zero and negative points are allowed.`);
-    }
     if (player.position === 'K' || player.rosterPosition.toUpperCase().includes('CPT')) throw new Error('Use NFL Classic salaries, not Captain/Showdown salaries.');
     const game = manualSalaryGame(player);
     if (Date.parse(game.kickoff) <= now) throw new Error(`${player.name}: kickoff has passed. This section creates pregame lineups only.`);
-    return { ...player, ...game, mean: Number(raw), projectionSource: 'Your manual DraftKings projection' };
+    return { ...player, ...game };
   });
 }
 

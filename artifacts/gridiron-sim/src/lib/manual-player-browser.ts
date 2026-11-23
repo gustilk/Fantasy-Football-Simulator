@@ -14,7 +14,7 @@ export const EMPTY_MANUAL_PLAYER_FILTERS: ManualPlayerFilters = {
 };
 const searchable = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
-/** View filters never change the candidate pool, selections, or entered estimates. */
+/** View filters never change the candidate pool or selected-player set. */
 export function filterManualPlayers<T extends SalaryPlayer>(players: T[], picks: ManualPicks, filters: ManualPlayerFilters): T[] {
   const terms = filters.query.trim().split(/\s+/).filter(Boolean).map(searchable).filter(Boolean);
   return players.filter(p => (!filters.position || p.position === filters.position)

@@ -69,11 +69,11 @@ Shared salary data does not automatically imply shared forecast pairing.
 
 **How to apply:** Preserve each device's pairing for unchanged contest data. Synchronizing forecast archives is a separate feature; until that exists, require a matching forecast on the current device rather than silently importing another device's forecast reference.
 
-The user also wants a separate manual lineup section: “I will select the players … I will add their Fantasy points” and generate the highest-point lineups from that list under $50,000, still using DraftKings salaries. They later specified, “In My Pick should at least generate top 5 lineups.”
+The user wants My Picks to create 150 random legal NFL Classic lineups from selected players without entering fantasy points. Salary is used only for roster eligibility and the $50,000 cap.
 
-**Why:** They want to optimize their own player expectations rather than relying only on simulator forecasts.
+**Why:** The user asked to remove fantasy-point entry and selected random legal lineups as the generation method.
 
-**How to apply:** Treat selected players as the candidate pool, not mandatory locks. The user explicitly corrected this: “it should generate the best lineup with most point from all the players I selected, I can select as many players as I want.” Do not limit selections to nine, require deselecting extras, or optimize only the currently visible filtered page. Return the top five distinct legal lineups, ranked by total entered points, from the entire selected pool under the cap. If fewer than five legal combinations exist, show every feasible result and explain the shortfall rather than duplicating lineups. Use only their entered point estimates and the current imported Classic contest's salaries and eligibility. Keep manual estimates separate from actual statistics and simulator forecasts; do not silently replace blank estimates with model values or carry them into another salary contest.
+**How to apply:** Treat selected players as the candidate pool, not mandatory locks. Use all selected candidates across filters/pages; do not rank by salary or infer points from salary. Generate distinct lineups with the official imported contest salaries, Classic roster rules, at least two games, and the $50,000 cap. If fewer than 150 are found, show the available unique lineups and explain that the pool may not support 150. Keep salary-only results separate from simulator forecasts and actual statistics.
 
 My Picks must make relevant players easy to find instead of requiring scrolling through the entire salary list.
 
