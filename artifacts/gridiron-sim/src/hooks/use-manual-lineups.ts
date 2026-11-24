@@ -2,13 +2,16 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { getFeaturedClassicSalary } from '@workspace/api-client-react';
 import { useSyncedSalaries } from './use-synced-salaries';
 import { useSyncedManualPicks } from './use-synced-manual-picks';
-import { parseSalaryCsv, lineupSlots, exportLineups } from '@/lib/lineups';
+import { useDraftKingsBoard } from './use-draftkings-board';
+import { parseSalaryCsv, lineupSlots, exportLineups, buildLineupPool } from '@/lib/lineups';
+import { combineForecastSlates, type ProjectionPortfolio } from '@/lib/projection-lineups';
+import type { SimulatorLineupSource } from '@/lib/simulator-lineups';
 import { readSalaryFile } from '@/lib/salary-file';
 import { buildManualLineupPool, manualContestSignature, manualSalaryGame, MANUAL_LINEUP_COUNT, type ManualPick, type ManualSalaryLineup } from '@/lib/manual-lineups';
 import { manualLineupIssue, manualRosterReadiness } from '@/lib/manual-lineup-readiness';
 
 const message = (e: unknown) => e instanceof Error ? e.message : 'The operation failed. Please retry.';
-export function useManualLineups(season: number) {
+export function useManualLineups(season: number, forecastSource?: SimulatorLineupSource) {
   const salarySync = useSyncedSalaries(season, 'classic');
   const record = salarySync.saved.status === 'ok' ? salarySync.saved.record : null;
   const parsed = useMemo(() => {
@@ -25,13 +28,19 @@ export function useManualLineups(season: number) {
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<{ key: string; lineups: ManualSalaryLineup[] } | null>(null);
   const worker = useRef<Worker | null>(null);
+  const board = useDraftKingsBoard(season);
+  const [projRunning, setProjRunning] = useState(false);
+  const [projError, setProjError] = useState('');
+  const [projResult, setProjResult] = useState<{ key: string; portfolio: ProjectionPortfolio; skipped: string[] } | null>(null);
+  const projWorker = useRef<Worker | null>(null);
   const key = JSON.stringify([season, signature, picks]);
   const keyRef = useRef(key); keyRef.current = key;
   const mounted = useRef(true);
-  useEffect(() => { mounted.current = true; return () => { mounted.current = false; worker.current?.terminate(); }; }, []);
-  const stop = () => { worker.current?.terminate(); worker.current = null; setRunning(false); };
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; worker.current?.terminate(); projWorker.current?.terminate(); }; }, []);
+  const stopProjection = () => { projWorker.current?.terminate(); projWorker.current = null; setProjRunning(false); };
+  const stop = () => { worker.current?.terminate(); worker.current = null; setRunning(false); stopProjection(); };
   useEffect(() => {
-    stop(); setResult(null); setError(''); setNotice('');
+    stop(); setResult(null); setError(''); setNotice(''); setProjResult(null); setProjError('');
   }, [key]);
   const updatePick = (id: string, patch: Partial<ManualPick>) => {
     if (!pickSync.ready || !parsed.players.some(p => p.id === id)) return;
@@ -96,6 +105,50 @@ export function useManualLineups(season: number) {
       w.postMessage({ players: pool, count: MANUAL_LINEUP_COUNT });
     } catch (e) { stop(); setError(message(e)); }
   };
+  const generateFromProjections = (options: { maxExposure: number }) => {
+    stop(); setResult(null); setError(''); setNotice(''); setProjResult(null); setProjError('');
+    if (salarySync.loading || pickSync.loading || !pickSync.ready || pickSync.dirty || importing || salarySync.error || parsed.error || storageError || !record) {
+      setProjError('Load valid Classic salaries and resolve save errors before generating.'); return;
+    }
+    try {
+      const selected = parsed.players.filter(p => picks[p.id]?.selected);
+      if (!selected.length) throw new Error('Select players from the imported DraftKings salary list first.');
+      const slate = combineForecastSlates([...board.slates, ...(forecastSource?.slates ?? [])], season);
+      if (!slate.forecasts.length) throw new Error('No saved projections yet. Run and save the games first (Game Simulator for Thursday or Monday games, DraftKings tab for Sunday).');
+      const built = buildLineupPool(selected, slate, board.historyQuery.data, Date.now());
+      const skipped = built.issues.map(issue => `${issue.player.name} (${issue.player.position} ${issue.player.team}): ${issue.reason}`);
+      if (built.players.length < 9) throw new Error(`Only ${built.players.length} selected players have a saved pregame projection. ${skipped[0] ?? ''}`.trim());
+      const runKey = keyRef.current;
+      const w = new Worker(new URL('../lib/projection-lineup-worker.ts', import.meta.url), { type: 'module' });
+      projWorker.current = w; setProjRunning(true);
+      w.onmessage = (event: MessageEvent<{ portfolio?: ProjectionPortfolio; error?: string }>) => {
+        if (projWorker.current !== w) return;
+        stopProjection();
+        if (keyRef.current !== runKey) return;
+        if (event.data.error) { setProjError(event.data.error); return; }
+        const portfolio = event.data.portfolio!;
+        if (!portfolio.lineups.length) { setProjError(portfolio.notes.join(' ') || 'No lineup was returned. Your picks have not changed.'); return; }
+        try {
+          for (const lineup of portfolio.lineups) {
+            lineupSlots(lineup);
+            if (lineup.players.some(p => Date.parse(p.kickoff) <= Date.now())) throw new Error('Kickoff passed while generating. Refresh your picks before generating again.');
+          }
+          setProjResult({ key: runKey, portfolio, skipped });
+        } catch (e) { setProjError(message(e)); }
+      };
+      w.onerror = event => { if (projWorker.current === w) { stopProjection(); setProjError(`Lineup generation failed: ${event.message}`); } };
+      w.postMessage({ players: built.players, slate, options: { count: MANUAL_LINEUP_COUNT, maxExposure: options.maxExposure } });
+    } catch (e) { stopProjection(); setProjError(message(e)); }
+  };
+  const projected = projResult?.key === key ? projResult : null;
+  const exportProjected = () => {
+    if (!projected) return;
+    try {
+      const url = URL.createObjectURL(new Blob([exportLineups(projected.portfolio.lineups)], { type: 'text/csv' }));
+      const a = document.createElement('a'); a.href = url; a.download = `projection-classic-${projected.portfolio.lineups.length}-lineups-${season}.csv`; a.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) { setProjError(message(e)); }
+  };
   const lineups = result?.key === key ? result.lineups : [];
   const exportResults = () => {
     if (!lineups.length) return;
@@ -114,6 +167,6 @@ export function useManualLineups(season: number) {
   return { season, record, players, picks, updatePick, lineups,
     running, stop, importing, loading: salarySync.loading || pickSync.loading, selectedCount: players.filter(p => picks[p.id]?.selected).length,
     error: error || parsed.error || salarySync.error, salaryError: salarySync.error, warning: salarySync.warning || pickSync.warning, notice, storageError,
-    pickSync, generate, importCsv, importFeatured, retrySave: pickSync.save, clearPicks, exportResults, refreshSalaries: salarySync.refresh };
+    pickSync, generate, generateFromProjections, projRunning, projError, projected, exportProjected, stopProjection, importCsv, importFeatured, retrySave: pickSync.save, clearPicks, exportResults, refreshSalaries: salarySync.refresh };
 }
 export type ManualLineupsController = ReturnType<typeof useManualLineups>;
