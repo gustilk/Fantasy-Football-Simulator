@@ -2,6 +2,32 @@ import { simulateGame, type SimulationInput, type SimulationResult } from "./sim
 import { validateMarketOdds, marketOutcomeWeights, weightedFantasySummary } from "./market-odds";
 import { calculateDefenseDraftKings } from "./draftkings-defense";
 import { highScoringWeights } from "./high-scoring";
+import {
+  availabilityAdjustedDistribution, BUST_FLOOR_POINTS, historicalPlayProbability, pairCorrelations, summarizeDistribution,
+  type PlayerDistributionReport,
+} from "./projection-distribution";
+
+/** Distribution reports and pair correlations from the raw per-game samples (must run before any in-place sorting). */
+function distributionDetail(input: SimulationInput, result: SimulationResult, values: number[][], weights?: number[]) {
+  const checks = [...(input.away.availabilityChecks ?? []), ...(input.home.availabilityChecks ?? [])];
+  const distribution: PlayerDistributionReport[] = result.players.map((player, index) => {
+    const floor = (BUST_FLOOR_POINTS as Record<string, number | undefined>)[player.position];
+    const points = values[index]!;
+    const report: PlayerDistributionReport = { ...summarizeDistribution(points, weights, floor), basis: "simulated" };
+    const check = player.id ? checks.find(c => c.id === player.id) : undefined;
+    const rate = check?.included ? historicalPlayProbability(check.status, player.position) : undefined;
+    if (check && rate) {
+      report.availability = {
+        status: check.status, statusBasis: check.basis, checkedAt: check.checkedAt,
+        playProbability: Math.round(rate.probability * 1000) / 1000, sample: { n: rate.n, played: rate.played }, rateSource: rate.source,
+        adjusted: availabilityAdjustedDistribution(points, weights, rate.probability, floor),
+      };
+    }
+    return report;
+  });
+  const correlations = pairCorrelations(result.players.map(p => ({ team: p.team, position: p.position })), values, weights);
+  return { distribution, correlations };
+}
 
 export function simulateEnsemble(input: SimulationInput, runs = 200): SimulationResult {
   if (!Number.isInteger(runs) || runs < 1 || runs > 500) throw new Error("Use between 1 and 500 simulations.");
@@ -35,6 +61,7 @@ export function simulateEnsemble(input: SimulationInput, runs = 200): Simulation
       marketResult?.weights ?? scores.map(() => 1 / runs),
     ) : undefined;
     const weights = highScoring?.weights ?? marketResult!.weights;
+    const detail = distributionDetail(input, first, values, weights);
     const probability = (test: (score: typeof scores[number]) => boolean) =>
       rounded(scores.reduce((sum, score, index) => sum + (test(score) ? weights[index] : 0), 0) * 100);
     first.ensemble = {
@@ -51,6 +78,7 @@ export function simulateEnsemble(input: SimulationInput, runs = 200): Simulation
       homeWinPct: probability(score => score.home > score.away),
       tiePct: probability(score => score.away === score.home),
       fantasy: values.map(points => weightedFantasySummary(points, weights)),
+      ...detail,
       defenseFantasy: defenseValues.map((points, index) => ({ team: first.defenses![index]!.team, ...weightedFantasySummary(points, weights) })),
       ...(kickerValues ? { kickerFantasy: kickerValues.map((points, i) => ({ name: first.kickers![i]!.name, team: first.kickers![i]!.team, ...weightedFantasySummary(points, weights) })) } : {}),
     };
@@ -66,6 +94,7 @@ export function simulateEnsemble(input: SimulationInput, runs = 200): Simulation
     }
     return first;
   }
+  const detail = distributionDetail(input, first, values);
   first.ensemble = {
     runs,
     scoring: (() => {
@@ -81,6 +110,7 @@ export function simulateEnsemble(input: SimulationInput, runs = 200): Simulation
     awayWinPct: rounded(awayWins / runs * 100),
     homeWinPct: rounded(homeWins / runs * 100),
     tiePct: rounded(ties / runs * 100),
+    ...detail,
     fantasy: values.map(points => {
       points.sort((a, b) => a - b);
       return {

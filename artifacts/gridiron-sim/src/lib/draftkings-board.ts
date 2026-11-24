@@ -27,6 +27,18 @@ export interface DKProjection {
   mean: number;
   p10: number;
   p90: number;
+  /** Calculated from the simulation (absent on forecasts saved before these fields existed; never back-filled). */
+  median?: number;
+  p75?: number;
+  p95?: number;
+  bustThreshold?: number;
+  bustProbability?: number;
+  /** Only when a verified Questionable/Limited/Doubtful designation exists. Rates are historical, not player-specific. */
+  availability?: {
+    status: string; statusBasis: 'weekly override' | 'saved roster'; checkedAt?: string;
+    playProbability: number; adjustedMean: number; adjustedBustProbability?: number;
+    sample: { n: number; played: number }; rateSource: string;
+  };
 }
 export interface DKGameForecast {
   gameId: string;
@@ -153,6 +165,17 @@ export function availableSundayOptions(games: NflScheduledGame[]) {
   }));
 }
 
+/** Copy the extra calculated fields when the ensemble produced them; otherwise add nothing. */
+function distributionFields(d: NonNullable<NonNullable<SimulationResult['ensemble']>['distribution']>[number] | undefined): Partial<DKProjection> {
+  if (!d) return {};
+  const a = d.availability;
+  return {
+    median: d.median, p75: d.p75, p95: d.p95,
+    ...(d.bustProbability === undefined ? {} : { bustThreshold: d.bustThreshold, bustProbability: d.bustProbability }),
+    ...(a ? { availability: { status: a.status, statusBasis: a.statusBasis, checkedAt: a.checkedAt, playProbability: a.playProbability,
+      adjustedMean: a.adjusted.mean, adjustedBustProbability: a.adjusted.bustProbability, sample: a.sample, rateSource: a.rateSource } } : {}),
+  };
+}
 export function gameForecast(game: Pick<NflScheduledGame, 'id' | 'week' | 'date' | 'awayTeam' | 'homeTeam'>, input: SimulationInput, result: SimulationResult): DKGameForecast {
   const ensemble = result.ensemble;
   if (!ensemble || ensemble.fantasy.length !== result.players.length) throw new Error('Complete ensemble projections are required.');
@@ -170,6 +193,7 @@ export function gameForecast(game: Pick<NflScheduledGame, 'id' | 'week' | 'date'
       elite1x: player.elite1x === true,
       eliteTier: savedEliteTier(player),
       mean: summary.mean, p10: summary.p10, p90: summary.p90,
+      ...distributionFields(ensemble.distribution?.[index]),
     };
   });
   return {

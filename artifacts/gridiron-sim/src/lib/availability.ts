@@ -22,6 +22,33 @@ export function availabilityForWeek(player: RosterPlayer, week: number) {
 
 export type AvailabilityCheck = ReturnType<typeof availabilityForWeek>;
 
+/** Statuses that keep a player out of generated lineups. Questionable/Limited are never auto-excluded. */
+export const LINEUP_EXCLUDING_STATUSES = ["out", "doubtful"] as const;
+const excludes = (status?: string) => (LINEUP_EXCLUDING_STATUSES as readonly string[]).includes(status ?? "");
+
+/**
+ * Lineup-builder eligibility. A weekly override always decides (so the user can force an Out player
+ * back in, or take a player out). Without one, a player is excluded when the saved roster marks them
+ * inactive OR the verified source report says Out/Doubtful (Out includes injured reserve, PUP, NFI and
+ * suspension as mapped by the importer) even if the saved Active flag was never updated.
+ * Unknown is never treated as Out, and missing data is never invented.
+ */
+export function lineupEligibility(player: RosterPlayer, week: number): { eligible: boolean; reason?: string } {
+  const override = player.availabilityOverride?.week === week ? player.availabilityOverride : undefined;
+  if (override) {
+    return excludes(override.status)
+      ? { eligible: false, reason: `Weekly override marks this player ${availabilityLabels[override.status]}.` }
+      : { eligible: true };
+  }
+  if (!player.active) return { eligible: false, reason: "Inactive on the current saved roster." };
+  const reported = player.availabilityReport?.status;
+  if (excludes(reported)) {
+    const detail = player.availability ? ` (${player.availability})` : "";
+    return { eligible: false, reason: `Source reports ${availabilityLabels[reported!]}${detail}. Set a weekly Available override to include this player anyway.` };
+  }
+  return { eligible: true };
+}
+
 export function availabilityWarnings(checks: AvailabilityCheck[], now = Date.now()): string[] {
   const warnings: string[] = [];
   const unknown = checks.filter(p => p.included && p.status === "unknown");

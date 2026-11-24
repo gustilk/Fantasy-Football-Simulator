@@ -14,6 +14,13 @@ const forecastSchema = z.object({
   players: z.array(z.object({
     playerId: z.string(), name: z.string(), team: z.string(), position: z.enum(['QB', 'RB', 'WR', 'TE']),
     mean: z.number(), p10: z.number(), p90: z.number(), elite1x: z.boolean().optional(),
+    median: z.number().finite().optional(), p75: z.number().finite().optional(), p95: z.number().finite().optional(),
+    bustThreshold: z.number().finite().optional(), bustProbability: z.number().min(0).max(1).optional(),
+    availability: z.object({
+      status: z.string(), statusBasis: z.enum(['weekly override', 'saved roster']), checkedAt: z.string().optional(),
+      playProbability: z.number().min(0).max(1), adjustedMean: z.number().finite(), adjustedBustProbability: z.number().min(0).max(1).optional(),
+      sample: z.object({ n: z.number(), played: z.number() }), rateSource: z.string(),
+    }).optional(),
     eliteTier: z.union([z.literal(0), z.literal(1), z.literal(1.5), z.literal(2), z.literal(3)]).optional(),
   })),
   warnings: z.array(z.string()),

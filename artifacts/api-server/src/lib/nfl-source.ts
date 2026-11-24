@@ -162,8 +162,10 @@ export async function getNflDepthChart(season: number, team: string): Promise<Nf
 }
 
 export function reportedAvailability(injury?: string): NonNullable<RosterPlayer["availabilityReport"]>["status"] {
-  const status = injury?.trim().toLowerCase();
-  if (["out", "suspended", "injured reserve"].includes(status ?? "")) return "out";
+  const status = injury?.trim().toLowerCase().replace(/[^a-z]+/g, " ").trim();
+  // Anything that rules a player out for the game or longer maps to "out"; the raw ESPN text stays in `availability`.
+  if (["out", "suspended", "suspension", "injured reserve", "ir", "reserve injured", "reserve pup", "reserve nfi",
+    "pup", "nfi", "physically unable to perform", "non football injury"].includes(status ?? "")) return "out";
   if (status === "doubtful") return "doubtful";
   if (status === "questionable") return "questionable";
   if (["limited", "limited participation"].includes(status ?? "")) return "limited";

@@ -181,6 +181,10 @@ export interface SimulationResult {
     homeWinPct: number;
     tiePct: number;
     fantasy: { mean: number; p10: number; p90: number }[];
+    /** Calculated distribution (median, P75, P90, P95, bust probability, availability uncertainty), parallel to `fantasy`. */
+    distribution?: import('./projection-distribution').PlayerDistributionReport[];
+    /** Correlations measured across the simulated games; emergent from game script, not fitted to history. */
+    correlations?: import('./projection-distribution').PlayerCorrelation[];
     defenseFantasy?: { team: string; mean: number; p10: number; p90: number }[];
     kickerFantasy?: { team: string; name: string; mean: number; p10: number; p90: number }[];
     market?: MarketEvidence;

@@ -14,6 +14,7 @@ A saved NFL season library and fantasy matchup lab: full rosters, raw weekly pla
 
 ## Weekly NFL advanced-stat source
 
+- Phase 1/2 upgrade notes (OUT/IR exclusion, distributions, bust risk, correlations, availability uncertainty): [docs/projection-engine-upgrade.md](docs/projection-engine-upgrade.md).
 - Use **nflverse** as the saved source for advanced NFL reference stats throughout the season. Refresh after the week's final game has finished and the source files include it; include all completed games, not Sunday-only games.
 - Source links, year-specific download templates, and the weekly refresh procedure are saved in [docs/nfl-data-sources.md](docs/nfl-data-sources.md).
 - Current fetching is on demand through Team Library's advanced-stats panel, with a ten-minute server cache; it is not an unattended weekly scheduled job. Reading these reports does not overwrite saved team history or forecasts.

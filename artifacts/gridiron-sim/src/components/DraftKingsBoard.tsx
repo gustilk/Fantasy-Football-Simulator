@@ -135,15 +135,18 @@ export default function DraftKingsBoard({ season }: { season: number }) {
               </> : <p className="dk-muted">Legacy saved forecast: original inputs preserved. Run a new forecast to use the expanded football evidence model.</p>}
             </div>)}
         </details>
-        <div className="player-table-wrap"><table className="player-table"><thead><tr><th>#  Player</th><th>DK points</th>{detail && <><th>10th–90th</th><th>Actual</th><th>Diff</th></>}</tr></thead><tbody>
+        <div className="player-table-wrap"><table className="player-table"><thead><tr><th>#  Player</th><th>DK points</th>{detail && <><th>10th–90th</th><th>Median · 75th · 95th</th><th>Bust risk</th><th>Actual</th><th>Diff</th></>}</tr></thead><tbody>
           {projList.map((r, i) => <tr key={`${r.team}-${r.playerId}`} data-testid={`dk-proj-${r.playerId}`}>
             <td><span className="dk-rank">{i + 1}</span><span className="player-name">{r.name}</span><EliteBadge player={r} /><span className="player-pos">{r.opponent ? `vs ${r.opponent}` : 'Opponent unavailable'}</span></td>
             <td className="dk-mean">{r.mean.toFixed(2)}</td>
             {detail && <><td>{r.p10.toFixed(2)}–{r.p90.toFixed(2)}</td>
+              <td data-testid={`dk-dist-${r.playerId}`}>{r.median === undefined || r.p75 === undefined || r.p95 === undefined ? 'not in this older forecast' : `${r.median.toFixed(1)} · ${r.p75.toFixed(1)} · ${r.p95.toFixed(1)}`}</td>
+              <td data-testid={`dk-bust-${r.playerId}`}>{r.bustProbability === undefined ? '–' : <>{(r.bustProbability * 100).toFixed(0)}% under {r.bustThreshold}{r.availability && <span className="dk-muted"> · {r.availability.status}: played {(r.availability.playProbability * 100).toFixed(0)}% of {r.availability.sample.n} similar past reports → average {r.availability.adjustedMean.toFixed(1)} counting a no-show{r.availability.adjustedBustProbability !== undefined && `, bust ${(r.availability.adjustedBustProbability * 100).toFixed(0)}%`}</span>}</>}</td>
               <td>{r.actual ? `${fmt(r.actual.points)}${r.actual.partial ? '*' : ''}` : 'not recorded'}</td>
               <td>{r.difference === null ? (r.actual?.partial ? 'partial' : '–') : `${r.difference > 0 ? '+' : ''}${r.difference.toFixed(2)}`}</td></>}</tr>)}
-          {projAll.length === 0 && <tr><td colSpan={detail ? 5 : 2}>No players.</td></tr>}</tbody></table></div>
+          {projAll.length === 0 && <tr><td colSpan={detail ? 7 : 2}>No players.</td></tr>}</tbody></table></div>
         <p className="dk-muted">Highest mean first; no minimum points. Ranges and actual comparisons appear under Details above.</p>
+        {detail && <p className="dk-muted" data-testid="dk-data-kinds"><strong>How to read these numbers.</strong> Historical data: recorded box scores, nflverse play-by-play and snap counts. Calculated projections: mean, median, percentiles and bust risk come from the simulation and are scenario estimates, not accuracy-validated forecasts; bust means scoring under a fixed position floor (QB 12, RB 6, WR 6, TE 4). Verified availability: only a timestamped source designation or your weekly override; the "played X%" figure is a historical base rate for that designation and position, not information about this player. Unknown is never treated as healthy or out.</p>}
       </div>) :
       <div className="dk-list">
         <p className="dk-short" data-testid="dk-partial-note">* partial estimate: recorded games only, unknown games are not counted as zero.
