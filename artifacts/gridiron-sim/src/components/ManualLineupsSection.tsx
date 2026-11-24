@@ -16,6 +16,7 @@ const POSITION_TABS = [{ value: '', label: 'All' }, ...POS.map(position => ({ va
 export default function ManualLineupsSection({ season, forecastSource }: { season: number; forecastSource?: SimulatorLineupSource }) {
   const c = useManualLineups(season, forecastSource);
   const [exposure, setExposure] = useState(60);
+  const [availabilityText, setAvailabilityText] = useState('');
   const [filters, setFilters] = useState<ManualPlayerFilters>({ ...EMPTY_MANUAL_PLAYER_FILTERS });
   const [requestedPage, setRequestedPage] = useState(1);
   const file = useRef<HTMLInputElement>(null);
@@ -179,12 +180,15 @@ export default function ManualLineupsSection({ season, forecastSource }: { seaso
       <p className="ml-muted">Every selected player needs a saved pregame projection. Thursday and Monday games come from <strong>Game Simulator</strong> runs; Sunday games from the <strong>DraftKings</strong> tab. Players without one are skipped and listed below. Lineups are estimates, not guaranteed winnings.</p>
       <div className="ml-filters"><div className="field"><label htmlFor="ml-exposure">Max share of lineups for any one player: {exposure}%</label>
         <input id="ml-exposure" type="range" min={20} max={100} step={5} value={exposure} data-testid="manual-exposure" onChange={e => setExposure(Number(e.target.value))} /></div></div>
+      <div className="field"><label htmlFor="ml-availability">Uncertain players (optional): one per line, name, chance to play %, workload %</label>
+        <textarea id="ml-availability" rows={3} placeholder={'Kenneth Walker, 50, 70\nDalton Kincaid, 75'} value={availabilityText} data-testid="manual-availability" onChange={e => setAvailabilityText(e.target.value)} />
+        <span className="ml-muted">Example: 50, 70 means he plays in half the simulated games and, when he plays, gets 70% of his normal points. Leave blank for normal. Update after the Wednesday practice report.</span></div>
       {c.projError && <div className="ml-err" role="alert" data-testid="manual-projection-error">{c.projError}</div>}
       <div className="ml-actions">
         {c.projRunning
           ? <button className="btn-secondary" data-testid="manual-projection-stop" onClick={c.stopProjection}><Square size={14} /> Stop</button>
           : <button className="btn-primary" data-testid="manual-generate-projection" disabled={busy || !c.pickSync.ready || c.pickSync.dirty || !!c.storageError || !c.selectedCount || c.running}
-              onClick={() => c.generateFromProjections({ maxExposure: exposure / 100 })}><Play size={15} /> Generate {MANUAL_LINEUP_COUNT} from projections</button>}
+              onClick={() => c.generateFromProjections({ maxExposure: exposure / 100, availabilityText })}><Play size={15} /> Generate {MANUAL_LINEUP_COUNT} from projections</button>}
         {c.projected && <button className="btn-secondary" data-testid="manual-projection-export" onClick={c.exportProjected}><Download size={14} /> Export {c.projected.portfolio.lineups.length} projection lineups CSV</button>}
       </div>
       {c.projRunning && <p className="ml-muted" role="status"><RotateCw size={12} className="spin-icon" /> Simulating and building lineups…</p>}
