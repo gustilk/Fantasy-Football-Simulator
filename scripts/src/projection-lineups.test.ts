@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { lineupSlots, type LineupPlayer } from '../../artifacts/gridiron-sim/src/lib/lineups';
-import { buildProjectionPortfolio, combineForecastSlates } from '../../artifacts/gridiron-sim/src/lib/projection-lineups';
+import { applyAvailabilityToScenarios, buildProjectionPortfolio, combineForecastSlates, parseAvailabilityText } from '../../artifacts/gridiron-sim/src/lib/projection-lineups';
 import { seededRandom, type JointScenarios } from '../../artifacts/gridiron-sim/src/lib/lineup-scenarios';
 import type { DKSlate } from '../../artifacts/gridiron-sim/src/lib/draftkings-board';
 
@@ -125,4 +125,36 @@ test('combineForecastSlates keeps the newest forecast per game across slates', (
     { ...slate('other-season', '2026-11-24T00:00:00Z', [forecast('g9', 9)]), season: 2025 },
   ], 2026);
   assert.deepEqual(merged.forecasts.map(f => `${f.gameId}:${f.seed}`).sort(), ['g1:2', 'g2:1']);
+});
+
+test('chance to play and workload scale simulated points and reduce use of a risky star', () => {
+  const pool = buildPool();
+  const scenarios = scenariosFor(pool);
+  const star = pool.find(p => p.position === 'QB' && p.team === 'AAA')!;
+  const hot = new Map(scenarios.samples);
+  const hotReport = new Map(scenarios.reporting!.samples);
+  for (const set of [hot, hotReport]) set.set(star.id, Float64Array.from(set.get(star.id)!, v => v + 14));
+  const base: JointScenarios = { samples: hot, count: scenarios.count, reporting: { samples: hotReport, count: scenarios.count } };
+  const risky = applyAvailabilityToScenarios(base, { [star.id]: { playProbability: 0.5, workload: 0.5 } }, 3);
+  const before = base.samples.get(star.id)!, after = risky.samples.get(star.id)!;
+  const zeros = after.filter(v => v === 0).length / after.length;
+  assert.ok(zeros > 0.4 && zeros < 0.6, `about half the scenarios should have him out, got ${zeros}`);
+  const avg = (a: Float64Array) => a.reduce((x, y) => x + y, 0) / a.length;
+  assert.ok(avg(after) < avg(before) * 0.35, 'expected mean near 25% of the original');
+  assert.equal(base.samples.get(star.id), before, 'input scenarios are not mutated');
+  const full = buildProjectionPortfolio(pool, base, { count: 30, maxExposure: 0.9 });
+  const hedged = buildProjectionPortfolio(pool, risky, { count: 30, maxExposure: 0.9 });
+  const use = (r: typeof full) => r.exposure.find(row => row.id === star.id)?.lineups ?? 0;
+  assert.ok(use(hedged) < use(full), `risky star in ${use(hedged)} vs ${use(full)} lineups`);
+});
+
+test('parseAvailabilityText reads names, percentages and reports bad lines', () => {
+  const pool = buildPool();
+  const a = pool[1]!, b = pool[2]!;
+  const ok = parseAvailabilityText(`${a.name}, 50, 70\n${b.name}, 75%`, pool);
+  assert.deepEqual(ok.availability[a.id], { playProbability: 0.5, workload: 0.7 });
+  assert.deepEqual(ok.availability[b.id], { playProbability: 0.75, workload: 1 });
+  assert.equal(ok.problems.length, 0);
+  const bad = parseAvailabilityText('Nobody Here, 50\n' + a.name + ', 150', pool);
+  assert.equal(bad.problems.length, 2);
 });

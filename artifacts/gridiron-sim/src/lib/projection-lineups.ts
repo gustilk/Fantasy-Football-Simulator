@@ -1,4 +1,4 @@
-import { lineupSlots, type Lineup, type LineupPlayer } from './lineups';
+import { lineupSlots, playerNameKey, type Lineup, type LineupPlayer } from './lineups';
 import { replayLineupScenarios, seededRandom, summarizeLineup, type JointScenarios } from './lineup-scenarios';
 import { generateRandomManualLineups } from './random-manual-lineups';
 import type { DKSlate } from './draftkings-board';
@@ -27,6 +27,36 @@ export interface ProjectionLineupOptions {
   /** Scenarios used to propose candidates (not the count scored for reporting). */
   proposalScenarios?: number;
   seed?: number;
+  /** Per-player chance to play and workload, keyed by player id. Players not listed play normally. */
+  availability?: Record<string, PlayerAvailability>;
+}
+
+export interface PlayerAvailability {
+  /** Chance the player plays at all, 0–1. In the other scenarios he scores 0. */
+  playProbability: number;
+  /** Share of his normal workload when he does play, 0–1. Scales his points in those scenarios. */
+  workload: number;
+}
+
+/** Random draws are seeded per player so reruns give the same lineups. Returns new scenario sets; the inputs are untouched. */
+export function applyAvailabilityToScenarios(scenarios: JointScenarios, availability: Record<string, PlayerAvailability>, seed = 1): JointScenarios {
+  const adjust = (set: JointScenarios, salt: number): JointScenarios => {
+    const samples = new Map(set.samples);
+    for (const [id, a] of Object.entries(availability)) {
+      const values = samples.get(id);
+      if (!values) continue;
+      if (!(a.playProbability >= 0 && a.playProbability <= 1 && a.workload >= 0 && a.workload <= 1)) throw new Error('Chance to play and workload must be between 0 and 100%.');
+      if (a.playProbability === 1 && a.workload === 1) continue;
+      let h = (seed + salt) >>> 0;
+      for (const ch of id) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
+      const random = seededRandom(h);
+      samples.set(id, Float64Array.from(values, v => (random() < a.playProbability ? v * a.workload : 0)));
+    }
+    return { samples, count: set.count };
+  };
+  const adjusted = adjust(scenarios, 17);
+  if (scenarios.reporting) adjusted.reporting = adjust(scenarios.reporting, 91);
+  return adjusted;
 }
 export interface ProjectionPortfolio {
   lineups: Lineup[];
@@ -225,8 +255,15 @@ function stackNames(players: LineupPlayer[]) {
 /** Replays the frozen forecasts, then builds the portfolio. Every player's game needs a saved forecast. */
 export function generateProjectionLineups(players: LineupPlayer[], slate: DKSlate, options: ProjectionLineupOptions = {}): ProjectionPortfolio {
   validatePool(players);
-  const scenarios = replayLineupScenarios(players, slate, 1500);
-  return buildProjectionPortfolio(players, scenarios, options);
+  let scenarios = replayLineupScenarios(players, slate, 1500);
+  const availability = options.availability;
+  if (availability && Object.keys(availability).length) scenarios = applyAvailabilityToScenarios(scenarios, availability, options.seed ?? 1);
+  const portfolio = buildProjectionPortfolio(players, scenarios, options);
+  if (availability && Object.keys(availability).length) {
+    const names = players.filter(p => availability[p.id]).map(p => p.name).join(', ');
+    if (names) portfolio.notes.push(`Chance to play and workload applied to: ${names}. Teammates are not boosted when one of them sits, so those teammates are slightly underrated.`);
+  }
+  return portfolio;
 }
 
 /** Merge several saved slates (Sunday board and Game Simulator runs) into one lookup. Newest save wins per game. */
@@ -242,4 +279,24 @@ export function combineForecastSlates(slates: DKSlate[], season: number): DKSlat
   }
   return { id: `combined:${season}`, season, sunday: 'All saved forecasts', timezone: 'America/Chicago',
     createdAt: new Date(0).toISOString(), forecasts: [...newest.values()].map(entry => entry.forecast), failures: [] };
+}
+
+/** Parses lines like "Kenneth Walker, 50, 70" (name, chance to play %, workload %). Workload is optional (default 100). */
+export function parseAvailabilityText(text: string, players: LineupPlayer[]): { availability: Record<string, PlayerAvailability>; problems: string[] } {
+  const availability: Record<string, PlayerAvailability> = {};
+  const problems: string[] = [];
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) continue;
+    const parts = line.split(',').map(part => part.trim());
+    const play = Number(parts[1]?.replace('%', ''));
+    const work = parts[2] === undefined || parts[2] === '' ? 100 : Number(parts[2].replace('%', ''));
+    if (parts.length < 2 || parts.length > 3 || !Number.isFinite(play) || !Number.isFinite(work) || play < 0 || play > 100 || work < 0 || work > 100) {
+      problems.push(`Could not read "${line}". Use: Name, chance to play %, workload % (for example Kenneth Walker, 50, 70).`); continue;
+    }
+    const matches = players.filter(p => playerNameKey(p.name) === playerNameKey(parts[0]!));
+    if (matches.length !== 1) { problems.push(`${parts[0]}: ${matches.length ? 'more than one selected player matches' : 'not found among your selected players with a saved projection'}.`); continue; }
+    availability[matches[0]!.id] = { playProbability: play / 100, workload: work / 100 };
+  }
+  return { availability, problems };
 }
