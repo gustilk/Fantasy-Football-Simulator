@@ -16,6 +16,10 @@ For a different season, replace `2026` in the first two filenames with the selec
 
 These URLs are already used by the app's data service. No API key is required. Do not substitute another season or dummy numbers if a file is unavailable.
 
+| Injury designations (historical play rates) | https://github.com/nflverse/nflverse-data/releases/download/injuries/injuries_2025.csv |
+
+The injuries file is used only offline by `scripts/derive-availability-rates.py` to produce `availability-rates.ts`.
+
 ## Weekly refresh procedure
 
 1. Wait for the NFL week's final game to finish, including Monday games or later rescheduled games.

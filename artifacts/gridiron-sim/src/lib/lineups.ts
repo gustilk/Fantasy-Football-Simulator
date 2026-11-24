@@ -1,6 +1,6 @@
 import type { DKSlate, DKGameForecast } from './draftkings-board';
 import type { TeamSeasonRecord } from '@workspace/api-client-react';
-import { availabilityForWeek } from './availability';
+import { lineupEligibility } from './availability';
 import { simulateEnsemble } from './ensemble';
 import { DST_MODEL_WARNING } from './draftkings-defense';
 
@@ -143,8 +143,10 @@ export function buildLineupPool(salaries: SalaryPlayer[], slate: DKSlate, teams?
           mean = matches[0]!.mean;
           const currentTeam = teams?.find(t => t.team === TEAM_CODES[player.team] && t.season === slate.season);
           const currentPlayer = currentTeam?.players.find(p => p.id === matches[0]!.playerId);
-          if (teams && (!currentPlayer || !availabilityForWeek(currentPlayer, game.week).included)) {
-            reason = 'Excluded by the current saved roster or weekly availability. Rerun projections after roster changes.';
+          if (teams) {
+            const eligibility = currentPlayer ? lineupEligibility(currentPlayer, game.week) : undefined;
+            if (!currentPlayer) reason = 'Excluded by the current saved roster or weekly availability. Rerun projections after roster changes.';
+            else if (!eligibility!.eligible) reason = `Excluded: ${eligibility!.reason} Rerun projections after roster changes.`;
           }
         }
       }

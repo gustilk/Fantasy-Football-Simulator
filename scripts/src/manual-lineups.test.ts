@@ -1,113 +1,113 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { parseSalaryCsv, lineupSlots, exportLineups, type SalaryPlayer, type Lineup } from '../../artifacts/gridiron-sim/src/lib/lineups';
-import { optimizeLineups } from '../../artifacts/gridiron-sim/src/lib/lineup-optimizer';
-import { buildManualLineupPool, manualSalaryGame, manualContestSignature, readManualPicks, saveManualPicks, MANUAL_LINEUP_COUNT, type ManualPicks } from '../../artifacts/gridiron-sim/src/lib/manual-lineups';
+import { parseSalaryCsv, lineupSlots, exportLineups } from '../../artifacts/gridiron-sim/src/lib/lineups';
+import { generateRandomManualLineups } from '../../artifacts/gridiron-sim/src/lib/random-manual-lineups';
+import { buildManualLineupPool, manualSalaryGame, manualContestSignature, readManualPicks, saveManualPicks, MANUAL_LINEUP_COUNT, type ManualPicks, type ManualSalaryCandidate } from '../../artifacts/gridiron-sim/src/lib/manual-lineups';
 
+// "My Picks" generates random legal lineups from selected players. Salary is only a roster/cap
+// constraint, so these tests never rely on projected points or a points-ranked optimizer.
 const now = Date.parse('2026-10-06T20:00:00Z');
+const FUTURE = '2099-10-11T17:00:00.000Z';
 const positions = ['QB', 'QB', 'RB', 'RB', 'RB', 'WR', 'WR', 'WR', 'WR', 'TE', 'TE', 'DST', 'DST'] as const;
 const costs = [7000, 6000, 8000, 7000, 3000, 9000, 6000, 5000, 3000, 4000, 2500, 3500, 2500];
-const points = [30.5, 24, 29, 27, 12, 33, 23, 20, 11, 18, 9, 12, 8];
 const csv = 'Position,Name,ID,Roster Position,Salary,Game Info,TeamAbbrev\n' + positions.map((pos, i) =>
   [pos, `Player ${i}`, 100 + i, pos === 'RB' || pos === 'WR' || pos === 'TE' ? `${pos}/FLEX` : pos,
     costs[i], i % 2 ? 'DAL@SF 10/11/2026 04:25PM ET' : 'PHI@JAX 10/11/2026 01:00PM ET', i % 2 ? 'SF' : 'PHI'].join(',')).join('\n');
 const salaries = parseSalaryCsv(csv);
-const picks: ManualPicks = Object.fromEntries(salaries.map((p, i) => [p.id, { selected: true, points: String(points[i]) }]));
+const picks: ManualPicks = Object.fromEntries(salaries.map(p => [p.id, { selected: true, points: '' }]));
 
-test('finds the exact highest-point legal lineup using only selected players and official salaries', () => {
-  const list = structuredClone(picks);
-  list[salaries[1]!.id]!.selected = false;
-  list[salaries[1]!.id]!.points = '999';
-  const pool = buildManualLineupPool(salaries, list, now);
-  assert.equal(pool.some(p => p.id === salaries[1]!.id), false);
-  for (const player of pool) assert.equal(player.salary, salaries.find(p => p.id === player.id)!.salary);
-  const [best] = optimizeLineups(pool, 1);
-  assert.ok(best);
-  assert.equal(best.players.length, 9);
-  assert.ok(best.salary <= 50000);
-  assert.equal(new Set(best.players.map(p => p.id)).size, 9);
-  assert.equal(lineupSlots(best).map(s => s.slot).join(','), 'QB,RB,RB,WR,WR,WR,TE,FLEX,DST');
-  let exactPoints = -Infinity, exactCost = Infinity;
-  function visit(index: number, selected: typeof pool) {
-    if (selected.length === 9) {
-      const salary = selected.reduce((sum, p) => sum + p.salary, 0);
-      const total = selected.reduce((sum, p) => sum + p.mean, 0);
-      try { lineupSlots({ players: selected, salary, points: total }); }
-      catch { return; }
-      if (total > exactPoints || (total === exactPoints && salary < exactCost)) { exactPoints = total; exactCost = salary; }
+/** The pool builder is pregame-checked against the clock; generation is checked against the real clock. */
+const futurePool = (pool: ManualSalaryCandidate[]) => pool.map(p => ({ ...p, kickoff: FUTURE }));
+function seededRandom(seed: number) {
+  let state = seed >>> 0;
+  return () => { state = (Math.imul(state, 1664525) + 1013904223) >>> 0; return state / 4294967296; };
+}
+const key = (lineup: { players: { id: string }[] }) => lineup.players.map(p => p.id).sort().join(',');
+/** Brute-force every legal 9-player Classic roster in the pool. */
+function allLegal(pool: ManualSalaryCandidate[]) {
+  const legal: { players: ManualSalaryCandidate[]; salary: number }[] = [];
+  function visit(index: number, chosen: ManualSalaryCandidate[]) {
+    if (chosen.length === 9) {
+      const salary = chosen.reduce((sum, p) => sum + p.salary, 0);
+      try { lineupSlots({ players: chosen, salary }); } catch { return; }
+      if (salary <= 50000) legal.push({ players: chosen, salary });
       return;
     }
     if (index === pool.length) return;
-    visit(index + 1, selected);
-    visit(index + 1, [...selected, pool[index]!]);
+    visit(index + 1, chosen);
+    visit(index + 1, [...chosen, pool[index]!]);
   }
   visit(0, []);
-  assert.equal(best.points, exactPoints);
-  assert.equal(best.salary, exactCost);
-  assert.deepEqual(picks, Object.fromEntries(salaries.map((p, i) => [p.id, { selected: true, points: String(points[i]) }])));
-});
+  return legal;
+}
 
-test('insufficient positions, single-game lists and over-budget pools produce no legal lineup', () => {
-  const pool = buildManualLineupPool(salaries, picks, now);
-  assert.deepEqual(optimizeLineups(pool.filter(p => p.position !== 'DST'), 1), []);
-  assert.deepEqual(optimizeLineups(pool.map(p => ({ ...p, salary: 10000 })), 1), []);
-  assert.deepEqual(optimizeLineups(pool.map(p => ({ ...p, gameId: 'one-game' })), 1), []);
-});
-
-test('top five exactly match all legal combinations, exclude unselected players and export all five in rank order', () => {
+test('the candidate pool contains only selected players with official salaries and carries no points', () => {
   const list = structuredClone(picks);
-  list['101'] = { selected: false, points: '99999' };
+  list[salaries[1]!.id] = { selected: false, points: '999' };
   const before = structuredClone({ salaries, list });
   const pool = buildManualLineupPool(salaries, list, now);
-  const identities = (lineup: Lineup) => lineup.players.map(p => p.id).sort().join(',');
-  const exact: Lineup[] = [];
-  function visit(index: number, players: typeof pool) {
-    if (players.length === 9) {
-      const lineup = { players, salary: players.reduce((sum, p) => sum + p.salary, 0), points: players.reduce((sum, p) => sum + p.mean, 0) };
-      try { lineupSlots(lineup); } catch { return; }
-      exact.push(lineup);
-      return;
-    }
-    if (index === pool.length) return;
-    visit(index + 1, players);
-    visit(index + 1, [...players, pool[index]!]);
+  assert.equal(pool.length, salaries.length - 1);
+  assert.equal(pool.some(p => p.id === salaries[1]!.id), false);
+  for (const player of pool) {
+    assert.equal(player.salary, salaries.find(p => p.id === player.id)!.salary);
+    assert.equal('mean' in player, false);
+    assert.equal('points' in player, false);
   }
-  visit(0, []);
-  exact.sort((a, b) => b.points - a.points || a.salary - b.salary || identities(a).localeCompare(identities(b)));
-  const top = optimizeLineups(pool, MANUAL_LINEUP_COUNT);
-  assert.equal(top.length, 5);
-  assert.equal(new Set(top.map(identities)).size, 5);
-  assert.deepEqual(top.map(identities), exact.slice(0, 5).map(identities));
-  assert.ok(top.every(lineup => lineup.players.every(p => list[p.id]?.selected && p.salary === salaries.find(s => s.id === p.id)!.salary)));
-  const exported = exportLineups(top.map(lineup => ({ ...lineup, players: lineup.players.map(p => ({ ...p, kickoff: '2099-10-11T17:00:00Z' })) }))).trim().split('\r\n');
-  assert.equal(exported.length, 6);
-  top.forEach((lineup, index) => assert.equal(exported[index + 1], lineupSlots(lineup).map(({ player }) => player.id).join(',')));
   assert.deepEqual({ salaries, list }, before);
 });
 
-test('top-five request returns every distinct feasible roster when fewer than five exist', () => {
-  const pool = buildManualLineupPool(salaries, picks, now);
-  const [best] = optimizeLineups(pool, 1);
-  assert.ok(best);
-  assert.equal(optimizeLineups(best.players, MANUAL_LINEUP_COUNT).length, 1);
-  const secondQb = pool.find(p => p.position === 'QB' && !best.players.some(b => b.id === p.id))!;
-  const two = optimizeLineups([...best.players, secondQb], MANUAL_LINEUP_COUNT);
-  assert.equal(two.length, 2);
-  assert.ok(two[0]!.points >= two[1]!.points);
+test('every generated lineup is a legal Classic roster, distinct, within the cap, and uses only pool players with their DraftKings IDs', () => {
+  const pool = futurePool(buildManualLineupPool(salaries, picks, now));
+  const exact = allLegal(pool);
+  assert.ok(exact.length > 0 && exact.length < MANUAL_LINEUP_COUNT, 'fixture must be small enough to enumerate fully');
+  const lineups = generateRandomManualLineups(pool, MANUAL_LINEUP_COUNT, seededRandom(11));
+  assert.equal(new Set(lineups.map(key)).size, lineups.length);
+  const exactKeys = new Set(exact.map(key));
+  for (const lineup of lineups) {
+    assert.ok(exactKeys.has(key(lineup)), 'generated an illegal or unknown roster');
+    assert.ok(lineup.salary <= 50000);
+    assert.equal(lineup.salary, lineup.players.reduce((sum, p) => sum + p.salary, 0));
+    assert.equal(new Set(lineup.players.map(p => p.gameId)).size >= 2, true);
+    for (const player of lineup.players) assert.equal(player.salary, salaries.find(s => s.id === player.id)!.salary);
+    assert.equal(lineupSlots(lineup).map(s => s.slot).join(','), 'QB,RB,RB,WR,WR,WR,TE,FLEX,DST');
+  }
+  // With fewer feasible rosters than requested, every distinct feasible roster is returned.
+  assert.equal(lineups.length, exact.length);
 });
 
-test('blank points are not silently zero; explicit zero and negatives are accepted', () => {
+test('unselected players are never used and exports list DraftKings IDs in slot order', () => {
   const list = structuredClone(picks);
-  list['100']!.points = '';
-  assert.throws(() => buildManualLineupPool(salaries, list, now), /Player 0.*valid projected points/);
-  for (const invalid of ['Infinity', 'NaN', 'hello', '1e999']) {
-    list['100']!.points = invalid;
-    assert.throws(() => buildManualLineupPool(salaries, list, now));
-  }
-  list['100']!.points = '0'; list['101']!.points = '-2.25';
-  const pool = buildManualLineupPool(salaries, list, now);
-  assert.equal(pool.find(p => p.id === '100')!.mean, 0);
-  assert.equal(pool.find(p => p.id === '101')!.mean, -2.25);
+  list['101'] = { selected: false, points: '99999' };
+  const pool = futurePool(buildManualLineupPool(salaries, list, now));
+  const lineups = generateRandomManualLineups(pool, 5, seededRandom(3));
+  assert.ok(lineups.length > 0);
+  assert.ok(lineups.every(l => l.players.every(p => p.id !== '101')));
+  const exported = exportLineups(lineups).trim().split('\r\n');
+  assert.equal(exported[0], 'QB,RB,RB,WR,WR,WR,TE,FLEX,DST');
+  assert.equal(exported.length, lineups.length + 1);
+  lineups.forEach((lineup, index) => assert.equal(exported[index + 1], lineupSlots(lineup).map(({ player }) => player.id).join(',')));
+});
+
+test('insufficient positions, a single game and over-budget pools produce no lineup instead of an invalid one', () => {
+  const pool = futurePool(buildManualLineupPool(salaries, picks, now));
+  assert.deepEqual(generateRandomManualLineups(pool.filter(p => p.position !== 'DST'), 5, seededRandom(1)), []);
+  assert.deepEqual(generateRandomManualLineups(pool.map(p => ({ ...p, salary: 10000 })), 5, seededRandom(1)), []);
+  assert.deepEqual(generateRandomManualLineups(pool.map(p => ({ ...p, gameId: 'one-game' })), 5, seededRandom(1)), []);
+});
+
+test('invalid generator requests and malformed pools are rejected', () => {
+  const pool = futurePool(buildManualLineupPool(salaries, picks, now));
+  assert.throws(() => generateRandomManualLineups(pool, 0), /Choose 1–150 lineups/);
+  assert.throws(() => generateRandomManualLineups(pool, 151), /Choose 1–150 lineups/);
+  assert.throws(() => generateRandomManualLineups([...pool, pool[0]!], 5), /duplicate/i);
+  assert.throws(() => generateRandomManualLineups(pool.map(p => ({ ...p, kickoff: '2020-01-01T00:00:00.000Z' })), 5), /started/i);
+  assert.throws(() => generateRandomManualLineups(pool, 5, () => 1), /Random source/);
+});
+
+test('pool building ignores point text, requires a selection and rejects started games', () => {
+  const noisy = structuredClone(picks);
+  noisy['100']!.points = 'hello'; noisy['101']!.points = '1e999'; noisy['102']!.points = '-2.25';
+  assert.deepEqual(buildManualLineupPool(salaries, noisy, now), buildManualLineupPool(salaries, picks, now));
   assert.throws(() => buildManualLineupPool(salaries, {}, now), /Select players/);
   assert.throws(() => buildManualLineupPool(salaries, picks, Date.parse('2027-01-01')), /kickoff has passed/);
 });
