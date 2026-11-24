@@ -5,6 +5,7 @@ import { TEAM_CODES, lineupSlots } from '@/lib/lineups';
 import { MANUAL_LINEUP_COUNT } from '@/lib/manual-lineups';
 import { EMPTY_MANUAL_PLAYER_FILTERS, filterManualPlayers, manualPlayerPage, type ManualPlayerFilters } from '@/lib/manual-player-browser';
 import { manualRosterReadiness } from '@/lib/manual-lineup-readiness';
+import type { SimulatorLineupSource } from '@/lib/simulator-lineups';
 import './manual-lineups.css';
 
 const CAP = 50000;
@@ -12,8 +13,9 @@ const money = (n: number) => `$${n.toLocaleString('en-US')}`;
 const POS = ['QB', 'RB', 'WR', 'TE', 'DST'];
 const POSITION_TABS = [{ value: '', label: 'All' }, ...POS.map(position => ({ value: position, label: position }))];
 
-export default function ManualLineupsSection({ season }: { season: number }) {
-  const c = useManualLineups(season);
+export default function ManualLineupsSection({ season, forecastSource }: { season: number; forecastSource?: SimulatorLineupSource }) {
+  const c = useManualLineups(season, forecastSource);
+  const [exposure, setExposure] = useState(60);
   const [filters, setFilters] = useState<ManualPlayerFilters>({ ...EMPTY_MANUAL_PLAYER_FILTERS });
   const [requestedPage, setRequestedPage] = useState(1);
   const file = useRef<HTMLInputElement>(null);
@@ -169,6 +171,41 @@ export default function ManualLineupsSection({ season }: { season: number }) {
       </div>
       {c.running && <p className="ml-muted" role="status"><RotateCw size={12} className="spin-icon" /> Generating random legal lineups…</p>}
     </div>
+
+
+    <div className="panel ml-panel">
+      <h2>4. Generate from projections</h2>
+      <p className="ml-note"><strong>Uses your saved game projections.</strong> Builds up to {MANUAL_LINEUP_COUNT} distinct legal lineups from your selected players, favouring combinations that score high together in the simulated games (stacks come from the simulations, not a fixed rule). Selected players are options, not locks. The random option above is unchanged.</p>
+      <p className="ml-muted">Every selected player needs a saved pregame projection. Thursday and Monday games come from <strong>Game Simulator</strong> runs; Sunday games from the <strong>DraftKings</strong> tab. Players without one are skipped and listed below. Lineups are estimates, not guaranteed winnings.</p>
+      <div className="ml-filters"><div className="field"><label htmlFor="ml-exposure">Max share of lineups for any one player: {exposure}%</label>
+        <input id="ml-exposure" type="range" min={20} max={100} step={5} value={exposure} data-testid="manual-exposure" onChange={e => setExposure(Number(e.target.value))} /></div></div>
+      {c.projError && <div className="ml-err" role="alert" data-testid="manual-projection-error">{c.projError}</div>}
+      <div className="ml-actions">
+        {c.projRunning
+          ? <button className="btn-secondary" data-testid="manual-projection-stop" onClick={c.stopProjection}><Square size={14} /> Stop</button>
+          : <button className="btn-primary" data-testid="manual-generate-projection" disabled={busy || !c.pickSync.ready || c.pickSync.dirty || !!c.storageError || !c.selectedCount || c.running}
+              onClick={() => c.generateFromProjections({ maxExposure: exposure / 100 })}><Play size={15} /> Generate {MANUAL_LINEUP_COUNT} from projections</button>}
+        {c.projected && <button className="btn-secondary" data-testid="manual-projection-export" onClick={c.exportProjected}><Download size={14} /> Export {c.projected.portfolio.lineups.length} projection lineups CSV</button>}
+      </div>
+      {c.projRunning && <p className="ml-muted" role="status"><RotateCw size={12} className="spin-icon" /> Simulating and building lineups…</p>}
+      {c.projected && <div data-testid="manual-projection-summary">
+        <p className="ml-muted" role="status">Built {c.projected.portfolio.lineups.length} of {c.projected.portfolio.requested} lineups from {c.projected.portfolio.candidates} candidates and {c.projected.portfolio.scenarios} simulated outcomes. Ranked by upside (90th percentile) on a separate set of simulated outcomes.</p>
+        {c.projected.portfolio.notes.map(note => <div key={note} className="ml-note">{note}</div>)}
+        {c.projected.skipped.length > 0 && <details className="ml-note"><summary>{c.projected.skipped.length} selected players were skipped (no usable projection)</summary>
+          <ul>{c.projected.skipped.map(reason => <li key={reason}>{reason}</li>)}</ul></details>}
+        <details className="ml-note"><summary>Player exposure</summary>
+          <ul>{c.projected.portfolio.exposure.slice(0, 40).map(row => <li key={row.id}>{row.name} ({row.position} {row.team}): {row.lineups} lineups · {Math.round(row.share * 100)}%</li>)}</ul></details>
+      </div>}
+    </div>
+
+    {c.projected && c.projected.portfolio.lineups.map((lineup, index) => <details key={`p-${lineup.players.map(p => p.id).sort().join(',')}`} className="panel ml-panel ml-result" data-testid={`manual-projection-result-${index + 1}`} open={index === 0}>
+      <summary>Projection lineup #{index + 1} · {money(lineup.salary)} used · avg {lineup.points.toFixed(1)} pts · 90th pct {lineup.tournament?.p90.toFixed(1)}{lineup.tournament?.stackNames.length ? ` · stack ${lineup.tournament.stackNames.join(', ')}` : ''}</summary>
+      <div className="tw"><table><thead><tr><th>Slot</th><th>Player</th><th>Salary</th><th>Avg proj</th></tr></thead><tbody>
+        {lineupSlots(lineup).map(({ slot, player }) => <tr key={`${slot}-${player.id}`}>
+          <td className="ml-slot">{slot}</td><td>{player.name}<br /><small className="ml-muted">{player.position} {player.team}</small></td>
+          <td>{money(player.salary)}</td><td>{player.mean.toFixed(1)}</td></tr>)}
+      </tbody></table></div>
+    </details>)}
 
     {!!c.lineups.length && <p className="ml-muted" role="status">Generated {c.lineups.length} distinct random legal lineups from your selected players. Salary only enforces the $50,000 cap; these lineups have no fantasy-point ranking.</p>}
     {c.lineups.map((lineup, index) => <details key={lineup.players.map(p => p.id).sort().join(',')} className="panel ml-panel ml-result" data-testid={index === 0 ? 'manual-result' : `manual-result-${index + 1}`} open={index === 0}>

@@ -207,7 +207,7 @@ function App() {
         </div>
         <div style={{ display: tab === 'draftkings' ? undefined : 'none' }}><DraftKingsBoard season={season} /></div>
         {tab === 'lineups' && <LineupsSection season={season} />}
-        {tab === 'manual' && <ManualLineupsSection season={season} />}
+        {tab === 'manual' && <ManualLineupsSection season={season} forecastSource={simulatorLineups} />}
         {tab === 'standings' && <StandingsEditor season={season} onSeasonChange={changeSeason} onDirtyChange={setStandingsDirty} />}
         <div className="game-simulator" style={{ display: tab === 'simulator' ? undefined : 'none' }}>
         <div className="page-heading">
