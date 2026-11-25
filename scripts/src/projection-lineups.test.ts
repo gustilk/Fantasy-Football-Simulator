@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { lineupSlots, type LineupPlayer } from '../../artifacts/gridiron-sim/src/lib/lineups';
-import { applyAvailabilityToScenarios, buildProjectionPortfolio, combineForecastSlates, parseAvailabilityText } from '../../artifacts/gridiron-sim/src/lib/projection-lineups';
+import { applyAvailabilityToScenarios, buildProjectionPortfolio, combineForecastSlates, parseAvailabilityText, parseExposureLimitText, parseGameLimitText } from '../../artifacts/gridiron-sim/src/lib/projection-lineups';
 import { seededRandom, type JointScenarios } from '../../artifacts/gridiron-sim/src/lib/lineup-scenarios';
 import type { DKSlate } from '../../artifacts/gridiron-sim/src/lib/draftkings-board';
 
@@ -157,4 +157,28 @@ test('parseAvailabilityText reads names, percentages and reports bad lines', () 
   assert.equal(ok.problems.length, 0);
   const bad = parseAvailabilityText('Nobody Here, 50\n' + a.name + ', 150', pool);
   assert.equal(bad.problems.length, 2);
+});
+
+test('a per-player limit is a hard cap, even for a star the optimizer loves', () => {
+  const pool = buildPool();
+  const scenarios = scenariosFor(pool);
+  const star = pool.find(p => p.position === 'QB' && p.team === 'AAA')!;
+  const boosted = new Map(scenarios.samples);
+  for (const set of [boosted, scenarios.reporting!.samples]) set.set(star.id, Float64Array.from(set.get(star.id)!, v => v + 14));
+  const result = buildProjectionPortfolio(pool, { ...scenarios, samples: boosted }, { count: 30, maxExposure: 0.9, playerMaxExposure: { [star.id]: 0.2 } });
+  assert.ok((result.exposure.find(r => r.id === star.id)?.lineups ?? 0) <= 6);
+  const parsed = parseExposureLimitText(`${star.name}, 20\nNobody, 20\n${star.name}, 120`, pool);
+  assert.deepEqual(parsed.limits[star.id], 0.2);
+  assert.equal(parsed.problems.length, 2);
+});
+
+test('a per-game limit caps how many lineups hold any player from that game', () => {
+  const pool = buildPool();
+  const scenarios = scenariosFor(pool);
+  const result = buildProjectionPortfolio(pool, scenarios, { count: 30, maxExposure: 0.9, gameMaxExposure: { g3: 0.2 } });
+  const inG3 = result.lineups.filter(l => l.players.some(p => p.gameId === 'g3')).length;
+  assert.ok(inG3 <= 6, `game g3 in ${inG3} lineups`);
+  const parsed = parseGameLimitText('eee, 20\nZZZ, 20\nEEE, 200', pool);
+  assert.deepEqual(parsed.limits.g3, 0.2);
+  assert.equal(parsed.problems.length, 2);
 });

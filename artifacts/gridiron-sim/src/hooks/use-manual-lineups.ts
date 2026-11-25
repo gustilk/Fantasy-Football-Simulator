@@ -4,7 +4,7 @@ import { useSyncedSalaries } from './use-synced-salaries';
 import { useSyncedManualPicks } from './use-synced-manual-picks';
 import { useDraftKingsBoard } from './use-draftkings-board';
 import { parseSalaryCsv, lineupSlots, exportLineups, buildLineupPool } from '@/lib/lineups';
-import { combineForecastSlates, parseAvailabilityText, type ProjectionPortfolio } from '@/lib/projection-lineups';
+import { combineForecastSlates, parseAvailabilityText, parseExposureLimitText, parseGameLimitText, type ProjectionPortfolio } from '@/lib/projection-lineups';
 import type { SimulatorLineupSource } from '@/lib/simulator-lineups';
 import { readSalaryFile } from '@/lib/salary-file';
 import { buildManualLineupPool, manualContestSignature, manualSalaryGame, MANUAL_LINEUP_COUNT, type ManualPick, type ManualSalaryLineup } from '@/lib/manual-lineups';
@@ -105,7 +105,7 @@ export function useManualLineups(season: number, forecastSource?: SimulatorLineu
       w.postMessage({ players: pool, count: MANUAL_LINEUP_COUNT });
     } catch (e) { stop(); setError(message(e)); }
   };
-  const generateFromProjections = (options: { maxExposure: number; availabilityText?: string }) => {
+  const generateFromProjections = (options: { maxExposure: number; availabilityText?: string; limitText?: string; gameLimitText?: string }) => {
     stop(); setResult(null); setError(''); setNotice(''); setProjResult(null); setProjError('');
     if (salarySync.loading || pickSync.loading || !pickSync.ready || pickSync.dirty || importing || salarySync.error || parsed.error || storageError || !record) {
       setProjError('Load valid Classic salaries and resolve save errors before generating.'); return;
@@ -119,7 +119,10 @@ export function useManualLineups(season: number, forecastSource?: SimulatorLineu
       const skipped = built.issues.map(issue => `${issue.player.name} (${issue.player.position} ${issue.player.team}): ${issue.reason}`);
       if (built.players.length < 9) throw new Error(`Only ${built.players.length} selected players have a saved pregame projection. ${skipped[0] ?? ''}`.trim());
       const parsedAvail = parseAvailabilityText(options.availabilityText ?? '', built.players);
-      if (parsedAvail.problems.length) throw new Error(parsedAvail.problems.join(' '));
+      const parsedLimits = parseExposureLimitText(options.limitText ?? '', built.players);
+      const parsedGames = parseGameLimitText(options.gameLimitText ?? '', built.players);
+      const parseProblems = [...parsedAvail.problems, ...parsedLimits.problems, ...parsedGames.problems];
+      if (parseProblems.length) throw new Error(parseProblems.join(' '));
       const runKey = keyRef.current;
       const w = new Worker(new URL('../lib/projection-lineup-worker.ts', import.meta.url), { type: 'module' });
       projWorker.current = w; setProjRunning(true);
@@ -139,7 +142,7 @@ export function useManualLineups(season: number, forecastSource?: SimulatorLineu
         } catch (e) { setProjError(message(e)); }
       };
       w.onerror = event => { if (projWorker.current === w) { stopProjection(); setProjError(`Lineup generation failed: ${event.message}`); } };
-      w.postMessage({ players: built.players, slate, options: { count: MANUAL_LINEUP_COUNT, maxExposure: options.maxExposure, availability: parsedAvail.availability } });
+      w.postMessage({ players: built.players, slate, options: { count: MANUAL_LINEUP_COUNT, maxExposure: options.maxExposure, availability: parsedAvail.availability, playerMaxExposure: parsedLimits.limits, gameMaxExposure: parsedGames.limits } });
     } catch (e) { stopProjection(); setProjError(message(e)); }
   };
   const projected = projResult?.key === key ? projResult : null;
