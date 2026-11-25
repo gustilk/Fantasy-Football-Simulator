@@ -31,6 +31,8 @@ export interface ProjectionLineupOptions {
   availability?: Record<string, PlayerAvailability>;
   /** Hard cap on one player's share of lineups (0–1), keyed by player id. Not raised for thin positions. */
   playerMaxExposure?: Record<string, number>;
+  /** Hard cap on the share of lineups holding ANY player from a game (0–1), keyed by gameId. */
+  gameMaxExposure?: Record<string, number>;
 }
 
 export interface PlayerAvailability {
@@ -217,6 +219,10 @@ export function buildProjectionPortfolio(players: LineupPlayer[], scenarios: Joi
   const capFor = (player: LineupPlayer) => limits[player.id] !== undefined
     ? Math.min(count, Math.floor(limits[player.id]! * count + 1e-9))
     : Math.min(count, Math.max(Math.ceil(maxExposure * count), positionNeed(player.position)));
+  const gameLimits = options.gameMaxExposure ?? {};
+  const gameCap = (gameId: string) => Math.min(count, Math.floor(gameLimits[gameId]! * count + 1e-9));
+  const gameUsage = new Map<string, number>();
+  const gamesOf = (ps: LineupPlayer[]) => [...new Set(ps.map(p => p.gameId))].filter(g => gameLimits[g] !== undefined);
   const usage = new Map<string, number>();
   const chosen: typeof scored = [];
   const taken = new Set<string>();
@@ -228,9 +234,12 @@ export function buildProjectionPortfolio(players: LineupPlayer[], scenarios: Joi
       const key = identity(candidate.lineup.players);
       if (taken.has(key)) continue;
       if (candidate.lineup.players.some(p => (usage.get(p.id) ?? 0) >= capFor(p))) continue;
+      const limitedGames = gamesOf(candidate.lineup.players);
+      if (limitedGames.some(g => (gameUsage.get(g) ?? 0) >= gameCap(g))) continue;
       const ids = new Set(candidate.lineup.players.map(p => p.id));
       if (chosen.some(other => other.lineup.players.filter(p => ids.has(p.id)).length > overlap)) continue;
       chosen.push(candidate); taken.add(key);
+      limitedGames.forEach(g => gameUsage.set(g, (gameUsage.get(g) ?? 0) + 1));
       candidate.lineup.players.forEach(p => usage.set(p.id, (usage.get(p.id) ?? 0) + 1));
     }
     if (chosen.length < count) overlap++;
@@ -319,6 +328,23 @@ export function parseExposureLimitText(text: string, players: LineupPlayer[]): {
     const matches = players.filter(p => playerNameKey(p.name) === playerNameKey(parts[0]!));
     if (matches.length !== 1) { problems.push(`${parts[0]}: ${matches.length ? 'more than one selected player matches' : 'not found among your selected players with a saved projection'}.`); continue; }
     limits[matches[0]!.id] = pct / 100;
+  }
+  return { limits, problems };
+}
+
+/** Parses lines like "KC, 33" (a team code from the game, max % of lineups holding any player from that game). */
+export function parseGameLimitText(text: string, players: LineupPlayer[]): { limits: Record<string, number>; problems: string[] } {
+  const limits: Record<string, number> = {};
+  const problems: string[] = [];
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) continue;
+    const parts = line.split(',').map(part => part.trim());
+    const pct = Number(parts[1]?.replace('%', ''));
+    if (parts.length !== 2 || !Number.isFinite(pct) || pct < 0 || pct > 100) { problems.push(`Could not read "${line}". Use: team code, max % of lineups (for example KC, 33).`); continue; }
+    const games = new Set(players.filter(p => p.team.toLowerCase() === parts[0]!.toLowerCase()).map(p => p.gameId));
+    if (games.size !== 1) { problems.push(`${parts[0]}: no selected player from that team code with a saved projection.`); continue; }
+    limits[[...games][0]!] = pct / 100;
   }
   return { limits, problems };
 }

@@ -18,6 +18,7 @@ export default function ManualLineupsSection({ season, forecastSource }: { seaso
   const [exposure, setExposure] = useState(60);
   const [availabilityText, setAvailabilityText] = useState('');
   const [limitText, setLimitText] = useState('');
+  const [gameLimitText, setGameLimitText] = useState('');
   const [filters, setFilters] = useState<ManualPlayerFilters>({ ...EMPTY_MANUAL_PLAYER_FILTERS });
   const [requestedPage, setRequestedPage] = useState(1);
   const file = useRef<HTMLInputElement>(null);
@@ -187,12 +188,15 @@ export default function ManualLineupsSection({ season, forecastSource }: { seaso
       <div className="field"><label htmlFor="ml-limits">Per-player limits (optional): one per line, name, max % of lineups</label>
         <textarea id="ml-limits" rows={2} placeholder={'Emmett Johnson, 20\nJames Cook, 20'} value={limitText} data-testid="manual-limits" onChange={e => setLimitText(e.target.value)} />
         <span className="ml-muted">A hard cap for that player. Players you leave out use the slider above.</span></div>
+      <div className="field"><label htmlFor="ml-game-limits">Per-game limits (optional): one per line, team code, max % of lineups</label>
+        <textarea id="ml-game-limits" rows={2} placeholder={'KC, 33'} value={gameLimitText} data-testid="manual-game-limits" onChange={e => setGameLimitText(e.target.value)} />
+        <span className="ml-muted">Caps how many lineups hold ANY player from that team's game. KC, 33 means the Chiefs–Bills game appears in at most 33% of lineups.</span></div>
       {c.projError && <div className="ml-err" role="alert" data-testid="manual-projection-error">{c.projError}</div>}
       <div className="ml-actions">
         {c.projRunning
           ? <button className="btn-secondary" data-testid="manual-projection-stop" onClick={c.stopProjection}><Square size={14} /> Stop</button>
           : <button className="btn-primary" data-testid="manual-generate-projection" disabled={busy || !c.pickSync.ready || c.pickSync.dirty || !!c.storageError || !c.selectedCount || c.running}
-              onClick={() => c.generateFromProjections({ maxExposure: exposure / 100, availabilityText, limitText })}><Play size={15} /> Generate {MANUAL_LINEUP_COUNT} from projections</button>}
+              onClick={() => c.generateFromProjections({ maxExposure: exposure / 100, availabilityText, limitText, gameLimitText })}><Play size={15} /> Generate {MANUAL_LINEUP_COUNT} from projections</button>}
         {c.projected && <button className="btn-secondary" data-testid="manual-projection-export" onClick={c.exportProjected}><Download size={14} /> Export {c.projected.portfolio.lineups.length} projection lineups CSV</button>}
       </div>
       {c.projRunning && <p className="ml-muted" role="status"><RotateCw size={12} className="spin-icon" /> Simulating and building lineups…</p>}
