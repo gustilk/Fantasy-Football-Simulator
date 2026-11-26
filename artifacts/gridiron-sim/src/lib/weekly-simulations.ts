@@ -3,7 +3,7 @@ import { withDepthChart } from './depth-chart';
 import { footballSetup, type FootballReports } from './football-evidence';
 import { loadFootballReports } from './load-football-evidence';
 import { simulateEnsemble } from './ensemble';
-import type { SimulationInput } from './simulator';
+import type { SimulationInput, WeatherSetup } from './simulator';
 import type { SavedSimulation } from './saved-simulations';
 import { applyStandings, validateStandings, type StandingsSnapshot } from './standings';
 
@@ -29,8 +29,15 @@ export async function runWeeklySimulations(options: {
   yieldUI: () => Promise<void>;
   simulate?: typeof simulateEnsemble;
   standings?: StandingsSnapshot;
+  /** Game-day weather for every simulated game. Defaults to neutral (68°F, 5 mph, none). */
+  weather?: WeatherSetup;
 }): Promise<WeeklyRun> {
   const { season, week } = options;
+  const weather: WeatherSetup = options.weather ?? { temperatureF: 68, windMph: 5, precipitation: 'none' };
+  if (!Number.isFinite(weather.temperatureF) || weather.temperatureF < -20 || weather.temperatureF > 120 || !Number.isFinite(weather.windMph) || weather.windMph < 0 || weather.windMph > 60 || !['none', 'light', 'moderate', 'heavy'].includes(weather.precipitation)) {
+    throw new Error('Weather is out of range. Use -20 to 120°F, 0 to 60 mph wind, and none, light, moderate or heavy precipitation.');
+  }
+  const neutral = weather.temperatureF === 68 && weather.windMph === 5 && weather.precipitation === 'none';
   const games = structuredClone(gamesForWeek(options.games, week));
   const teams = structuredClone(options.teams);
   const standings = options.standings ? structuredClone(options.standings) : undefined;
@@ -67,7 +74,7 @@ export async function runWeeklySimulations(options: {
         secondaryModel: 'secondary-v1',
         away: applyStandings(footballSetup(away, week, 'away', home.team, awayEvidence), standings, season, week),
         home: applyStandings(footballSetup(home, week, 'home', away.team, homeEvidence), standings, season, week),
-        weather: { temperatureF: 68, windMph: 5, precipitation: 'none' },
+        weather: { ...weather },
         importance: game.seasonType === 'postseason' ? 'playoff' : 'regular',
         market: {
           enabled: false, source: game.odds ? 'ESPN' : 'manual', ...game.odds,
@@ -82,7 +89,7 @@ export async function runWeeklySimulations(options: {
       if (!game.timeConfirmed || Date.parse(game.date) <= Date.now()) {
         result.overview.push('Historical/unconfirmed-kickoff simulation: not an eligible pregame forecast. Current roster/depth-chart data may differ from game-day roles.');
       }
-      result.overview.push(`${games.length === 1 ? 'Single-game simulation' : 'Weekly batch'} uses neutral weather (68°F, 5 mph wind, no precipitation) and no market-odds adjustment.`);
+      result.overview.push(`${games.length === 1 ? 'Single-game simulation' : 'Weekly batch'} uses ${neutral ? 'neutral weather (68°F, 5 mph wind, no precipitation)' : `your weather setting (${weather.temperatureF}°F, ${weather.windMph} mph wind, ${weather.precipitation} precipitation)`} and no market-odds adjustment.`);
       const { seed: _seed, ...setup } = input;
       const entry: SavedSimulation = {
         id: `${season}-${week}-${game.id}-${crypto.randomUUID()}`,

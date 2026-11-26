@@ -117,7 +117,7 @@ function App() {
     setSeason(value);
     if (value !== season) setSetup(current => ({ ...current, market: undefined }));
   };
-  const runGame = async (selectedWeek: number, game: NflScheduledGame, fetchedAt: string) => {
+  const runGame = async (selectedWeek: number, game: NflScheduledGame, fetchedAt: string, weather?: Weather) => {
     if (running.current) return;
     setError('');
     if (history.isLoading || history.isError) {
@@ -131,7 +131,7 @@ function App() {
     setWeeklyProgress({ completed: 0, total: 1, matchup: `${game.awayTeam} at ${game.homeTeam}` });
     try {
       const report = await runSingleGameSimulation({
-        season, week: selectedWeek, gameId: game.id, games: [game], teams: storedTeams, fetchedAt,
+        season, week: selectedWeek, gameId: game.id, games: [game], teams: storedTeams, fetchedAt, weather,
         standings: findStandings(readStandings(localStorage), season, selectedWeek),
         loadDepth: (year, name) => queryClient.fetchQuery({
           queryKey: getGetNflDepthChartQueryKey(year, name),

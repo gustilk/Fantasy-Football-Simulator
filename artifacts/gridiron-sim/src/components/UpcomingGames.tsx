@@ -3,12 +3,13 @@ import { useGetNflSchedule, getGetNflScheduleQueryKey, type NflScheduledGame, ty
 import { RotateCw } from 'lucide-react';
 import { gamesForWeek, type WeeklyProgress } from '@/lib/weekly-simulations';
 import { orderGamesByProjection, rankGamesByScoring, type GameScoringRankings } from '@/lib/game-scoring-rankings';
+import type { WeatherSetup } from '@/lib/simulator';
 import { readStandings, findStandings } from '@/lib/standings';
 
 export default function UpcomingGames({ season, enabled, busy, teams, onRunGame, progress, historyReady, loadDepth }: {
   season: number; enabled: boolean; busy: boolean; teams: TeamSeasonRecord[];
   historyReady: boolean; loadDepth: (season: number, team: string) => Promise<NflDepthChart>;
-  onRunGame: (week: number, game: NflScheduledGame, fetchedAt: string) => void;
+  onRunGame: (week: number, game: NflScheduledGame, fetchedAt: string, weather?: WeatherSetup) => void;
   progress: WeeklyProgress | null;
 }) {
   const schedule = useGetNflSchedule(season, { scope: 'all' }, {
@@ -16,6 +17,10 @@ export default function UpcomingGames({ season, enabled, busy, teams, onRunGame,
   });
   const [week, setWeek] = useState('');
   const [gameId, setGameId] = useState('');
+  const [useWeather, setUseWeather] = useState(false);
+  const [tempF, setTempF] = useState('40');
+  const [windMph, setWindMph] = useState('20');
+  const [precip, setPrecip] = useState<WeatherSetup['precipitation']>('moderate');
   const [ranking, setRanking] = useState<GameScoringRankings | null>(null);
   const [rankingBusy, setRankingBusy] = useState(false);
   const [rankingProgress, setRankingProgress] = useState<WeeklyProgress | null>(null);
@@ -111,14 +116,22 @@ export default function UpcomingGames({ season, enabled, busy, teams, onRunGame,
           {!!selectedProjection.warnings.length && <details><summary>Evidence limitations</summary><ul>{selectedProjection.warnings.map(w => <li key={w}>{w}</li>)}</ul></details>}
         </div>}
         {!!ranking?.failures.length && <details className="history-warning"><summary>{ranking.failures.length} game(s) could not be ranked</summary><ul>{ranking.failures.map(f => <li key={f.gameId}>{f.matchup}: {f.reason}</li>)}</ul></details>}
+        <label className="sim-caption" style={{ display: 'block', marginBottom: 6 }}>
+          <input type="checkbox" checked={useWeather} data-testid="weather-toggle" onChange={e => setUseWeather(e.target.checked)} /> Use game-day weather for this run (otherwise neutral)</label>
+        {useWeather && <div className="sim-caption" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+          <label>Temp °F <input type="number" value={tempF} data-testid="weather-temp" style={{ width: 64 }} onChange={e => setTempF(e.target.value)} /></label>
+          <label>Wind mph <input type="number" value={windMph} data-testid="weather-wind" style={{ width: 64 }} onChange={e => setWindMph(e.target.value)} /></label>
+          <label>Precipitation <select value={precip} data-testid="weather-precip" onChange={e => setPrecip(e.target.value as WeatherSetup['precipitation'])}>
+            <option value="none">None</option><option value="light">Light</option><option value="moderate">Moderate</option><option value="heavy">Heavy</option></select></label>
+        </div>}
         <button className="btn-primary" style={{ width: '100%', marginBottom: 8 }} disabled={busy || rankingBusy || !selectedGame || schedule.isFetching}
           data-testid="button-run-game" onClick={() => {
-            if (selectedWeek !== undefined && selectedGame) onRunGame(selectedWeek, selectedGame, schedule.data!.fetchedAt);
+            if (selectedWeek !== undefined && selectedGame) onRunGame(selectedWeek, selectedGame, schedule.data!.fetchedAt, useWeather ? { temperatureF: Number(tempF), windMph: Number(windMph), precipitation: precip } : undefined);
           }}>
           {progress && busy ? <><RotateCw size={15} className="spin-icon" /> Simulating selected game…</>
             : <>Run selected game</>}
         </button>
-        <p className="sim-caption">Runs only the selected matchup using saved history before this week, neutral weather and no odds adjustment. Past or unconfirmed games can be simulated, but are not eligible for pregame Captain lineups.</p>
+        <p className="sim-caption">Runs only the selected matchup using saved history before this week, neutral weather unless you turn on game-day weather above, and no odds adjustment. Past or unconfirmed games can be simulated, but are not eligible for pregame Captain lineups.</p>
         {progress && busy && <div role="status" aria-live="polite">
           <progress value={progress.completed} max={progress.total} style={{ width: '100%' }} aria-label="Selected game simulation progress" />
           <p className="sim-caption">{progress.matchup || 'Preparing selected game…'}</p>
