@@ -16,6 +16,10 @@ const POSITION_TABS = [{ value: '', label: 'All' }, ...POS.map(position => ({ va
 export default function ManualLineupsSection({ season, forecastSource }: { season: number; forecastSource?: SimulatorLineupSource }) {
   const c = useManualLineups(season, forecastSource);
   const [exposure, setExposure] = useState(60);
+  const [randomCount, setRandomCount] = useState(String(MANUAL_LINEUP_COUNT));
+  const [projCount, setProjCount] = useState(String(MANUAL_LINEUP_COUNT));
+  const clampCount = (text: string) => clampNumber(Number(text));
+  const clampNumber = (value: number) => Math.min(MANUAL_LINEUP_COUNT, Math.max(1, Math.round(Number.isFinite(value) && value > 0 ? value : MANUAL_LINEUP_COUNT)));
   const [availabilityText, setAvailabilityText] = useState('');
   const [limitText, setLimitText] = useState('');
   const [gameLimitText, setGameLimitText] = useState('');
@@ -169,7 +173,8 @@ export default function ManualLineupsSection({ season, forecastSource }: { seaso
       <div className="ml-actions">
         {c.running
           ? <button className="btn-secondary" data-testid="manual-stop" onClick={c.stop}><Square size={14} /> Stop</button>
-          : <button className="btn-primary" data-testid="manual-generate" disabled={busy || !c.pickSync.ready || c.pickSync.dirty || !!c.storageError || !c.selectedCount} onClick={c.generate}><Play size={15} /> Generate {MANUAL_LINEUP_COUNT} lineups</button>}
+          : <label className="ml-count">How many (1–{MANUAL_LINEUP_COUNT}) <input type="number" min={1} max={MANUAL_LINEUP_COUNT} value={randomCount} data-testid="manual-count" onChange={e => setRandomCount(e.target.value)} /></label>}
+        {!c.running && <button className="btn-primary" data-testid="manual-generate" disabled={busy || !c.pickSync.ready || c.pickSync.dirty || !!c.storageError || !c.selectedCount} onClick={() => c.generate(clampCount(randomCount))}><Play size={15} /> Generate {clampCount(randomCount)} lineups</button>}
         {!!c.lineups.length && <button className="btn-secondary" onClick={c.exportResults}><Download size={14} /> Export {c.lineups.length} {c.lineups.length === 1 ? 'lineup' : 'lineups'} CSV</button>}
       </div>
       {c.running && <p className="ml-muted" role="status"><RotateCw size={12} className="spin-icon" /> Generating random legal lineups…</p>}
@@ -195,8 +200,9 @@ export default function ManualLineupsSection({ season, forecastSource }: { seaso
       <div className="ml-actions">
         {c.projRunning
           ? <button className="btn-secondary" data-testid="manual-projection-stop" onClick={c.stopProjection}><Square size={14} /> Stop</button>
-          : <button className="btn-primary" data-testid="manual-generate-projection" disabled={busy || !c.pickSync.ready || c.pickSync.dirty || !!c.storageError || !c.selectedCount || c.running}
-              onClick={() => c.generateFromProjections({ maxExposure: exposure / 100, availabilityText, limitText, gameLimitText })}><Play size={15} /> Generate {MANUAL_LINEUP_COUNT} from projections</button>}
+          : <label className="ml-count">How many (1–{MANUAL_LINEUP_COUNT}) <input type="number" min={1} max={MANUAL_LINEUP_COUNT} value={projCount} data-testid="manual-projection-count" onChange={e => setProjCount(e.target.value)} /></label>}
+        {!c.projRunning && <button className="btn-primary" data-testid="manual-generate-projection" disabled={busy || !c.pickSync.ready || c.pickSync.dirty || !!c.storageError || !c.selectedCount || c.running}
+              onClick={() => c.generateFromProjections({ maxExposure: exposure / 100, availabilityText, limitText, gameLimitText, count: clampCount(projCount) })}><Play size={15} /> Generate {clampCount(projCount)} from projections</button>}
         {c.projected && <button className="btn-secondary" data-testid="manual-projection-export" onClick={c.exportProjected}><Download size={14} /> Export {c.projected.portfolio.lineups.length} projection lineups CSV</button>}
       </div>
       {c.projRunning && <p className="ml-muted" role="status"><RotateCw size={12} className="spin-icon" /> Simulating and building lineups…</p>}

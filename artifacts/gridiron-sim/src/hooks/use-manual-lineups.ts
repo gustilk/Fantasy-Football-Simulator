@@ -73,7 +73,8 @@ export function useManualLineups(season: number, forecastSource?: SimulatorLineu
     } catch (e) { if (mounted.current) setError(`Featured salaries were not imported: ${message(e)}`); }
     finally { if (mounted.current) setImporting(false); }
   };
-  const generate = () => {
+  const generate = (requested: number = MANUAL_LINEUP_COUNT) => {
+    const wanted = Number.isInteger(requested) && requested >= 1 && requested <= MANUAL_LINEUP_COUNT ? requested : MANUAL_LINEUP_COUNT;
     stop(); setResult(null); setError(''); setNotice('');
     if (salarySync.loading || pickSync.loading || !pickSync.ready || pickSync.dirty || importing || salarySync.error || parsed.error || storageError || !record) {
       setError('Load valid Classic salaries and resolve save errors before generating.'); return;
@@ -98,14 +99,14 @@ export function useManualLineups(season: number, forecastSource?: SimulatorLineu
             if (lineup.players.some(p => Date.parse(p.kickoff) <= Date.now())) throw new Error('Kickoff passed while generating. Refresh your picks before generating again.');
           }
           setResult({ key: runKey, lineups });
-        if (lineups.length < MANUAL_LINEUP_COUNT) setNotice(`Generated ${lineups.length} distinct legal ${lineups.length === 1 ? 'lineup' : 'lineups'}. Your selected pool may not allow 150 unique combinations under $50,000; add candidates or generate again for another random sample.`);
+        if (lineups.length < wanted) setNotice(`Generated ${lineups.length} of ${wanted} requested distinct legal ${lineups.length === 1 ? 'lineup' : 'lineups'}. Your selected pool may not allow ${wanted} unique combinations under $50,000; add candidates or generate again for another random sample.`);
         } catch (e) { setError(message(e)); }
       };
       w.onerror = event => { if (worker.current === w) { stop(); setError(`Lineup generation failed: ${event.message}`); } };
-      w.postMessage({ players: pool, count: MANUAL_LINEUP_COUNT });
+      w.postMessage({ players: pool, count: wanted });
     } catch (e) { stop(); setError(message(e)); }
   };
-  const generateFromProjections = (options: { maxExposure: number; availabilityText?: string; limitText?: string; gameLimitText?: string }) => {
+  const generateFromProjections = (options: { maxExposure: number; availabilityText?: string; limitText?: string; gameLimitText?: string; count?: number }) => {
     stop(); setResult(null); setError(''); setNotice(''); setProjResult(null); setProjError('');
     if (salarySync.loading || pickSync.loading || !pickSync.ready || pickSync.dirty || importing || salarySync.error || parsed.error || storageError || !record) {
       setProjError('Load valid Classic salaries and resolve save errors before generating.'); return;
@@ -142,7 +143,7 @@ export function useManualLineups(season: number, forecastSource?: SimulatorLineu
         } catch (e) { setProjError(message(e)); }
       };
       w.onerror = event => { if (projWorker.current === w) { stopProjection(); setProjError(`Lineup generation failed: ${event.message}`); } };
-      w.postMessage({ players: built.players, slate, options: { count: MANUAL_LINEUP_COUNT, maxExposure: options.maxExposure, availability: parsedAvail.availability, playerMaxExposure: parsedLimits.limits, gameMaxExposure: parsedGames.limits } });
+      w.postMessage({ players: built.players, slate, options: { count: Number.isInteger(options.count) && options.count! >= 1 && options.count! <= MANUAL_LINEUP_COUNT ? options.count : MANUAL_LINEUP_COUNT, maxExposure: options.maxExposure, availability: parsedAvail.availability, playerMaxExposure: parsedLimits.limits, gameMaxExposure: parsedGames.limits } });
     } catch (e) { stopProjection(); setProjError(message(e)); }
   };
   const projected = projResult?.key === key ? projResult : null;
